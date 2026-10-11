@@ -1,0 +1,62 @@
+# Yerel geliştirme servisleri: MongoDB (tek düğümlü replica set) ve MinIO (S3 uyumlu belge deposu).
+# Kimlik bilgileri depo kökündeki .env dosyasından okunur; bu dosyaya değer yazılmaz.
+name: santiye-hesap
+
+services:
+  mongo:
+    image: mongo:8.2
+    command: ['--replSet', 'rs0', '--bind_ip_all', '--port', '27017']
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    # Replica set ilk açılışta kurulur; düğüm birincil olana kadar sağlıksız sayılır.
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - >-
+          try { rs.status() } catch (e) {
+          rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }) }
+          if (!db.hello().isWritablePrimary) quit(1)
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  # Resmi MinIO imajları dağıtılmadığı için kaynaktan derlenen topluluk imajı (pgsty/minio) kullanılır.
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:?.env içinde STORAGE_ACCESS_KEY tanımlı olmalı}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:?.env içinde STORAGE_SECRET_KEY tanımlı olmalı}
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+
+  # Belge kovasını oluşturur ve herkese kapalı tutar; işi bitince kapanır.
+  minio-init:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    depends_on:
+      - minio
+    environment:
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?.env içinde STORAGE_ACCESS_KEY tanımlı olmalı}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?.env içinde STORAGE_SECRET_KEY tanımlı olmalı}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?.env içinde STORAGE_BUCKET tanımlı olmalı}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until mc alias set local http://minio:9000 "$$STORAGE_ACCESS_KEY" "$$STORAGE_SECRET_KEY" > /dev/null 2>&1; do sleep 1; done
+        mc mb --ignore-existing "local/$$STORAGE_BUCKET"
+        mc anonymous set none "local/$$STORAGE_BUCKET"
+    restart: 'no'
+
+volumes:
+  mongo-data:
+  minio-data:

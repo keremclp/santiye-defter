@@ -1,0 +1,19 @@
+import type { RequestHandler } from 'express';
+import type { Logger } from '../lib/logger.js';
+
+// Sorgu metni loglanmaz; yalnız yöntem, yol, durum ve süre.
+export function requestLogger(logger: Logger): RequestHandler {
+  return (req, res, next) => {
+    const startedAt = process.hrtime.bigint();
+    res.on('finish', () => {
+      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      logger.info('istek', {
+        method: req.method,
+        path: req.originalUrl.split('?')[0],
+        status: res.statusCode,
+        durationMs: Math.round(durationMs),
+      });
+    });
+    next();
+  };
+}

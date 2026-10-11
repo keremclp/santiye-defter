@@ -1,1 +1,17 @@
 .claude/settings.local.json
+.claude/launch.json
+# Bağımlılıklar ve derleme çıktıları
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Ortam dosyaları (yalnız .env.example commit edilir)
+.env
+.env.*
+!.env.example
+
+# Loglar ve sistem dosyaları
+*.log
+.DS_Store
+Thumbs.db

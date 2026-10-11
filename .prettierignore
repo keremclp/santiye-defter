@@ -1,0 +1,11 @@
+dist
+coverage
+pnpm-lock.yaml
+
+# Kaynak belgeler elle düzenlenir; biçimlendiriciyle değiştirilmez.
+AGENTS.md
+CLAUDE.md
+santiye-hesap-web-prompt.md
+proje_kapsami_ve_planlama_kararlari.md
+gelistirme/
+.claude/
