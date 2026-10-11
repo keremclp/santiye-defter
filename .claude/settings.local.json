@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p teknik_plan)",
+      "Bash(cp \"/c/Users/kerem_can/.claude/plans/evet-bir-teknik-altyap-kind-leaf.md\" teknik_plan/asama4_teknik_altyapi_plani.md)",
+      "Bash(sed -i 's#\\(C:/Users/kerem_can/Desktop/BUSINESS/Şantiye Defter/proje_kapsami_ve_planlama_kararlari.md\\)#\\(../proje_kapsami_ve_planlama_kararlari.md\\)#g' teknik_plan/asama4_teknik_altyapi_plani.md)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
