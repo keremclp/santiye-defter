@@ -1,4 +1,5 @@
 import { model, Schema, type HydratedDocument, type Types } from 'mongoose';
+import { historyEntrySchema, type HistoryEntry } from '../db/company-scope.js';
 
 /** Şartname 6.2 ve 7.13: firma 20 GB belge alanıyla başlar. */
 export const DEFAULT_STORAGE_QUOTA_BYTES = 20 * 1024 ** 3;
@@ -23,6 +24,8 @@ export interface Company {
   isDemo: boolean;
   demoLastActiveAt: Date | null;
   recordCounter: number;
+  /** Firma kullanıcılarının görünen ad ve iletişim değişiklikleri (şartname 7.11) */
+  history: HistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +50,7 @@ const companySchema = new Schema<Company>(
     isDemo: { type: Boolean, default: false },
     demoLastActiveAt: { type: Date, default: null },
     recordCounter: { type: Number, default: 0 },
+    history: { type: [historyEntrySchema], default: [] },
   },
   { timestamps: true },
 );

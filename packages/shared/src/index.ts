@@ -7,4 +7,6 @@ export * from './finance/allocation.js';
 export * from './finance/refund.js';
 export * from './finance/totals.js';
 export * from './money.js';
+export * from './record-schemas.js';
 export * from './schemas.js';
+export * from './text.js';

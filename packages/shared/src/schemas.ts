@@ -58,6 +58,8 @@ export const transactionCreateSchema = z
     allocations: z.array(allocationInputSchema).min(1, 'En az bir pay olmalı.'),
     confirmExcess: z.boolean().optional(),
     excessReason: z.string().trim().optional(),
+    /** Tamamlanan veya arşivlenen şantiyeye anlaşmasız gider için zorunlu */
+    reason: z.string().trim().optional(),
   })
   .superRefine((value, ctx) => {
     const sumMessage = allocationSumIssue(value.amount, value.allocations);

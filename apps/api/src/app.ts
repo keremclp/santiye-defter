@@ -5,6 +5,7 @@ import type { AppDeps } from './deps.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { authRouter } from './routes/auth.js';
+import { companyDataRouter } from './routes/company-data.js';
 import { healthRouter } from './routes/health.js';
 import { platformRouter } from './routes/platform.js';
 import { CustomerAuthService } from './services/customer-auth.js';
@@ -42,6 +43,7 @@ export function createApp(deps: AppDeps, options: AppOptions = {}): express.Expr
 
   app.use(healthRouter);
   app.use(authRouter(services.customerAuth));
+  app.use(companyDataRouter(deps, services.customerAuth));
   app.use(platformRouter(deps, services.platformAuth, services.platformManagement));
   if (options.extraRoutes) app.use(options.extraRoutes(services));
 

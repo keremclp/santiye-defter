@@ -22,6 +22,7 @@ import { CompanyModel, type Company } from '../models/company.js';
 import type { IdempotencyResultRef } from '../models/idempotency-record.js';
 import { PlatformLogModel } from '../models/platform-log.js';
 import { UserModel } from '../models/user.js';
+import { seedDefaultCategories } from './categories.js';
 import type { IdempotentOutcome } from './idempotency.js';
 import { writePlatformLog } from './platform-log.js';
 import { presentPlatformCompany, presentPlatformLog, presentPlatformUser } from './presenters.js';
@@ -120,6 +121,7 @@ export class PlatformManagementService {
       { session },
     );
     if (!company) throw new Error('Firma oluşturulamadı.');
+    await seedDefaultCategories(company._id, this.deps.clock.now(), session);
     await writePlatformLog(
       {
         adminId,

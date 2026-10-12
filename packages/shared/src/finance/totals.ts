@@ -72,9 +72,28 @@ function add(totals: CashTotals, kind: TransactionKind, amount: number): void {
   else if (kind === 'income_refund') totals.incomeRefund += amount;
   else if (kind === 'expense') totals.expense += amount;
   else totals.expenseRefund += amount;
-  totals.netIncome = totals.income - totals.incomeRefund;
-  totals.netExpense = totals.expense - totals.expenseRefund;
-  totals.difference = totals.netIncome - totals.netExpense;
+  Object.assign(totals, cashTotalsFromSums(totals));
+}
+
+/**
+ * Türe göre toplanmış tutarlardan net tahsilat, net ödeme ve farkı hesaplar. Veritabanında
+ * türe göre toplanan tutarlar bu fonksiyondan geçer; formül API'de yeniden yazılmaz.
+ */
+export function cashTotalsFromSums(
+  sums: Pick<CashTotals, 'income' | 'incomeRefund' | 'expense' | 'expenseRefund'>,
+): CashTotals {
+  for (const value of Object.values(sums)) assertKurus(value);
+  const netIncome = sums.income - sums.incomeRefund;
+  const netExpense = sums.expense - sums.expenseRefund;
+  return {
+    income: sums.income,
+    incomeRefund: sums.incomeRefund,
+    expense: sums.expense,
+    expenseRefund: sums.expenseRefund,
+    netIncome,
+    netExpense,
+    difference: netIncome - netExpense,
+  };
 }
 
 /** Dönem toplamı: her hareket, iade de dahil, kendi işlem tarihinin dönemine yazılır. */

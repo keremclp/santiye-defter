@@ -1,7 +1,13 @@
+import { AgreementModel } from './agreement.js';
+import { CategoryModel } from './category.js';
 import { CompanyModel } from './company.js';
 import { IdempotencyRecordModel } from './idempotency-record.js';
+import { PartyModel } from './party.js';
 import { PlatformAdminModel } from './platform-admin.js';
 import { PlatformLogModel } from './platform-log.js';
+import { ProjectModel } from './project.js';
+import { SearchHistoryModel } from './search-history.js';
+import { TransactionModel } from './transaction.js';
 import { UserModel } from './user.js';
 
 export const models = [
@@ -10,6 +16,12 @@ export const models = [
   PlatformAdminModel,
   IdempotencyRecordModel,
   PlatformLogModel,
+  ProjectModel,
+  PartyModel,
+  CategoryModel,
+  TransactionModel,
+  AgreementModel,
+  SearchHistoryModel,
 ];
 
 /** Koleksiyonları ve indeksleri oluşturur; transaction içinde ilk yazıdan önce hazır olmalı. */

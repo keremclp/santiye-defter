@@ -21,7 +21,9 @@ function isBodyParserError(err: unknown): err is { type: string; status: number 
 function toAppError(err: unknown): AppError {
   if (err instanceof AppError) return err;
   if (err instanceof ZodError) {
-    return new AppError('VALIDATION', 'Eksik veya hatalı bilgi.', {
+    // Şemanın kendi iş kuralı mesajı (ör. pay toplamı) varsa doğrudan gösterilir.
+    const rule = err.issues.find((issue) => issue.code === 'custom');
+    return new AppError('VALIDATION', rule?.message ?? 'Eksik veya hatalı bilgi.', {
       issues: err.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
     });
   }

@@ -37,7 +37,7 @@ export interface CompanyScopedFields {
   updatedAt: Date;
 }
 
-const historyEntrySchema = new Schema<HistoryEntry>(
+export const historyEntrySchema = new Schema<HistoryEntry>(
   {
     at: { type: Date, required: true },
     by: { type: Schema.Types.ObjectId, ref: 'User', required: true },

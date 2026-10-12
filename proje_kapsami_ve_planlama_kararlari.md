@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -849,6 +849,32 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 - **Sıfırlama komutu:** `pnpm --filter api platform:reset-2fa --username <ad>` derlenmiş API ile (`pnpm build` sonrası) yalnız sunucuda çalışır.
 - **Canlıya hazırlık notu:** Ters vekil sunucu arkasında deneme sınırının gerçek IP'yi görmesi için Express `trust proxy` ayarı barındırma seçilince yapılmalıdır.
 
+### 10.8. Adım 3'te kabul edilen finans API'si kararları (12 Ekim 2026)
+
+Adım 3 (finans API'si) tamamlandı: şantiye, kişi, kategori, firma bilgisi, işlem (paylar, iadeler, düzeltme, silme, geri yükleme), anlaşma ve başlangıç kaydı uçları ile pano, vade, arama ve silinenler. Bölüm 9'daki örnek tutarlar API üzerinden uçtan uca birebir tutuyor; bütün firma uçları yalıtım testinde. Şartnamenin açık bıraktığı şu noktalar kullanıcı tarafından kararlaştırıldı:
+
+- **Kopyala taslak döner:** `POST /transactions/:id/duplicate` kayıt açmaz; aynı alanlar ve bugünün tarihiyle form taslağı döner, anlaşma bağlantısı "onay gerekli" işaretlidir. Kullanıcı kaydedince normal oluşturma akışı çalışır.
+- **Tamamlanan şantiye:** Anlaşmaya bağlı ödeme, tahsilat, iade ve düzeltme serbesttir. Anlaşmaya bağlı olmayan yeni gider gerekçe ister (`POST /transactions` gövdesinde `reason`); anlaşmasız gelir serbesttir. Yeni anlaşma için şantiye gerekçeyle yeniden aktifleştirilir.
+- **Arşivlenen şantiye tamamlanan gibi davranır:** Aynı kurallar uygulanır; arşiv yalnız günlük listeden kaldırır.
+- **Arşivden çıkış önceki duruma döner:** `completedAt` doluysa tamamlandı, boşsa aktif. Yeniden aktifleştirme `completedAt` alanını temizler.
+- **Geri yüklemede fazla ödeme onayı:** Silinmiş ödeme geri yüklenirken anlaşmanın kalanı aşılıyorsa yeni kayıttaki gibi `confirmExcess` ve `excessReason` istenir.
+- **Mükerrer uyarısı kayıt sonrası:** Aynı gün, tutar, kişi ve kapsamda kayıt varsa oluşturma cevabında uyarı ve benzer kayıtların numaraları döner; kayıt engellenmez, ayrı kontrol ucu yoktur.
+- **Başlangıç kayıtları özetlerde:** Anlaşma toplamı, ödenen, kalan borç/alacak ve gecikmiş tutarlar anlaşma ile başlangıç kayıtlarını birlikte içerir; başlangıç kayıtları ayrıca ayrı alt toplam olarak döner.
+- **Kişi silme:** Silinmiş ama geri yüklenebilir hareket veya anlaşması olan kişi de silinmez, pasifleştirilir.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **Formüllerin yeri:** Veritabanı yalnız türe göre toplanmış tutarları getirir; net tahsilat/ödeme ve fark `cashTotalsFromSums`, kalan/fazla/ödeme durumu `computeAgreementBalance`, vade grupları `dueStateOf` ile `packages/shared` içinde hesaplanır.
+- **Güvenli tekrar:** Para hareketi, anlaşma ve iade oluşturmada Idempotency-Key zorunlu; şantiye, kişi ve kategori oluşturmada isteğe bağlı (gelirse uygulanır).
+- **Sürüm kontrolü:** Sabitleme ve arama geçmişini temizleme dışındaki bütün değiştirme işlemleri (güncelleme, tamamlama, arşiv, bedel/vade/iş durumu, iptal, silme, geri yükleme) `expectedUpdatedAt` ister.
+- **İade kaydı:** Açıklaması iade gerekçesidir; kaynak hareketin kişisi ve kategorisi taşınır. Bağlı iadesi olan hareketin kişisi değiştirilemez.
+- **İptal ve bedel:** İptal edilen anlaşmaya ödeme/tahsilat bağlanabilir. Hesabı kesinleşmemiş iptalde bedel değişikliği kesin bedeli kaydeder; kesin bedeli girilmiş iptalde bedel değiştirilemez; iptal edilen anlaşmanın iş durumu değişmez.
+- **Kategori:** Pasif kategori yeni kayıtta seçilemez, geri yüklemede engel olmaz. Ad firma içinde Türkçe katlamalı olarak benzersizdir.
+- **Başlangıç kategorileri:** Firma oluşturulurken aynı transaction'da "Sistem" adına eklenir.
+- **Arama:** Tutar tek değer veya `10.000-20.000` biçiminde aralık olarak aranabilir.
+- **Firma bilgisi:** Görünen ad ve iletişim değişiklikleri firma kaydında geçmişle tutulur; işletim notu müşteriye dönmez.
+- **Performans notu:** Anlaşma listesi toplamları ve vade filtresi eşleşen anlaşmaları bellekte paylaşılan fonksiyonla hesaplar; firma başına binlerce anlaşmaya çıkılırsa gözden geçirilmelidir.
+
 ## 11. Açık ürün ve teknik kararlar
 
 - Barındırma sağlayıcısı, veritabanı paketi, yedekleme yöntemi ve aylık maliyet (zamanlama 10.4). İptal edilen teknik plandaki kademeli düşük maliyet yaklaşımı ve pilotta en fazla 24 saatlik veri kaybı kabulü artık bağlayıcı değil; yeniden kararlaştırılacak.
@@ -899,3 +925,4 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 | 12 Ekim 2026 | Adım 0 (proje iskeleti) tamamlandı ve kabul edildi (bölüm 10.5). Geliştirme ortamı Node.js 24 LTS ve pnpm 12 olarak belirlendi; iptal edilen teknik plandaki Node 24 tercihi bu kez Adım 0 gerekçesiyle yeniden kabul edildi. MinIO resmi imajları dağıtılmadığı için yerel S3 deposu olarak `pgsty/minio` topluluk imajı seçildi; üretim deposu kararı açık kalır. TypeScript 6.0, MongoDB 8.2, `/health` cevap biçimi ve geliştirme ortamı varsayılanları kaydedildi. |
 | 12 Ekim 2026 | Adım 1 (finans çekirdeği) tamamlandı ve kabul edildi (bölüm 10.6). Şartnamedeki boşluklar için üç karar alındı: ödeme durumu net ödenen/kalan/fazladan hesaplanır (bedel 0 ve ödeme yok → `settled`, tamamen iade edilmiş → `open`); para girişi katı tr-TR biçimindedir ve `12.5` gibi girdiler reddedilir; iadesi olan pay kaldırılamaz, hedefi değiştirilemez ve iade toplamının altına indirilemez. İade hareketinin kaynak payların kapsamını taşıması ve vade grupları sonraki adımlar için kaydedildi. |
 | 12 Ekim 2026 | Adım 2 (API temeli) tamamlandı ve kabul edildi (bölüm 10.7). Şartnamedeki boşluklar için dört karar alındı: kullanıcı oluşturma tekrarında geçici şifre yeniden gösterilmez; şifre değişimi/sıfırlama, pasifleştirme ve 2FA sıfırlamasında oturumlar `tokensValidAfter` ile hemen düşer; yönetimde pasifleştirme, aktifleştirme ve şifre sıfırlama gerekçe ister; hizmet sonu günleri D dahil, bitiş günleri dahil sayılır. İlk şifre akışı, firma ayrımı koruması, deneme sınırı değerleri, kullanıcı adı biçimi ve kütüphane seçimleri sonraki adımlar için kaydedildi. |
+| 12 Ekim 2026 | Adım 3 (finans API'si) tamamlandı ve kabul edildi (bölüm 10.8). Şartnamedeki boşluklar için sekiz karar alındı: kopyala kayıt açmaz, taslak döner; tamamlanan şantiyede anlaşmasız gider gerekçe ister, anlaşmasız gelir serbest, yeni anlaşma için yeniden aktifleştirme gerekir; arşivlenen şantiye tamamlanan gibi davranır; arşivden çıkış önceki duruma döner; geri yüklemede kalan aşılırsa fazla onayı istenir; mükerrer uyarısı kayıt sonrası cevapta verilir; özetlerde başlangıç kayıtları toplamlara dahil ve ayrıca alt toplam olarak gösterilir; silinmiş kaydı olan kişi de silinmez, pasifleştirilir. Formüllerin `packages/shared` içinde kalması, güvenli tekrar ve sürüm kontrolü kapsamı, iade ve iptal davranışları sonraki adımlar için kaydedildi. |
