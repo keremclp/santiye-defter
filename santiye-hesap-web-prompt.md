@@ -34,6 +34,7 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 
 | Katman | Seçim | Not |
 | --- | --- | --- |
+| Çalışma ortamı | Node.js 24 LTS, pnpm, TypeScript 6.0 | `.nvmrc` ve `engines: >=24`. TypeScript 7, lint aracı desteklediğinde yükseltilebilir |
 | Web | React 19, TypeScript, Vite | Tek sayfa uygulama |
 | Yönlendirme | React Router | Tanıtım, uygulama ve yönetim aynı origin |
 | Sunucu durumu | TanStack Query | Liste, detay, mutasyon, yeniden doğrulama |
@@ -42,10 +43,11 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 | Stil | CSS Modules veya tek tasarım token dosyası | Aşağıdaki renkler sabit |
 | HTTP | Axios | `Authorization: Bearer` |
 | API | Node.js, Express, TypeScript | ESM veya derlenmiş TS |
-| Doğrulama | Zod | Gövde ve sorgu |
-| Veritabanı | MongoDB (replica set) + Mongoose | Çok dokümanlı transaction zorunlu |
-| Kimlik | JWT access + refresh | Access 15 dk, refresh 30 gün, her yenilemede döner |
-| Şifre | bcrypt | Maliyet 12 |
+| Doğrulama | Zod | Gövde ve sorgu. Ortak şemalar yüklenince Zod'un hazır hata mesajları Türkçeye ayarlanır |
+| Veritabanı | MongoDB 8.2 (replica set) + Mongoose | Çok dokümanlı transaction zorunlu. API açılışta replica set olduğunu doğrular; değilse başlamaz. Üretim veritabanı da en az 8.2 olmalı |
+| Kimlik | JWT access + refresh (`jose`) | Access 15 dk, refresh 30 gün, her yenilemede döner |
+| Şifre | bcrypt algoritması (`bcryptjs`) | Maliyet 12. Yük artarsa yerel `bcrypt` paketine geçilebilir |
+| Yerel geliştirme | Docker: MongoDB 8.2 replica set, `pgsty/minio` (S3 uyumlu) | Resmi MinIO imajları dağıtılmadığı için topluluk imajı; yalnız yerelde, sürümü sabit. Kod yalnız S3 API'sini kullanır |
 | Belge depolama | S3 uyumlu özel bucket (ör. Cloudflare R2) | İmzalı ve süreli bağlantılar |
 | Görsel önizleme | sharp (HEIC için heic-convert) | Orijinal dosya korunur |
 | İki aşamalı doğrulama | otplib (TOTP, RFC 6238) | Yalnız ürün sahibi hesabı; doğrulama uygulamasıyla 6 haneli kod |
@@ -136,16 +138,18 @@ Tarayıcı
 Kurallar:
 
 - Rota ince olsun. İş kuralı serviste kalsın.
-- Her başarılı JSON: `{ success: true, data, message? }`.
+- Her başarılı JSON: `{ success: true, data, message? }`. Tek istisna `/health`: `{ success: true, status: "ok" }`.
 - Her hata JSON: `{ success: false, message, code, details? }` ve doğru HTTP kodu.
 - Liste cevapları sayfalı olsun: `{ items, page, limit, total }`. Filtreli listelerde `totals` alanı bütün filtrelenmiş sonuçların toplamını taşır, yalnız o sayfanın değil.
-- **Firma ayrımı:** Kullanıcı ve ürün sahibi dışındaki her modelde `companyId` zorunludur. Firma kullanıcısının bütün sorgularına `companyId` servis katmanında zorla eklenir; istemciden gelen `companyId` kabul edilmez. Başka firmaya ait kayıt kimliği istenirse 404 dön (403 değil; kaydın varlığı sızmasın). Bütün bileşik indeksler `companyId` ile başlar.
+- **Firma ayrımı:** Kullanıcı ve ürün sahibi dışındaki her modelde `companyId` zorunludur. Firma kullanıcısının bütün sorgularına `companyId` servis katmanında zorla eklenir; istemciden gelen `companyId` kabul edilmez. Başka firmaya ait kayıt kimliği istenirse 404 dön (403 değil; kaydın varlığı sızmasın). Bütün bileşik indeksler `companyId` ile başlar. Firma verisi taşıyan modellerde `companyId` filtresi olmayan her sorgu reddedilir; firma kayıtlarına servis katmanındaki `forCompany` yardımcısıyla erişilir. Her yeni firma ucu API testlerindeki ortak firma yalıtım listesine eklenir.
 - Silme fiziksel değil. `deletedAt` dolar. Varsayılan sorgular `deletedAt: null`.
-- **Para:** Tutarlar kuruş cinsinden tamsayı saklanır ve API'de kuruş tamsayı olarak taşınır (`12.500,50 TL` → `1250050`). Kayan noktalı sayı kullanma. Ekranda `tr-TR` para formatı.
+- **Para:** Tutarlar kuruş cinsinden tamsayı saklanır ve API'de kuruş tamsayı olarak taşınır (`12.500,50 TL` → `1250050`). Kayan noktalı sayı kullanma.
+  - **Giriş katı tr-TR biçimindedir:** Nokta yalnız üç haneli binlik grubunda, virgül ondalık ayracı olarak geçerlidir (`12500`, `12.500`, `12.500,50`). Binlik grubuna uymayan noktalı girdi (`12.5`) reddedilir ve "Ondalık için virgül kullanın" denir. En fazla iki ondalık kabul edilir; fazlası yuvarlanmaz, reddedilir.
+  - **Gösterim:** Ekranda tutarlar `Intl` tr-TR para biçimiyle (`₺12.500,50`); hata ve uyarı metinlerinde `40.000 TL` biçiminde.
 - **Tarih:** İşlem, vade, anlaşma, başlangıç ve takip tarihleri `YYYY-MM-DD` metni olarak saklanır; saat dilimi kayması olmaz. Sistem zamanları (`createdAt` vb.) ISO UTC. "Bugün" ve gecikme hesabı Europe/Istanbul gününe göre yapılır.
 - **Atomik işlem:** Bir para hareketinin, payların, bağlı anlaşma bakiyelerinin, iade toplamlarının ve kayıt geçmişinin değiştiği her işlem tek MongoDB transaction'ı içinde tamamlanır. Yarım güncelleme olmaz.
-- **Eşzamanlı güncelleme:** Güncelleme isteklerinde `expectedUpdatedAt` zorunlu. Kayıt bu arada değişmişse 409 `CONFLICT`, mesaj "Kayıt başka bir yerde güncellendi" ve güncel kayıt `details` içinde döner. Sessizce üzerine yazma.
-- **Güvenli tekrar:** Para hareketi, anlaşma, iade, ödeme ve hesap oluşturan bütün `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
+- **Eşzamanlı güncelleme:** Sabitleme ve arama geçmişini temizleme dışındaki bütün değiştirme işlemlerinde (güncelleme, tamamlama, arşiv, bedel/vade/iş durumu, iptal, silme, geri yükleme) `expectedUpdatedAt` zorunlu. Kayıt bu arada değişmişse 409 `CONFLICT`, mesaj "Kayıt başka bir yerde güncellendi" ve güncel kayıt `details` içinde döner. Sessizce üzerine yazma.
+- **Güvenli tekrar:** Para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturma `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Şantiye, kişi ve kategori oluşturmada isteğe bağlıdır; gelirse uygulanır. Web, çift tıklamaya karşı bütün oluşturma isteklerinde anahtar gönderir. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
 - **Hizmet durumu her istekte hesaplanır** (bölüm 9.10). Görüntüleme döneminde yazma isteği 403 `READ_ONLY`; kapalı durumlarda 403 `ACCESS_CLOSED`.
 
 Kimlik akışı:
@@ -414,9 +418,13 @@ Kayıttan sonra detaya git. Düzenlemede aynı alanlar. Sabitle.
 
 Durum eylemleri ayrı düğmelerdir:
 
-- **Tamamla:** Açık borç/alacak ve vadeler dialogda gösterilir; kullanıcı onayıyla tamamlanır. Tamamlanma tarihi bugün önerilir, değiştirilebilir. Tamamlamak tutarları, vadeleri veya kalanları değiştirmez. Tamamlanan şantiyede ödeme, tahsilat, iade ve düzeltme yapılabilir; yeni doğrudan gider gerekçeyle girilir.
-- **Yeniden aktifleştir:** gerekçe ister.
-- **Arşivle / arşivden çıkar:** Günlük listeden kaldırır; kayıt, belge ve açık tutarlar firma özetinde ve vade listelerinde kalır.
+- **Tamamla:** Açık borç/alacak ve vadeler dialogda gösterilir; kullanıcı onayıyla tamamlanır. Tamamlanma tarihi bugün önerilir, değiştirilebilir. Tamamlamak tutarları, vadeleri veya kalanları değiştirmez. Tamamlanan şantiyede:
+  - Anlaşmaya bağlı ödeme, tahsilat, iade ve düzeltme serbesttir.
+  - Anlaşmaya bağlı olmayan yeni gider gerekçe ister (formda gerekçe alanı açılır).
+  - Anlaşmaya bağlı olmayan gelir serbesttir.
+  - Yeni anlaşma için şantiye önce gerekçeyle yeniden aktifleştirilir.
+- **Yeniden aktifleştir:** gerekçe ister; `completedAt` alanını temizler.
+- **Arşivle / arşivden çıkar:** Günlük listeden kaldırır; kayıt, belge ve açık tutarlar firma özetinde ve vade listelerinde kalır. Arşivlenen şantiye kayıt kuralları bakımından tamamlanan şantiye gibi davranır. Arşivden çıkınca önceki duruma döner: `completedAt` doluysa tamamlandı, boşsa aktif.
 - **Sil:** Yalnız hiç aktif hareketi ve anlaşması olmayan şantiyede, onay ve gerekçeyle, yumuşak. Kaydı olan şantiyede sil yerine arşivle önerilir.
 
 Detay üstü lacivert özet: tahsilat, ödeme, fark, ödenecek anlaşma toplamı, ödenen, kalan borç, tahsil edilecek anlaşma toplamı, tahsil edilen, kalan alacak, fazla ödeme/tahsilat varsa ayrı. Bloklar: son hareketler, anlaşmalar, vadeler, rapor bağlantısı. Gelir ekle, gider ekle ve anlaşma ekle bu projeye kilitli açılsın.
@@ -451,7 +459,7 @@ Detay: ad, tür, etiketler, iletişim, not. Finans, borç ve alacak **ayrı** (n
 
 Eylemler: ilgili anlaşmaya ödeme yap / tahsilat al, yeni anlaşma, hesap dökümü indir.
 
-İşlem geçmişi olan kişi silinmez; **pasifleştirilir**. Pasif kişi yeni kayıtta önerilmez, geçmişte görünür, yeniden aktifleştirilebilir. Hiç kaydı olmayan kişi onayla yumuşak silinebilir.
+İşlem geçmişi olan kişi silinmez; **pasifleştirilir**. Silinmiş ama geri yüklenebilir hareketi veya anlaşması olan kişi de bu kapsamdadır. Pasif kişi yeni kayıtta önerilmez, geçmişte görünür, yeniden aktifleştirilebilir. Hiç kaydı olmayan kişi onayla yumuşak silinebilir.
 
 ### 7.4 İşlemler
 
@@ -476,8 +484,9 @@ Form:
 | --- | --- | --- |
 | Tür | Evet | Gelir veya gider. Açılan eylemden hazır, URL ile kilitlenebilir |
 | Şantiye veya firma geneli | Evet | Aktif şantiyeler chip veya seçim + açık "Firma geneli" seçeneği. Bağlamdan hazır gelebilir, görünür olur. Tamamlanan şantiye de seçilebilir |
-| Tutar | Evet | 0'dan büyük, en fazla iki ondalık, yazarken binlik. Boş başlar |
+| Tutar | Evet | 0'dan büyük, en fazla iki ondalık, yazarken binlik. Boş başlar. Giriş kuralı bölüm 3 "Para" |
 | İşlem tarihi | Evet | Bugün hazır, değiştirilebilir |
+| Gerekçe | Koşullu | Yalnız tamamlanan veya arşivlenen şantiyeye anlaşmasız gider girilirken görünür ve zorunludur |
 | Kişi/firma | Hayır | Yazınca öner, listeden seç, yoksa aynı akışta hızlı ekle |
 | Gider kategorisi | Hayır, giderde | Seçilmezse "Kategorisiz" |
 | Anlaşma | Hayır | Seçilen kişinin aynı kapsam ve yöndeki açık anlaşmaları önerilir; **otomatik bağlanmaz**. Seçilirse kalan tutar görünür |
@@ -490,6 +499,7 @@ Kurallar:
 - Anlaşma seçilirse kişi ve kapsam anlaşmadan gelir ve kilitlenir. Tutar kalanla otomatik dolmaz; "Kalanın tamamı" kısayolu vardır.
 - Tutar kalanı aşarsa fazla ödeme/tahsilat uyarısı çıkar; kullanıcı onay ve gerekçe girmeden kayıt oluşmaz (bölüm 9.4).
 - **Paylaştır:** Tek gerçek ödemeyi birden fazla şantiye/anlaşmaya bölmek için. Satır ekle: kapsam, varsa anlaşma veya başlangıç kaydı, pay tutarı; her satırda hedefin kalanı görünür. Bütün satırlar aynı yönde ve varsa aynı kişiye ait. Dağıtılmamış tutar görünür; pay toplamı ana tutara eşit olmadan kaydetme açılmaz. Hata metni örneği: "Payların toplamı 40.000 TL olmalı; 5.000 TL daha dağıtılmalı." Basit kayıtta paylaştırma satırları görünmez.
+- **Mükerrer uyarısı:** Aynı gün, aynı tutar, aynı kişi ve kapsamda başka kayıt varsa kayıt engellenmez. Oluşturma cevabı uyarıyı ve benzer kayıtların numaralarını döner; ekran bunu kayıttan sonra gösterir ve benzer kayıtlara bağlantı verir.
 - Kaydet başarılı olunca geldiği liste/detaya dön. "Kaydet ve yeni ekle" tutarı boşaltır, kapsam ve tarihi korur, kişi/anlaşma bağlantısını görünür biçimde yeniden sorar.
 - Kayıt finansal kayıt ile belge yüklemesini ayrı gösterir: "İşlem kaydedildi; 1 belge yüklenemedi" → yalnız belge yeniden denenir.
 
@@ -497,9 +507,14 @@ Detay: kayıt no, tür, tutar, tarih, kapsam ve paylar, kişi, kategori, anlaşm
 
 Eylemler:
 
-- **Düzenle (finansal düzeltme):** Tutar, tarih, kapsam, kişi, anlaşma, paylar değişirse eski/yeni değerler ve bakiye etkisi önizlenir, gerekçe zorunlu. Yalnız açıklama değişiyorsa gerekçe gerekmez, geçmiş yine yazılır. Yanlış şantiye/anlaşma düzeltmesinde eski ve yeni bakiyeler aynı transaction'da güncellenir; tutar değişmiyorsa firma toplamı değişmez. Bağlı iadeyi tutarsız bırakan değişiklik engellenir.
+- **Düzenle (finansal düzeltme):** Tutar, tarih, kapsam, kişi, anlaşma, paylar değişirse eski/yeni değerler ve bakiye etkisi önizlenir, gerekçe zorunlu. Yalnız açıklama değişiyorsa gerekçe gerekmez, geçmiş yine yazılır. Yanlış şantiye/anlaşma düzeltmesinde eski ve yeni bakiyeler aynı transaction'da güncellenir; tutar değişmiyorsa firma toplamı değişmez. Bağlı iadeyi tutarsız bırakan değişiklik engellenir:
+  - Bağlı aktif iadesi olan pay kaldırılamaz.
+  - Böyle bir payın şantiyesi veya anlaşması değiştirilemez.
+  - Böyle bir payın tutarı bağlı iade toplamının altına indirilemez.
+  - Bağlı iadesi olan hareketin kişisi değiştirilemez.
+  - Hedef değişecekse önce iade silinir; ekran bunu açıklar.
 - **İade kaydet:** bölüm 7.5.
-- **Kopyala:** Yeni kayıt, aynı alanlar, tarih bugün, geçmiş ve belgeler boş, anlaşma bağlantısı yeniden onaylanır.
+- **Kopyala:** Kayıt açmaz. Aynı alanlar ve bugünün tarihiyle dolu bir yeni kayıt formu açılır; geçmiş ve belgeler boş, anlaşma bağlantısı "onay gerekli" işaretlidir. Kullanıcı kaydedince normal oluşturma akışı çalışır.
 - **Sil:** Tutar, kapsam ve bakiye etkisiyle onay + gerekçe. Bağlı aktif iadesi varsa silinemez; nedeni gösterilir. Paylaştırılmış hareketin bütün payları birlikte kalkar.
 - **Geri al:** Silinenlerden; bölüm 7.9.
 
@@ -508,7 +523,7 @@ Eylemler:
 İlgili ödeme/tahsilat detayından "İade kaydet" açılır. Ödemeden geri gelen paraya **ödeme iadesi**, müşteriye geri verilen tahsilata **tahsilat iadesi** denir.
 
 - Kaynak hareket, önceki iadeler ve en fazla iade edilebilir tutar gösterilir.
-- Zorunlu: iade tutarı (pozitif), gerçek tarih, kısa gerekçe. Belge isteğe bağlı.
+- Zorunlu: iade tutarı (pozitif), gerçek tarih, kısa gerekçe. Belge isteğe bağlı. Gerekçe iade kaydının açıklaması olur; kaynak hareketin kişisi ve kategorisi iade kaydına taşınır.
 - Kaynak paylaştırılmışsa kullanıcı hangi payı ne kadar geri çevirdiğini seçer; pay bazında iade, payın kalan iade edilebilir tutarını aşamaz.
 - Kaydetmeden önce net ödenen/tahsil edilen, kalan ve fazla tutar etkisi önizlenir.
 - İade başka anlaşmaya kendiliğinden dağıtılmaz; kaynak hareketin tutarı değişmez.
@@ -556,15 +571,19 @@ Eylemler:
 - **Vadeyi değiştir:** eski/yeni tarih ve gerekçe.
 - **İşi tamamlandı olarak işaretle:** iş durumunu değiştirir; borç/alacağı sıfırlamaz.
 - **İptal et:** İşin iptalini ve hesaplaşmayı ayırır. Kesinleşen bedel biliniyorsa yeni bedel ve gerekçe alınır; ödenen, kalan ve fazla birlikte gösterilir. Kesin bedel belli değilse anlaşma "İptal — hesap kesinleşmedi" olarak kalır, kalan gizlenmez. İptal para iadesi oluşturmaz; geri gelen para iade eylemiyle girilir.
+  - İptal edilen anlaşmaya ödeme/tahsilat bağlanabilir (hesaplaşma için).
+  - Hesabı kesinleşmemiş iptalde "Bedeli değiştir" kesin bedeli kaydeder.
+  - Kesin bedeli girilmiş iptalde bedel değiştirilemez.
+  - İptal edilen anlaşmanın iş durumu değiştirilemez.
 - **Sil:** Yalnız hiç aktif bağlı hareketi olmayan anlaşmada, onay ve gerekçeyle. Hareketi olan anlaşmada sil yerine iptal veya bedel değişikliği önerilir.
 
 ### 7.7 Vadeler
 
-Üç grup: gecikmiş, yaklaşan (vade tarihi aralığı seçilebilir, varsayılan 30 gün), vadesi belirlenmemiş açık tutarlar. Borç ve alacak ayrı sekmeler. Tamamlanan ve arşivlenen şantiyelerin açık tutarları dahil. Satırda kişi, anlaşma, kapsam, vade, kalan, gecikme gün sayısı. Bildirim yok; yalnız uygulama içi liste.
+Üç grup: gecikmiş, yaklaşan (vade tarihi aralığı seçilebilir, varsayılan 30 gün), vadesi belirlenmemiş açık tutarlar. Pencerenin ötesindeki vadeler ayrı "Daha sonra" (`later`) grubunda listelenebilir. Gruplama kuralı bölüm 9.3. Borç ve alacak ayrı sekmeler. Tamamlanan ve arşivlenen şantiyelerin açık tutarları dahil. Satırda kişi, anlaşma, kapsam, vade, kalan, gecikme gün sayısı. Bildirim yok; yalnız uygulama içi liste.
 
 ### 7.8 Arama
 
-Tek kutu: şantiye, kişi, anlaşma, tutar, açıklama, kayıt numarası. Sonuçlar dört grup: Şantiyeler, Kişiler / firmalar, Anlaşmalar, İşlemler. Tür filtresi, tarih aralığı. Türkçe büyük/küçük harf ve `ı/i`, `ş/s` gibi karakterler engel olmasın. Arama firmanın bütün kayıtlarında çalışır, yalnız yüklenmiş sayfada değil. Belge içeriğinde arama yok. Boş sorguda son aramalar (en fazla üç, yalnız o kullanıcının) ve temizle. Arama yapılınca geçmişe yaz.
+Tek kutu: şantiye, kişi, anlaşma, tutar, açıklama, kayıt numarası. Sonuçlar dört grup: Şantiyeler, Kişiler / firmalar, Anlaşmalar, İşlemler. Tür filtresi, tarih aralığı. Türkçe büyük/küçük harf ve `ı/i`, `ş/s` gibi karakterler engel olmasın. Arama firmanın bütün kayıtlarında çalışır, yalnız yüklenmiş sayfada değil. Belge içeriğinde arama yok. Tutar tek değer (`12.500`) veya aralık (`10.000-20.000`) olarak aranabilir. Boş sorguda son aramalar (en fazla üç, yalnız o kullanıcının) ve temizle. Arama yapılınca geçmişe yaz.
 
 ### 7.9 Silinenler
 
@@ -592,14 +611,14 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
 - **Profil:** görünen ad, telefon, e-posta. Kullanıcı adını yalnız ürün sahibi değiştirir.
 - **Şifre:** mevcut, yeni, tekrar. Yeni en az 8 karakter. Başarılı olunca bütün oturumlar düşer, girişe al.
 - **Firma:** ortak firma görünen adı ve iletişim bilgileri (bütün firma kullanıcıları düzenleyebilir, geçmiş tutulur). Depolama kullanımı: kullanılan / toplam, orijinal, önizleme ve silinmiş ama geri alınabilir belgeler ayrı. Hizmet durumu ve varsa bitiş tarihleri. Kapasite artırımı için `SUPPORT_CONTACT_TEXT`; satın alma akışı yok.
-- **Kategoriler:** gider kategorisi ekle, yeniden adlandır, pasifleştir. Kullanılmış kategori silinmez, pasifleşir.
+- **Kategoriler:** gider kategorisi ekle, yeniden adlandır, pasifleştir. Kullanılmış kategori silinmez, pasifleşir. Ad firma içinde Türkçe harf farkı gözetmeden benzersizdir. Pasif kategori yeni kayıtta seçilemez; pasif kategorili kaydın geri yüklenmesine engel olmaz.
 - **Hakkında:** ürün adı, slogan, sürüm, "veriler sunucuda, dil Türkçe".
 
 ### 7.12 Giriş ve ilk şifre
 
 - Giriş: kullanıcı adı ve şifre. Hata: "Kullanıcı adı veya şifre hatalı". Hangi alanın yanlış olduğunu söyleme. Altında "Demoyu dene" ve "Şifremi unuttum".
 - Şifremi unuttum: "Şifrenizi sıfırlamak için hesabınızı açan ürün sahibiyle iletişime geçin" + `SUPPORT_CONTACT_TEXT`. E-posta gönderimi yok.
-- İlk şifre: geçici şifreyle giren kullanıcı kişisel şifresini oluşturmadan başka ekrana geçemez; sonra boş firma özetine alınır.
+- İlk şifre: geçici şifreyle giren kullanıcı kişisel şifresini oluşturmadan başka ekrana geçemez. Kişisel şifre kaydedilince bütün eski oturumlar düşer, yeni oturum verilir ve kullanıcı yeniden giriş yapmadan firma özetine alınır. (Normal şifre değişiminde yeni oturum verilmez; kullanıcı yeniden giriş yapar, bölüm 7.11.)
 - Oturum bittiyse yeniden giriş istenir. Giriş sonrası önceki form kendiliğinden gönderilmez.
 
 ### 7.13 Yönetim (ürün sahibi)
@@ -607,10 +626,13 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
 - **İşletim özeti ve firma listesi:** Firma adına göre arama; durum filtresi (aktif, geçici durdurulmuş, hizmet sonu görüntüleme, arşiv saklama, silme onayı bekleyen). Satırda firma adı, kullanıcı sayısı, kullanılan/toplam depolama, hizmet durumu ve ilgili bitiş tarihleri. Kapasitesi dolan/yaklaşan, görüntüleme süresi biten ve saklama süresi dolan firmalar üstte özetlenir. Otomatik müşteri mesajı ve faturalama yok.
 - **Firma oluştur:** ad zorunlu; yetkili kişi, telefon, e-posta, işletim notu isteğe bağlı. Yeni firma aktif, boş ve 20 GB kapasiteyle başlar; demo verisi aktarılmaz. Benzer ad uyarısı engellemez.
 - **Kullanıcı ekle:** ad soyad, kullanıcı adı (sistem genelinde benzersiz, küçük harfe ve Türkçe kurallara göre normalize) ve firma zorunlu; telefon/e-posta isteğe bağlı. Sistem geçici şifre üretir ve **yalnız bir kez** gösterir; 72 saat geçerlidir. Ürün sahibi bunu müşteriye kendisi iletir; uygulama mesaj göndermez. Kullanıcı tek firmaya bağlıdır.
-- **Şifre sıfırla:** yeni geçici şifre üretir, mevcut şifre hiç görüntülenmez, bütün oturumlar düşer.
-- **Kullanıcıyı pasifleştir / aktifleştir:** giriş ve oturumlar kapanır; geçmişteki kayıt atıfları kalır.
+  - Kullanıcı adı biçimi: 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi ve tire.
+  - Geçici şifre hiçbir yerde düz metin saklanmaz. Oluşturma isteği aynı `Idempotency-Key` ile tekrar gelirse kullanıcı şifresiz döner ve "Geçici şifre ilk yanıtta gösterildi; görmediyseniz şifreyi sıfırlayın" denir.
+- **Şifre sıfırla:** gerekçe zorunlu. Yeni geçici şifre üretir, mevcut şifre hiç görüntülenmez, bütün oturumlar hemen düşer.
+- **Kullanıcıyı pasifleştir / aktifleştir:** gerekçe zorunlu. Giriş ve oturumlar hemen kapanır; geçmişteki kayıt atıfları kalır.
+- Firma ve kullanıcı oluşturmada gerekçe isteğe bağlıdır. Bütün yönetim işlemleri işletim geçmişine yazılır.
 - **Kapasite:** gerekçeyle artır veya mevcut kullanımın altına inmeden azalt; önceki/yeni değer ve kim/ne zaman kaydedilir.
-- **Hizmet yaşam döngüsü:** Geçici durdur, Hizmeti sonlandır, Yeniden aç ayrı eylemler. Sonlandırmada yürürlük tarihi (geçmişe çekilemez), 30. gün görüntüleme bitişi ve 180. gün saklama bitişi önizlenir; gerekçe ve onay alınır. Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
+- **Hizmet yaşam döngüsü:** Geçici durdur, Hizmeti sonlandır, Yeniden aç ayrı eylemler. Sonlandırmada yürürlük tarihi (geçmişe çekilemez), son görüntüleme günü (`viewUntil`) ve saklama bitişi (`retainUntil`) kesin tarih olarak önizlenir (gün sınırları bölüm 9.10); gerekçe ve onay alınır. Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
 - **Kalıcı silme:** Yalnız saklama süresi dolmuş firmada, ayrı ekranda. Firma adı, durum, kapsanan kayıt ve belge sayısı, geri döndürülemeyecek sonuç gösterilir; firma adını yazarak onay ve gerekçe. Durum: bekliyor / sürüyor / tamamlandı / başarısız. Kalıcı silinen firma yeniden açılamaz.
 - **İşletim geçmişi:** hesap, şifre sıfırlama, kapasite, hizmet ve silme işlemleri kim, ne zaman, gerekçe ile kaydedilir; şifre hiçbir yerde loglanmaz.
 - Ürün sahibi müşteri finansal kayıtlarını görüntülemez ve düzenlemez.
@@ -650,7 +672,7 @@ Bütün tutar alanları kuruş cinsinden tamsayıdır. İş tarihleri `YYYY-MM-D
 | `storageUsedBytes` | Atomik `$inc` ile güncellenir |
 | `isSuspended` | Geçici durdurma |
 | `serviceEndedAt` | Hizmet sonu yürürlük tarihi veya null |
-| `viewUntil` `retainUntil` | `serviceEndedAt` + 30 gün / + 180 gün; arşiv uzatmada `retainUntil` güncellenir |
+| `viewUntil` `retainUntil` | `serviceEndedAt` (D) + 30 gün / D + 180 gün; ikisi de dahil edilen son gündür (bölüm 9.10). Arşiv uzatmada `retainUntil` güncellenir |
 | `deletionStatus` | `none` `pending` `running` `done` `failed` |
 | `isDemo` `demoLastActiveAt` | Yalnız demo veritabanında |
 | `recordCounter` | Firma içi artan kayıt numarası |
@@ -668,8 +690,9 @@ Bütün tutar alanları kuruş cinsinden tamsayıdır. İş tarihleri `YYYY-MM-D
 | `tempPasswordExpiresAt` | Geçici şifre + 72 saat |
 | `isActive` | Pasifleştirmede false |
 | `refreshTokens` | Hash'lenmiş token dizisi, en fazla son 10 |
+| `tokensValidAfter` | Şifre değişimi, sıfırlama veya pasifleştirmede güncellenir; bu andan önce verilmiş access token'lar süresini beklemeden reddedilir |
 
-**PlatformAdmin:** `username`, `passwordHash`, `refreshTokens`, `totpSecretEncrypted` (`PLATFORM_TOTP_ENCRYPTION_KEY` ile şifreli), `totpConfirmedAt` (null ise kurulum zorunlu), `recoveryCodeHashes` (kullanılmamış kodlar), `failedSecondFactorCount` ve `secondFactorLockedUntil`. Ayrı koleksiyon; müşteri firmasına bağlı değildir.
+**PlatformAdmin:** `username`, `passwordHash`, `refreshTokens`, `totpSecretEncrypted` (`PLATFORM_TOTP_ENCRYPTION_KEY` ile şifreli), `totpConfirmedAt` (null ise kurulum zorunlu), `recoveryCodeHashes` (kullanılmamış kodlar), `totpLastUsedStep` (aynı kodun tekrar kullanılmaması için), `tokensValidAfter` (2FA sıfırlamasında güncellenir), `failedSecondFactorCount` ve `secondFactorLockedUntil`. Ayrı koleksiyon; müşteri firmasına bağlı değildir.
 
 ### 8.3 Project
 
@@ -706,7 +729,7 @@ Bütün tutar alanları kuruş cinsinden tamsayıdır. İş tarihleri `YYYY-MM-D
 | `name` | Zorunlu, firma içinde benzersiz |
 | `isActive` | Pasifleştirmede false |
 
-Yeni firmaya başlangıç kategorileri: Malzeme, İşçilik, Taşeron, Nakliye, Kira, Genel giderler. Kullanıcı değiştirebilir.
+Yeni firmaya başlangıç kategorileri: Malzeme, İşçilik, Taşeron, Nakliye, Kira, Genel giderler. Firma oluşturulurken aynı transaction'da "Sistem" adına eklenir; kullanıcı değiştirebilir. Ad firma içinde Türkçe katlamalı olarak benzersizdir.
 
 ### 8.6 Transaction
 
@@ -725,6 +748,8 @@ Yeni firmaya başlangıç kategorileri: Malzeme, İşçilik, Taşeron, Nakliye, 
 | `documentCount` | Atomik sayaç, en fazla 10 |
 
 Kurallar: Payların toplamı `amount`'a eşittir. Basit kayıtta tek pay otomatik oluşur. Pay hedefi anlaşmaysa yön uyumlu olmalı (gider ↔ ödenecek, gelir ↔ tahsil edilecek) ve kapsam anlaşmanın kapsamıyla aynı olmalı. `refundedAmount`, o paya bağlı aktif iadelerin toplamıdır ve aynı transaction'da güncellenir.
+
+İade hareketi de kendi paylarıyla kaydedilir: her payı, geri çevirdiği kaynak payın kapsamını ve anlaşmasını taşır. Şantiye toplamları iadeyi bu paylardan hesaplar. Anlaşmanın net ödenen/tahsil edilen tutarı ise kaynak payların `refundedAmount` değerinden hesaplanır; iade iki kez sayılmaz.
 
 İndeksler: `companyId + date` azalan; `companyId + allocations.projectId + date`; `companyId + allocations.agreementId`; `companyId + partyId + deletedAt`; `companyId + kind + date`; `companyId + recordNo` benzersiz; `companyId + createdBy`; `refundOf.transactionId`.
 
@@ -751,7 +776,7 @@ Anlaşmalar ve başlangıç borç/alacakları aynı koleksiyondadır.
 | `settlementPending` | İptal edildi ama kesin bedel belli değil |
 | `netSettled` `remaining` `excess` `paymentStatus` | Önbellek, bağlı her harekette aynı transaction'da yeniden hesaplanır |
 
-`paymentStatus`: `open` (hiç ödeme yok), `partial`, `settled` (kalan 0, fazla 0), `overpaid` (fazla > 0).
+`paymentStatus` nete göre ve şu sırayla belirlenir: fazla > 0 → `overpaid`; kalan 0 → `settled`; net ödenen/tahsil edilen 0 → `open`; aksi halde `partial`. Böylece bedeli 0'a inmiş ve ödemesi olmayan anlaşma `settled`, ödemeleri tamamen iade edilmiş anlaşma `open` görünür. Hesabı kesinleşmemiş iptal (`settlementPending`) ekranda ayrıca "İptal — hesap kesinleşmedi" olarak gösterilir.
 
 İndeksler: `companyId + projectId + partyId + deletedAt`; `companyId + direction + remaining`; `companyId + dueDate + remaining`; `companyId + paymentStatus`.
 
@@ -800,6 +825,8 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Dönem | İşlem tarihine göre. İade kendi tarihinin dönemine yazılır: ocakta 40.000 TL ödeme, şubatta 10.000 TL iade → ocak 40.000, şubat −10.000, toplam 30.000 |
 | Kişi özeti | O kişiye bağlı borç, alacak, fazla ödeme, fazla tahsilat ve doğrudan hareketler **ayrı**. Otomatik mahsup yok |
 | Kapsam | Tamamlanan ve arşivlenen şantiyelerin açık tutarları firma toplamında ve vade listelerinde kalır. Yalnız aktifleri kapsayan özet bunu açıkça yazar |
+| Başlangıç kayıtları özetlerde | Anlaşma toplamı, ödenen, kalan borç/alacak ve gecikmiş tutarlar anlaşmaları ve başlangıç kayıtlarını birlikte içerir; başlangıç kayıtları ayrıca ayrı alt toplam olarak döner. Ekran ve raporlarda bu toplamlar "Anlaşmalar ve başlangıç kayıtları" diye etiketlenir, başlangıç alt toplamı ayrıca gösterilir |
+| Hesap yeri | Veritabanı yalnız türe göre toplanmış tutarları getirir; net tahsilat/ödeme ve fark `cashTotalsFromSums`, kalan/fazla/ödeme durumu `computeAgreementBalance`, vade grupları `dueStateOf` ile `packages/shared` içinde hesaplanır |
 
 ### 9.2 Anlaşma ve başlangıç kaydı
 
@@ -818,6 +845,8 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Doğrudan hareket | Anlaşmaya bağlanmadıkça hiçbir anlaşmanın kalanını azaltmaz |
 | Ayrı şantiyeler | Bir şantiyeye bağlanan ödeme diğer şantiyenin bakiyesini değiştirmez; fazla ödeme başka borcu kendiliğinden kapatmaz |
 | Paylaştırma | 40.000 TL ödeme: A'ya 25.000, B'ye 15.000. A 75.000 → 50.000, B 60.000 → 45.000. Firma giderinde 40.000 bir kez |
+| Tamamlanan veya arşivlenen şantiye | Anlaşmaya bağlı ödeme, tahsilat, iade ve düzeltme serbest. Anlaşmasız yeni gider gerekçe (`reason`) ister; anlaşmasız gelir serbest. Yeni anlaşma için şantiye gerekçeyle yeniden aktifleştirilir |
+| İptal edilen anlaşma | Ödeme/tahsilat bağlanabilir. Hesabı kesinleşmemişse bedel değişikliği kesin bedeli kaydeder; kesin bedel girilmişse bedel değiştirilemez; iş durumu değiştirilemez |
 
 ### 9.3 Vade
 
@@ -829,6 +858,7 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Kısmi ödeme | Gecikmiş tutarı azaltır, vadeyi ertelemez |
 | Gecikme | Bedeli veya geliri artırmaz; faiz/ceza yok |
 | Vade değişikliği | Gerekçe, eski/yeni tarih, kullanıcı ve zaman tutulur |
+| Vade grupları | Açık tutarı olan kayıt tek gruba girer: gecikmiş (vade < bugün), yaklaşan (bugün ≤ vade ≤ bugün + pencere; varsayılan 30 gün, pano için 14 gün), daha sonra (`later`, pencerenin ötesi), vadesi belirlenmemiş. Açık tutarı olmayan kayıt hiçbir gruba girmez |
 
 ### 9.4 Fazla ödeme ve iade
 
@@ -838,6 +868,8 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | İade sınırı | Bir paya bağlı aktif iadelerin toplamı pay tutarını aşamaz. 45.000 ödemenin 5.000'i iade edilmişse en fazla 40.000 daha |
 | Ana tutar | Bağlı iade toplamının altına indirilemez |
 | İade düzeltme/silme/geri yükleme | Kaynak payın `refundedAmount` değeri ve bağlı anlaşma önbelleği aynı transaction'da güncellenir |
+| İadesi olan pay | Düzeltmede kaldırılamaz, şantiyesi veya anlaşması değiştirilemez, tutarı bağlı iade toplamının altına indirilemez. Bağlı iadesi olan hareketin kişisi değiştirilemez. Hedef değişecekse önce iade silinir |
+| Geri yüklemede fazla | Silinmiş ödeme/tahsilat geri yüklenirken anlaşmanın kalanı aşılıyorsa yeni kayıttaki gibi `confirmExcess` ve `excessReason` istenir |
 | Düzeltme ile iade farkı | Yanlış girilen tutar düzenleme ile düzeltilir (geçmişte eski/yeni kalır). Gerçekte geri gelen para iade olarak ayrı kaydedilir |
 
 ### 9.5 Silme, geri yükleme ve geçmiş
@@ -849,11 +881,11 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Paylaştırılmış silme | Bütün paylar birlikte kalkar |
 | Anlaşma silme | Yalnız aktif bağlı hareket yoksa |
 | Şantiye silme | Yalnız aktif hareket ve anlaşma yoksa; aksi halde arşivle |
-| Kişi silme | Yalnız hiç kaydı yoksa; aksi halde pasifleştir |
+| Kişi silme | Yalnız hiç kaydı yoksa (silinmiş ama geri yüklenebilir kayıtlar dahil); aksi halde pasifleştir |
 | Geri yükleme | İlişkiler ve iade sınırları yeniden doğrulanır; geçersizse açıklamalı 409. Etki bir kez uygulanır |
 | Kayıt geçmişi | Oluşturan kişi/zaman değişmez; her değişiklik `history`'ye yazılır |
-| Hareket kopyala | Yeni kayıt, aynı alanlar, tarih bugün, geçmiş ve belgeler boş |
-| Mükerrer uyarısı | Aynı gün, aynı tutar, aynı kişi ve kapsamda kayıt varsa uyar; engelleme |
+| Hareket kopyala | Kayıt açmaz; aynı alanlar ve bugünün tarihiyle form taslağı döner, anlaşma bağlantısı "onay gerekli" işaretlidir. Geçmiş ve belgeler kopyalanmaz. Kaydedilince normal oluşturma akışı çalışır |
+| Mükerrer uyarısı | Aynı gün, aynı tutar, aynı kişi ve kapsamda kayıt varsa kayıt engellenmez; oluşturma cevabı uyarıyı ve benzer kayıtların numaralarını döner. Ayrı kontrol ucu yoktur |
 
 ### 9.6 Belgeler ve kapasite
 
@@ -882,17 +914,19 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 
 | Kural | Davranış |
 | --- | --- |
-| Şifre | En az 8. Değişince, sıfırlanınca veya kullanıcı pasifleşince bütün oturumlar düşer |
-| Geçici şifre | 72 saat; ilk girişte değiştirme zorunlu |
+| Şifre | En az 8. Değişince, sıfırlanınca veya kullanıcı pasifleşince bütün oturumlar **hemen** düşer: refresh token'lar silinir, `tokensValidAfter` sayesinde eski access token'lar 15 dakikayı beklemeden reddedilir |
+| Geçici şifre | 72 saat; ilk girişte değiştirme zorunlu. İlk şifre değişiminde yeni oturum verilir; normal şifre değişiminde verilmez |
 | Giriş hatası | 401 "Kullanıcı adı veya şifre hatalı". Hesabın varlığını ifşa etme |
-| Deneme sınırı | Kullanıcı adı ve IP başına; aşılınca kısa bekleme |
+| Deneme sınırı | Aynı kullanıcı adında 15 dakikada 5 veya aynı IP'den 30 hatalı denemede 5 dakika bekleme. Sınır sunucu belleğinde tutulur; birden fazla sunucuya geçilirse paylaşılan bir depoya taşınmalıdır. Ters vekil sunucu arkasında gerçek IP için Express `trust proxy` barındırma seçilince ayarlanır |
+| Kullanıcı adı biçimi | 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi, tire. `tr-TR` küçük harfe normalize |
+| Yönetim gerekçesi | Kullanıcı pasifleştirme, aktifleştirme ve şifre sıfırlamada zorunlu; firma ve kullanıcı oluşturmada isteğe bağlı |
 | Kullanıcı adı çakışması | Yönetimde 409 "Bu kullanıcı adı kullanılıyor" |
 | Ürün sahibi ikinci adım | Şifre doğruysa yalnız 5 dakika geçerli bir ara token verilir; access/refresh ancak geçerli TOTP veya kurtarma koduyla verilir. TOTP ±1 zaman adımı toleranslı, aynı kod ikinci kez kabul edilmez |
 | Ürün sahibi kilit | 5 hatalı ikinci adım denemesinde 15 dakika kilit; PlatformLog'a yazılır |
 
 ### 9.9 Arama
 
-Firma filtresi zorunlu. Ad ve açıklama alanları Türkçe küçük harf ve karakter katlamalı kopya alanlarda aranır. Tutar araması kuruşa çevrilmiş eşitlik veya aralık olarak çalışır. Arama sonuçları silinmiş kayıtları dışlar.
+Firma filtresi zorunlu. Ad ve açıklama alanları Türkçe küçük harf ve karakter katlamalı kopya alanlarda aranır. Tutar araması kuruşa çevrilmiş eşitlik (`12.500`) veya aralık (`10.000-20.000`) olarak çalışır. Arama sonuçları silinmiş kayıtları dışlar.
 
 ### 9.10 Hizmet durumu ve erişim
 
@@ -901,15 +935,16 @@ Firmanın etkin durumu her istekte tarihlerden ve işaretlerden hesaplanır; zam
 | Etkin durum | Giriş | Okuma, rapor, dışa aktarma | Kayıt değiştirme ve belge yükleme | Kendi şifresi ve profili |
 | --- | --- | --- | --- | --- |
 | Aktif | Açık | Açık | Açık | Açık |
-| Hizmet sonu, ilk 30 gün | Açık | Açık | Kapalı (`READ_ONLY`) | Açık |
+| Görüntüleme dönemi (D … `viewUntil`) | Açık | Açık | Kapalı (`READ_ONLY`) | Açık |
 | Geçici durdurulmuş | Erişim mesajı | Kapalı | Kapalı | Kapalı |
-| Arşiv saklama (31–180. gün) | Erişim mesajı | Kapalı | Kapalı | Kapalı |
+| Arşiv saklama (`viewUntil`+1 … `retainUntil`) | Erişim mesajı | Kapalı | Kapalı | Kapalı |
 | Silme onayı bekliyor / siliniyor | Erişim mesajı | Kapalı | Kapalı | Kapalı |
 | Kullanıcı pasif | Erişim mesajı | Kapalı | Kapalı | Kapalı |
 
+- **Gün sınırları:** D yürürlük günüdür. Görüntüleme dönemi D ile `viewUntil` (D+30) arasıdır ve iki gün de dahildir. `viewUntil`+1 ile `retainUntil` (D+180) arası arşiv saklamadır. `retainUntil`'den sonra durum "silme onayı bekliyor" olur. Ekranlarda ve yasal metinlerde gün sayısı yerine bu kesin tarihler gösterilir.
 - Görüntüleme döneminde sayfa üstünde bant: "Hizmetiniz sona erdi. {tarih}'e kadar kayıtlarınızı görüntüleyip dışa aktarabilirsiniz." Değişiklik düğmeleri kapalı ve nedeni yazılı.
 - Erişim kapalıyken boş firma gösterme; açıklayıcı erişim mesajı göster. Veri silinmiş gibi sunma.
-- 180 gün sonunda veri kendiliğinden silinmez; ürün sahibinin onayını bekler. Hizmet bu süre içinde yeniden açılırsa firma geçmişiyle devam eder.
+- `retainUntil` sonrasında veri kendiliğinden silinmez; ürün sahibinin onayını bekler. Hizmet bu süre içinde yeniden açılırsa firma geçmişiyle devam eder.
 - Kullanıcı pasifleştirme, geçici durdurma veya tek kayıt silme hizmet sonu sürecini başlatmaz.
 
 ---
@@ -927,7 +962,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 | POST | `/auth/logout` | `refreshToken` opsiyonel | o token veya hepsi silinir |
 | GET | `/auth/me` | — | user, firma görünen adı, etkin hizmet durumu |
 | PATCH | `/auth/me` | `name, phone, email` | güncel profil |
-| PATCH | `/auth/password` | `currentPassword, newPassword` | oturumlar düşer |
+| PATCH | `/auth/password` | `currentPassword, newPassword` | bütün oturumlar düşer; yalnız ilk şifre değişiminde yeni tokenlar döner |
 
 `user`: `{ id, name, username, companyId, mustChangePassword }`.
 
@@ -986,13 +1021,13 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 | --- | --- | --- |
 | GET | `/transactions` | filtreler bölüm 7.4; cevapta `totals` |
 | GET | `/transactions/suggestions?kind=` | son açıklama önerileri |
-| POST | `/transactions` | `kind, amount, date, partyId?, categoryId?, description, allocations[], confirmExcess?, excessReason?` |
+| POST | `/transactions` | `kind, amount, date, partyId?, categoryId?, description, allocations[], confirmExcess?, excessReason?, reason?`. `reason`, tamamlanan/arşivlenen şantiyeye anlaşmasız giderde zorunlu. Cevap mükerrer uyarısı ve benzer kayıt numaralarını içerebilir |
 | GET | `/transactions/:id` | detay, paylar, iadeler, belgeler, geçmiş |
 | PATCH | `/transactions/:id` | düzeltme; finansal alan değişirse `reason` zorunlu |
 | POST | `/transactions/:id/refunds` | `amount, date, reason, parts[]` |
 | DELETE | `/transactions/:id` | `reason`; aktif iade varsa 409 `HAS_DEPENDENCIES` |
 | POST | `/transactions/:id/restore` | `reason` |
-| POST | `/transactions/:id/duplicate` | kopya |
+| POST | `/transactions/:id/duplicate` | kayıt açmaz; form taslağı döner (anlaşma bağlantısı "onay gerekli") |
 | GET | `/idempotency/:key` | `{ status: 'done' \| 'not_found', resultRef? }` |
 
 ### 10.7 Anlaşmalar
@@ -1028,7 +1063,7 @@ Anlaşmaya ödeme/tahsilat ayrı uç değil; `POST /transactions` ile `allocatio
 | Metot | Yol | Not |
 | --- | --- | --- |
 | GET | `/dashboard` | bölüm 7.1 verisi + `monthly` + `generatedAt` |
-| GET | `/dues` | `direction, group (overdue \| upcoming \| none), from, to` |
+| GET | `/dues` | `direction, group (overdue \| upcoming \| later \| none), from, to` |
 | GET | `/search` | `q, saveHistory, projectId, type, dateFrom, dateTo` |
 | GET | `/search/history` | son aramalar |
 | DELETE | `/search/history` | temizle |
@@ -1058,7 +1093,7 @@ Ayrı token türü. Müşteri finansal kayıtlarına uç yok.
 | POST | `/platform/companies` | firma oluştur |
 | GET | `/platform/companies/:id` | detay, kullanıcılar, depolama, hizmet, işletim geçmişi |
 | PATCH | `/platform/companies/:id` | ad, iletişim, işletim notu |
-| POST | `/platform/companies/:id/users` | kullanıcı + bir kez gösterilen geçici şifre |
+| POST | `/platform/companies/:id/users` | kullanıcı + bir kez gösterilen geçici şifre. Aynı `Idempotency-Key` ile tekrar: kullanıcı şifresiz ve açıklama mesajıyla döner |
 | PATCH | `/platform/users/:id` | ad, kullanıcı adı, `isActive` |
 | POST | `/platform/users/:id/reset-password` | yeni geçici şifre |
 | POST | `/platform/companies/:id/quota` | `quotaBytes, reason` |
@@ -1077,13 +1112,13 @@ Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 
 - İlk açılışta token varsa `/auth/me` dene. Başarılıysa uygulamaya al. Ağ hatasında kayıtlı kullanıcıyla içeri al, sonraki istek yenilensin; bağlantı durumu görünür olsun.
 - Tanıtım ve uygulama aynı görsel dili kullansın. Tanıtım daha geniş ve gradyanlı, uygulama `surface` zeminli ve sıkı.
 - Tabloda masaüstünde satır, 760 px altında kart. Sütunlar: tarih, açıklama, şantiye veya kişi, tutar.
-- Form kaydı çift tıklamada iki kayıt açmasın. Düğme gönderim sürerken kilitli; `Idempotency-Key` bölüm 9.7'ye göre.
+- Form kaydı çift tıklamada iki kayıt açmasın. Düğme gönderim sürerken kilitli; `Idempotency-Key` bölüm 9.7'ye göre. API'de anahtarın isteğe bağlı olduğu şantiye, kişi ve kategori oluşturma dahil, web bütün oluşturma isteklerinde anahtar gönderir.
 - Kaydedilmemiş formdan çıkışta sor: "Kaydedilmemiş değişiklikler. Çıkmak istediğinize emin misiniz?" Bu uyarı sonucu belirsiz bir gönderimi iptal ettiğini iddia etmesin.
 - Boş liste, hata ve yükleniyor durumları her listede olsun. Sonsuz iskelet koyma. Yükleme veya erişim hatasını `0 TL` gibi gösterme. Filtre sonucu boşsa "Filtrelere uyan kayıt bulunamadı" + filtreleri temizle.
 - Yenileme sırasında eski veri gösteriliyorsa "Güncelleniyor" bilgisi. Kısmi hata varsa başarısız bölümün toplamı kesin gibi gösterilmesin.
 - 409 `CONFLICT` geldiğinde güncel kayıt ile kullanıcının değişikliği yan yana gösterilsin; kullanıcı yeniden değerlendirsin. Onay gerektiren eylemler eski önizlemeyle tamamlanmasın.
 - Hata ilgili alanın yanında açık dille gösterilsin; telefonda ilk hatalı alana kaydırılsın.
-- Para inputu sayısal klavye ve `inputMode="decimal"`. Kullanıcı `12500` veya `12.500,50` yazabilir; kuruşa çevrilir. Gösterim `tr-TR`.
+- Para inputu sayısal klavye ve `inputMode="decimal"`. Kullanıcı `12500`, `12.500` veya `12.500,50` yazabilir; kuruşa çevrilir. `12.5` gibi girdide alanın altında "Ondalık için virgül kullanın" görünür (bölüm 3 "Para"). Gösterim `tr-TR`. Telefon dili İngilizce olan cihazlarda sayısal klavyede virgül çıkmayabilir; bu durum İngilizce dilli bir telefonda denenmeli. Ondalık girilemiyorsa giriş kuralını değiştirmeden önce kullanıcıya sorulmalı.
 - Tarih inputu `type="date"` veya özel takvim. Etiket Türkçe. Seçilen takvim günü korunur.
 - Belge seçimi telefonda `accept="image/*,application/pdf"` ve `capture` desteğiyle kameradan veya galeriden.
 - Demo ve görüntüleme döneminde bant her sayfada; kapalı eylemlerde neden yazılı.
