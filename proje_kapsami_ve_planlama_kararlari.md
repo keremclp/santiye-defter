@@ -1,6 +1,6 @@
 # İnşaat Gelir–Gider Uygulaması — Kapsam ve Planlama Kararları
 
-Son güncelleme: 11 Ekim 2026
+Son güncelleme: 12 Ekim 2026
 
 Bu belge, proje görüşmelerinde kabul edilen kararları, henüz kesinleşmeyen ayrıntıları ve aşamaların durumunu kaydeder. Mevcut özellik raporunun yerine geçmez; raporun ticari ürün ve web kullanımına uyarlanması için karar kaynağıdır.
 
@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -803,6 +803,17 @@ Bütün firmaları yöneten ürün sahibi hesabı için şu yöntem seçildi ve 
 | KVKK hukuki değerlendirmesi | Gerçek müşteri verisinden önce; barındırma seçilir seçilmez başlatılmalı | Kullanıcı bir avukat veya KVKK danışmanıyla görüşür. Claude danışmana verilecek veri envanterini hazırlayabilir |
 | Alan adı ve iletişim metni | Adım 9'dan önce | Kullanıcı seçer; o zamana kadar yer tutucu metin kullanılır |
 
+### 10.5. Adım 0'da kabul edilen geliştirme ortamı kararları (12 Ekim 2026)
+
+Adım 0 (proje iskeleti) tamamlandı: `docker compose up` sonrası `pnpm dev` ile API ve web açılıyor, `/health` cevap veriyor; `pnpm lint`, `pnpm typecheck`, `pnpm test` ve `pnpm build` temiz. Adım sırasında şartnamenin belirlemediği şu noktalar kararlaştırıldı:
+
+- **Node.js 24 LTS:** Yerel geliştirme ve CI Node 24 ile çalışır (`.nvmrc`, `engines: >=24`). Gerekçe: güncel Vite, Vitest, ESLint, React Router ve jsdom sürümleri Node 22.11'i desteklemiyor; eski ana sürümlere sabitlenmek yükseltme borcu bırakırdı. Paket yöneticisi pnpm 12.
+- **Yerel S3 deposu `pgsty/minio`:** MinIO resmi Docker imajlarını dağıtmayı bıraktığı için yerelde MinIO kaynağından derlenen topluluk imajı kullanılır; sürüm sabitlenir. Bu yalnız yerel geliştirme içindir; üretim belge deposu kararı 10.4'teki barındırma kararıyla verilir. Uygulama kodu yalnız S3 API'sini kullanır.
+- **TypeScript 6.0:** TypeScript 7 yayımlanmış olsa da lint aracı (typescript-eslint) henüz desteklemediği için 6.0 kullanılır; destek gelince yükseltilebilir.
+- **MongoDB 8.2:** Yerel Docker MongoDB ile testlerdeki bellek içi replica set aynı sürümü kullanır. API açılışta veritabanının replica set olduğunu doğrular; değilse başlamaz.
+- **`/health` cevabı:** Genel başarılı cevap biçimi `{ success, data }` olsa da şartname 10.9 ve görev metnindeki özel biçim uygulanır: `{ success: true, status: "ok" }`.
+- **Ortam değişkenleri:** `.env.example` değersiz tutulur. Geliştirmede boş bırakılan `PORT`, `MONGODB_URI` ve `WEB_ORIGIN` için API gizli olmayan yerel varsayılanları kullanır; üretimde bu değerler zorunludur. Yerel MinIO kimlik bilgileri `.env`'den okunur, koda yazılmaz.
+
 ## 11. Açık ürün ve teknik kararlar
 
 - Barındırma sağlayıcısı, veritabanı paketi, yedekleme yöntemi ve aylık maliyet (zamanlama 10.4). İptal edilen teknik plandaki kademeli düşük maliyet yaklaşımı ve pilotta en fazla 24 saatlik veri kaybı kabulü artık bağlayıcı değil; yeniden kararlaştırılacak.
@@ -850,3 +861,4 @@ Bütün firmaları yöneten ürün sahibi hesabı için şu yöntem seçildi ve 
 | 8 Ekim 2026 | Codex incelemesinin bulguları kabul edildi ve plana işlendi: silme günlüğünün önce yazılması ve ayrı kontrol veritabanında tutulması; geri yükleme sonrası silmelerin yeniden uygulanması; geçici alana yükleyip değiştirilemez nihai anahtara taşıma; atomik belge sayacı ve kapasite rezervasyonu; finansal kaynakların `transactions` + `obligations` olarak tanımlanması; fazla ödemede gerekçe; güvenli tekrar anahtarının içerik bağlı ve 24 saat geçerli olması; her istekte hesaplanan hizmet erişimi ve izin tablosu; iş kuyruğunda kilit süresi, deneme sınırı ve tekrar çalıştırma güvenliği; iki aşamalı büyük dışa aktarma; KVKK'nın altyapıyı etkileyebileceği; Node 24 LTS; arama ölçümü; avansın testlerden çıkarılması; anlaşma ve takip başlangıç tarihlerinin modele eklenmesi. Kullanıcı ayrıca kademeli düşük maliyetli altyapıyı kabul etti: geliştirme/demo 0 USD; pilot ~7–10 USD/ay + alan adı (Atlas M0 + gece şifreli yedek, tek Render Starter sunucusu); pilotta en fazla 24 saatlik veritabanı kaybı riski. Yedekli veritabanı, ayrı worker ve belgelerin B2 kopyası büyüme kademesine bırakıldı. Ayrıntılı plan `teknik_plan/` klasörüne taşındı. |
 | 11 Ekim 2026 | Kullanıcı `teknik_plan` klasöründeki teknik planı iptal etti; 6 ve 8 Ekim teknik plan kararları (kademeli altyapı, sağlayıcılar, 24 saatlik veri kaybı kabulü dahil) artık bağlayıcı değil. Yerine `santiye-hesap-web-prompt.md` esas alındı. Prompt, Şantiye Hesap tasarım sistemi ve sayfa yapısı korunarak bu belgedeki kurallarla güncellendi: firma ayrımı, ürün sahibinin açtığı hesaplar ve kullanıcı adıyla giriş, hesapsız demo, anlaşmanın gider yazmaması, ödenecek/tahsil edilecek anlaşmalar, başlangıç kayıtları, vade, iade, paylaştırma, firma geneli gider, kategoriler, belgeler, gerekçe ve geçmiş, güvenli tekrar, raporlar ve tam veri çıkışı, hizmet sonu erişimi, ürün sahibi yönetimi. Yalnız web ürünü yapılacak; mobil uygulama şimdilik yok. Tanıtım sitesi kapsama eklendi. |
 | 11 Ekim 2026 | Aşama 5 geliştirme planı kabul edildi (bölüm 10): şartname tek parça kalacak, iş Adım 0–10 olarak oturumlara bölünecek; görev metinleri `gelistirme/gorev_metinleri.md`, ajan kuralları `AGENTS.md` ve `CLAUDE.md` dosyalarında. Ürün sahibi hesabı için zorunlu TOTP, 10 tek kullanımlık kurtarma kodu ve yalnız sunucuda çalışan sıfırlama komutu kabul edildi ve şartnameye işlendi. Açık kararların zamanlaması belirlendi; git deposunu kullanıcı kuracak. |
+| 12 Ekim 2026 | Adım 0 (proje iskeleti) tamamlandı ve kabul edildi (bölüm 10.5). Geliştirme ortamı Node.js 24 LTS ve pnpm 12 olarak belirlendi; iptal edilen teknik plandaki Node 24 tercihi bu kez Adım 0 gerekçesiyle yeniden kabul edildi. MinIO resmi imajları dağıtılmadığı için yerel S3 deposu olarak `pgsty/minio` topluluk imajı seçildi; üretim deposu kararı açık kalır. TypeScript 6.0, MongoDB 8.2, `/health` cevap biçimi ve geliştirme ortamı varsayılanları kaydedildi. |
