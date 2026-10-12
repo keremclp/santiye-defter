@@ -1,9 +1,9 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { createApp } from '../src/app.js';
+import { buildTestApp } from './helpers/app.js';
 
 const webOrigin = 'http://localhost:5173';
-const app = createApp({ webOrigin });
+const { app } = buildTestApp({ config: { webOrigin } });
 
 describe('GET /health', () => {
   it('{ success: true, status: "ok" } döner', async () => {

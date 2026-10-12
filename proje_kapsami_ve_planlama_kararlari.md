@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -814,6 +814,41 @@ Adım 0 (proje iskeleti) tamamlandı: `docker compose up` sonrası `pnpm dev` il
 - **`/health` cevabı:** Genel başarılı cevap biçimi `{ success, data }` olsa da şartname 10.9 ve görev metnindeki özel biçim uygulanır: `{ success: true, status: "ok" }`.
 - **Ortam değişkenleri:** `.env.example` değersiz tutulur. Geliştirmede boş bırakılan `PORT`, `MONGODB_URI` ve `WEB_ORIGIN` için API gizli olmayan yerel varsayılanları kullanır; üretimde bu değerler zorunludur. Yerel MinIO kimlik bilgileri `.env`'den okunur, koda yazılmaz.
 
+### 10.6. Adım 1'de kabul edilen finans çekirdeği kararları (12 Ekim 2026)
+
+Adım 1 (finans çekirdeği) tamamlandı: para, tarih, pay doğrulaması, anlaşma/başlangıç hesabı, iade sınırları, toplamlar, fazla ödeme tespiti ve ortak giriş şemaları `packages/shared` içinde saf fonksiyon olarak yazıldı. Şartname bölüm 9 ve bu belgenin bölüm 6'sındaki örnek tutarlar birim testlerde birebir tutuyor. Şartnamenin açık bıraktığı şu noktalar kullanıcı tarafından kararlaştırıldı:
+
+- **Ödeme durumu nete göre hesaplanır:** Sıra: fazla > 0 → `overpaid`; kalan 0 → `settled`; net ödenen/tahsil edilen 0 → `open`; aksi halde `partial`. Böylece bedeli 0'a inmiş (ör. iptal, kesin bedel 0) ve ödemesi olmayan anlaşma `settled`; ödemeleri tamamen iade edilmiş anlaşma `open` görünür.
+- **Para girişi katı tr-TR biçimindedir:** Nokta yalnız üç haneli binlik grubunda, virgül ondalık ayracı olarak geçerlidir (`12500`, `12.500`, `12.500,50`). `12.5` gibi binlik grubuna uymayan noktalı girdi reddedilir ve "Ondalık için virgül kullanın" denir. En fazla iki ondalık kabul edilir; fazlası yuvarlanmaz, reddedilir.
+- **İadesi olan pay korunur:** Bağlı aktif iadesi olan pay düzeltmede kaldırılamaz, şantiyesi veya anlaşması değiştirilemez ve tutarı bağlı iade toplamının altına indirilemez. Hedef değiştirilecekse önce iade silinir.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **İade hareketinin payları:** İade hareketi, geri çevrilen kaynak payların kapsamını ve anlaşmasını taşıyan kendi paylarıyla kaydedilir; şantiye toplamları iadeyi de paylardan hesaplar. Anlaşmanın net ödenen/tahsil edilen tutarı ise kaynak payların `refundedAmount` değerinden hesaplanır; iade iki kez sayılmaz.
+- **Vade grupları:** Gecikmiş (vade < bugün), yaklaşan (bugün ≤ vade ≤ bugün + pencere; varsayılan 30 gün, pano için 14 gün), vadesi belirlenmemiş ve pencerenin ötesindeki vadeler (`later`). Açık tutarı olmayan kayıt hiçbir gruba girmez.
+- **Mesaj biçimi:** Ekranda tutarlar `₺12.500,50` biçiminde (Intl tr-TR); hata ve uyarı metinlerinde şartnamedeki örnekler gibi `40.000 TL` biçiminde gösterilir.
+- **Zod mesajları:** Ortak şemalar yüklendiğinde Zod'un hazır hata mesajları Türkçeye ayarlanır.
+
+### 10.7. Adım 2'de kabul edilen API temeli kararları (12 Ekim 2026)
+
+Adım 2 (API temeli) tamamlandı: firma modelleri için ortak alanlar ve firma ayrımı, her istekte hesaplanan hizmet durumu ve erişim tablosu, müşteri kimliği, ürün sahibi kimliği (TOTP, kurtarma kodları, kilit, sunucu sıfırlama komutu), temel yönetim API'si, güvenli tekrar ve çakışma kontrolü. Şartnamenin açık bıraktığı şu noktalar kullanıcı tarafından kararlaştırıldı:
+
+- **Geçici şifre tekrar gösterilmez:** Kullanıcı oluşturma isteği aynı Idempotency-Key ile tekrar gelirse oluşan kullanıcı şifresiz döner ve "Geçici şifre ilk yanıtta gösterildi; görmediyseniz şifreyi sıfırlayın" denir. Geçici şifre hiçbir yerde düz metin saklanmaz.
+- **Oturumlar hemen düşer:** Şifre değişimi, şifre sıfırlama, kullanıcı pasifleştirme ve ürün sahibinde 2FA sıfırlamasında refresh token'lar silinir; ayrıca kullanıcı ve ürün sahibi hesabındaki `tokensValidAfter` alanı sayesinde bu andan önce verilmiş access token'lar 15 dakikayı beklemeden hemen reddedilir.
+- **Yönetim işlemlerinde gerekçe:** Kullanıcı pasifleştirme, aktifleştirme ve şifre sıfırlamada zorunlu; firma ve kullanıcı oluşturmada isteğe bağlı. Hepsi işletim geçmişine yazılır.
+- **Hizmet sonu gün sınırları:** Yürürlük günü D dahil görüntüleme dönemidir ve `viewUntil` (D+30) günü de dahildir; `viewUntil`+1 … `retainUntil` (D+180) arşiv saklamadır; `retainUntil`'den sonra "silme onayı bekliyor" durumuna geçilir. Görüntüleme bandındaki tarih son görüntüleme günüdür.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **İlk şifre ve şifre değişimi:** Geçici şifreden kişisel şifreye geçişte bütün eski oturumlar düşer ve yeni oturum verilir; kullanıcı firma özetine devam eder (şartname 7.12). Normal şifre değişiminde yeni oturum verilmez; kullanıcı yeniden giriş yapar (7.11).
+- **Firma ayrımı koruması:** Firma verisi taşıyan modellerde `companyId` filtresi olmayan her sorgu reddedilir; firma kayıtlarına servis katmanındaki `forCompany` yardımcısıyla erişilir. Her yeni firma ucu, API testlerindeki ortak firma yalıtım listesine eklenir.
+- **Deneme sınırı:** Aynı kullanıcı adında 15 dakika içinde 5 hatalı denemede veya aynı IP'den 30 hatalı denemede 5 dakika bekleme. Sınır sunucu belleğinde tutulur; birden fazla sunucuya geçilirse paylaşılan bir depoya taşınmalıdır.
+- **Kullanıcı adı biçimi:** 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi ve tire.
+- **TOTP tekrar engeli:** Aynı kodun ikinci kez kabul edilmemesi için ürün sahibi hesabında son kabul edilen zaman adımı (`totpLastUsedStep`) tutulur.
+- **Kütüphaneler:** JWT için `jose`, şifre için bcrypt algoritmasının saf JS sürümü `bcryptjs` (maliyet 12), TOTP için `otplib`.
+- **Sıfırlama komutu:** `pnpm --filter api platform:reset-2fa --username <ad>` derlenmiş API ile (`pnpm build` sonrası) yalnız sunucuda çalışır.
+- **Canlıya hazırlık notu:** Ters vekil sunucu arkasında deneme sınırının gerçek IP'yi görmesi için Express `trust proxy` ayarı barındırma seçilince yapılmalıdır.
+
 ## 11. Açık ürün ve teknik kararlar
 
 - Barındırma sağlayıcısı, veritabanı paketi, yedekleme yöntemi ve aylık maliyet (zamanlama 10.4). İptal edilen teknik plandaki kademeli düşük maliyet yaklaşımı ve pilotta en fazla 24 saatlik veri kaybı kabulü artık bağlayıcı değil; yeniden kararlaştırılacak.
@@ -862,3 +897,5 @@ Adım 0 (proje iskeleti) tamamlandı: `docker compose up` sonrası `pnpm dev` il
 | 11 Ekim 2026 | Kullanıcı `teknik_plan` klasöründeki teknik planı iptal etti; 6 ve 8 Ekim teknik plan kararları (kademeli altyapı, sağlayıcılar, 24 saatlik veri kaybı kabulü dahil) artık bağlayıcı değil. Yerine `santiye-hesap-web-prompt.md` esas alındı. Prompt, Şantiye Hesap tasarım sistemi ve sayfa yapısı korunarak bu belgedeki kurallarla güncellendi: firma ayrımı, ürün sahibinin açtığı hesaplar ve kullanıcı adıyla giriş, hesapsız demo, anlaşmanın gider yazmaması, ödenecek/tahsil edilecek anlaşmalar, başlangıç kayıtları, vade, iade, paylaştırma, firma geneli gider, kategoriler, belgeler, gerekçe ve geçmiş, güvenli tekrar, raporlar ve tam veri çıkışı, hizmet sonu erişimi, ürün sahibi yönetimi. Yalnız web ürünü yapılacak; mobil uygulama şimdilik yok. Tanıtım sitesi kapsama eklendi. |
 | 11 Ekim 2026 | Aşama 5 geliştirme planı kabul edildi (bölüm 10): şartname tek parça kalacak, iş Adım 0–10 olarak oturumlara bölünecek; görev metinleri `gelistirme/gorev_metinleri.md`, ajan kuralları `AGENTS.md` ve `CLAUDE.md` dosyalarında. Ürün sahibi hesabı için zorunlu TOTP, 10 tek kullanımlık kurtarma kodu ve yalnız sunucuda çalışan sıfırlama komutu kabul edildi ve şartnameye işlendi. Açık kararların zamanlaması belirlendi; git deposunu kullanıcı kuracak. |
 | 12 Ekim 2026 | Adım 0 (proje iskeleti) tamamlandı ve kabul edildi (bölüm 10.5). Geliştirme ortamı Node.js 24 LTS ve pnpm 12 olarak belirlendi; iptal edilen teknik plandaki Node 24 tercihi bu kez Adım 0 gerekçesiyle yeniden kabul edildi. MinIO resmi imajları dağıtılmadığı için yerel S3 deposu olarak `pgsty/minio` topluluk imajı seçildi; üretim deposu kararı açık kalır. TypeScript 6.0, MongoDB 8.2, `/health` cevap biçimi ve geliştirme ortamı varsayılanları kaydedildi. |
+| 12 Ekim 2026 | Adım 1 (finans çekirdeği) tamamlandı ve kabul edildi (bölüm 10.6). Şartnamedeki boşluklar için üç karar alındı: ödeme durumu net ödenen/kalan/fazladan hesaplanır (bedel 0 ve ödeme yok → `settled`, tamamen iade edilmiş → `open`); para girişi katı tr-TR biçimindedir ve `12.5` gibi girdiler reddedilir; iadesi olan pay kaldırılamaz, hedefi değiştirilemez ve iade toplamının altına indirilemez. İade hareketinin kaynak payların kapsamını taşıması ve vade grupları sonraki adımlar için kaydedildi. |
+| 12 Ekim 2026 | Adım 2 (API temeli) tamamlandı ve kabul edildi (bölüm 10.7). Şartnamedeki boşluklar için dört karar alındı: kullanıcı oluşturma tekrarında geçici şifre yeniden gösterilmez; şifre değişimi/sıfırlama, pasifleştirme ve 2FA sıfırlamasında oturumlar `tokensValidAfter` ile hemen düşer; yönetimde pasifleştirme, aktifleştirme ve şifre sıfırlama gerekçe ister; hizmet sonu günleri D dahil, bitiş günleri dahil sayılır. İlk şifre akışı, firma ayrımı koruması, deneme sınırı değerleri, kullanıcı adı biçimi ve kütüphane seçimleri sonraki adımlar için kaydedildi. |

@@ -1,23 +1,26 @@
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { connectDatabase, disconnectDatabase } from './db/connection.js';
+import { createDeps } from './deps.js';
 import { createLogger } from './lib/logger.js';
+import { loadLocalEnvFile } from './load-env.js';
+import { initModels } from './models/index.js';
+import { ensureBootstrapAdmin } from './services/platform-auth.js';
 
-// Yerelde depo kökündeki .env okunur; üretimde değişkenler ortamdan gelir.
-const envFile = fileURLToPath(new URL('../../../.env', import.meta.url));
-if (existsSync(envFile)) process.loadEnvFile(envFile);
-
+loadLocalEnvFile();
 const logger = createLogger();
 
 try {
-  const config = loadConfig();
-  await connectDatabase(config.mongodbUri);
+  const deps = createDeps({ config: loadConfig(), logger });
+  await connectDatabase(deps.config.mongodbUri);
+  await initModels();
+  if ((await ensureBootstrapAdmin(deps)) === 'created') {
+    logger.info('İlk ürün sahibi hesabı oluşturuldu; ilk girişte TOTP kurulumu zorunlu.');
+  }
 
-  const app = createApp({ webOrigin: config.webOrigin, logger });
-  const server = app.listen(config.port, () => {
-    logger.info('API çalışıyor', { port: config.port });
+  const app = createApp(deps);
+  const server = app.listen(deps.config.port, () => {
+    logger.info('API çalışıyor', { port: deps.config.port });
   });
   server.on('error', (error) => {
     logger.error('API başlatılamadı', { error: error.message });

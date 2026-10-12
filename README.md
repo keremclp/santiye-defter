@@ -32,6 +32,14 @@ packages/shared   Ortak tipler, Zod şemaları ve saf finans fonksiyonları
 
    `docker compose` için `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY` (en az 3 karakter) ve `STORAGE_SECRET_KEY` (en az 8 karakter) zorunludur; yerel MinIO bu değerlerle açılır. Yerelde `STORAGE_ENDPOINT=http://localhost:9000` kullanın.
 
+   API her ortamda şu gizli değerler olmadan başlamaz: `JWT_ACCESS_SECRET` ve `JWT_REFRESH_SECRET` (en az 32 karakter, birbirinden farklı), `PLATFORM_TOTP_ENCRYPTION_KEY` (en az 32 bayt). Rastgele değer üretmek için:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+   ```
+
+   İlk ürün sahibi hesabı için `PLATFORM_BOOTSTRAP_USERNAME` ve `PLATFORM_BOOTSTRAP_PASSWORD` doldurulur; hesap yoksa API açılışında bir kez oluşturulur ve ilk girişte TOTP kurulumu zorunludur.
+
    Geliştirmede boş bırakılırsa API şu yerel varsayılanları kullanır: `PORT=3000`, `MONGODB_URI=mongodb://localhost:27017/santiye_hesap?replicaSet=rs0`, `WEB_ORIGIN=http://localhost:5173`. Üretimde (`NODE_ENV=production`) bu değerler zorunludur.
 
 3. Yerel servisleri başlatın:
@@ -64,6 +72,12 @@ pnpm dev
 | `pnpm format`    | Prettier ile biçimlendirme                                   |
 | `pnpm typecheck` | TypeScript tip denetimi                                      |
 | `pnpm build`     | `packages/shared`, `apps/api` ve `apps/web` üretim derlemesi |
+
+Ürün sahibinin telefonu ve kurtarma kodları birlikte kaybolursa iki aşamalı doğrulama yalnız sunucuda, derlenmiş API ile sıfırlanır (`pnpm build` sonrası):
+
+```bash
+pnpm --filter api platform:reset-2fa --username <ad>
+```
 
 API testleri `mongodb-memory-server` ile bellek içi bir MongoDB replica set açar; ilk çalıştırmada MongoDB ikilisi indirilir (birkaç yüz MB), sonra önbellekten kullanılır. Testler Docker gerektirmez.
 

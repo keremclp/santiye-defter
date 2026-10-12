@@ -31,6 +31,16 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // API testlerinde supertest cevap gövdesi (`res.body`) tipsizdir.
+    files: ['apps/api/test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+  {
     files: ['apps/web/src/**/*.{ts,tsx}'],
     extends: [reactHooks.configs.flat['recommended-latest'], reactRefresh.configs.vite],
     languageOptions: { globals: globals.browser },

@@ -6,18 +6,47 @@ const DEVELOPMENT_DEFAULTS = {
   WEB_ORIGIN: 'http://localhost:5173',
 };
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  MONGODB_URI: z.string().startsWith('mongodb'),
-  WEB_ORIGIN: z.url(),
-});
+/** Şartname bölüm 2: bcrypt maliyeti 12. */
+export const BCRYPT_COST = 12;
+
+const byteLength = (value: string) => Buffer.byteLength(value, 'utf8');
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    MONGODB_URI: z.string().startsWith('mongodb'),
+    WEB_ORIGIN: z.url(),
+    APP_NAME: z.string().trim().min(1).default('Şantiye Hesap'),
+    JWT_ACCESS_SECRET: z.string().min(32, 'En az 32 karakter olmalı.'),
+    JWT_REFRESH_SECRET: z.string().min(32, 'En az 32 karakter olmalı.'),
+    PLATFORM_TOTP_ENCRYPTION_KEY: z
+      .string()
+      .refine((value) => byteLength(value) >= 32, 'En az 32 bayt olmalı.'),
+    PLATFORM_BOOTSTRAP_USERNAME: z.string().trim().optional(),
+    PLATFORM_BOOTSTRAP_PASSWORD: z.string().optional(),
+  })
+  .superRefine((env, ctx) => {
+    if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Access imzasından farklı olmalı.',
+        path: ['JWT_REFRESH_SECRET'],
+      });
+    }
+  });
 
 export interface Config {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
   mongodbUri: string;
   webOrigin: string;
+  appName: string;
+  jwtAccessSecret: string;
+  jwtRefreshSecret: string;
+  totpEncryptionKey: string;
+  platformBootstrap: { username: string; password: string } | null;
+  bcryptCost: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -32,11 +61,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!result.success) {
     throw new Error(`Ortam değişkenleri geçersiz:\n${z.prettifyError(result.error)}`);
   }
+  const data = result.data;
 
   return {
-    nodeEnv: result.data.NODE_ENV,
-    port: result.data.PORT,
-    mongodbUri: result.data.MONGODB_URI,
-    webOrigin: result.data.WEB_ORIGIN,
+    nodeEnv: data.NODE_ENV,
+    port: data.PORT,
+    mongodbUri: data.MONGODB_URI,
+    webOrigin: data.WEB_ORIGIN,
+    appName: data.APP_NAME,
+    jwtAccessSecret: data.JWT_ACCESS_SECRET,
+    jwtRefreshSecret: data.JWT_REFRESH_SECRET,
+    totpEncryptionKey: data.PLATFORM_TOTP_ENCRYPTION_KEY,
+    platformBootstrap:
+      data.PLATFORM_BOOTSTRAP_USERNAME && data.PLATFORM_BOOTSTRAP_PASSWORD
+        ? {
+            username: data.PLATFORM_BOOTSTRAP_USERNAME,
+            password: data.PLATFORM_BOOTSTRAP_PASSWORD,
+          }
+        : null,
+    bcryptCost: BCRYPT_COST,
   };
 }
