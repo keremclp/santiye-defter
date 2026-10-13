@@ -143,31 +143,54 @@ Bitti sayılması için:
 - Temel bileşen ve form testleri geçer.
 ```
 
-## Adım 4b — Görsel revizyon
+## Adım 4b — Görsel revizyon (iki oturum: 4b-1 ve 4b-2)
 
-Adım 4'ün ekranları işlevsel olarak kabul edildi; görünüm onaylanan taslağa göre yenilenir. Adım 5'ten önce yapılır ki sonraki ekranlar yeni bileşenlerle gelsin.
+Adım 4'ün ekranları işlevsel olarak kabul edildi; görünüm onaylanan taslağa göre yenilenir. Adım 5'ten önce yapılır ki sonraki ekranlar yeni bileşenlerle gelsin. Kullanım limitine sığması için iki ayrı oturuma bölündü; her biri kendi başına bitirilip commit edilir.
+
+**Token tasarrufu:** Bu iki adımda şartnamenin tamamını okumak gerekmez. Ortak girişteki "tamamını oku" cümlesi yerine adım metnindeki "Okunacaklar" satırı geçerlidir.
+
+### Adım 4b-1 — Temel, yerleşim ve üç ana ekran
 
 ```text
-ADIM 4b — Görsel revizyon
-İlgili şartname bölümleri: 4 (tamamı, yenilendi), 5.2 (sol menü), 7.1, 7.2, 7.4, 11.
-Görsel başvuru: `tasarim/taslak_v1.html` (onaylanan taslak; tarayıcıda açıp masaüstü ve telefon görünümüne bak). Ölçü, renk veya düzende şartname bölüm 4 ile taslak çelişirse bölüm 4 geçerlidir.
+ADIM 4b-1 — Görsel revizyon: temel, yerleşim ve üç ana ekran
+Okunacaklar: şartnamede yalnız bölüm 4 (tamamı), 5.2'nin son paragrafı (sol menü), 7.1, 7.2 (ilk iki paragraf ve tablo/kart tarifi), 7.4 (ilk tarif bloğu), 11. Şartnamenin geri kalanını okuma; ihtiyaç olursa yalnız ilgili başlığı Grep ile bul.
+Görsel başvuru: `tasarim/taslak_v1.html` (onaylanan taslak). Dosyayı baştan sona okumak yerine CSS token'larını (`.app{...}` bloğu) ve ilgili ekran fonksiyonunu (`screenOzet`, `screenIslemler`, `screenSantiyeler`) oku. Şartname bölüm 4 ile taslak çelişirse bölüm 4 geçerlidir.
 
 Yap:
-- Tasarım token dosyasını bölüm 4.1–4.3'e göre güncelle: nötr metin renkleri (ink, ink2, muted), surface #F7F6FA, border/borderSoft, warn, yeni tint'ler, radius ve gölgeler, tipografi ölçeği. Uygulama içinde başlık ve gövde metnini mor/lacivert yapan bütün kullanımları kaldır.
-- lucide-react ekle; menü, düğmeler, liste satırları, sekmeler ve durum rozetlerinde ikonları bölüm 4.4'e göre kullan.
-- Yerleşim (4.5): içerik genişlik sınırını kaldır (yalnız formlar ve düz metin ~760 px); 232 px kenar menü (gruplar, "Takip", gecikmiş vade sayısı rozeti, kullanıcı kartı); üst çubukta genel arama ve "Yeni kayıt" açılır menüsü; telefonda alt menü ve yüzen + düğmesi.
-- Ortak bileşenleri bölüm 4.4'e göre yenile: düğmeler (birincil, kenarlı, tehlike), input/select, segment, filtre etiketi, rozet, panel ve panel başlığı, özet kutusu, liste satırı, tablo, sekmeler, boş durum. Kart içinde kart kullanma; bağlantıların altı çizili olmasın.
-- Özet (7.1), Şantiyeler (7.2) ve İşlemler (7.4) ekranlarını taslaktaki düzene getir: dönem segmenti ile 5 özet kutusu, 2×2 panel; şantiye sekmeleri + masaüstü tablo + telefon kartı; tek satır araç çubuğu + Filtreler paneli + etiketler + toplam şeridi + yeni tablo sütunları.
-- Diğer bütün uygulama ekranlarını (kişiler, anlaşmalar, vadeler, arama, silinenler, ayarlar, detaylar, formlar, dialoglar, giriş ekranları) aynı bileşenlerle tutarlı hale getir: beyaz paneller, nötr metin, ikonlar, boş grupların tek satır olması (ör. Vadeler'de "Gecikmiş (0)").
+- Tasarım token dosyasını bölüm 4.1–4.3'e göre güncelle: nötr metin renkleri (ink, ink2, muted), surface #F7F6FA, border/borderSoft, warn, yeni tint'ler, radius ve gölgeler, tipografi ölçeği. Başlık ve gövde metnini mor/lacivert yapan ortak stilleri nötre çevir.
+- lucide-react ekle.
+- Uygulama kabuğu (4.5): içerik genişlik sınırını kaldır (yalnız formlar ve düz metin ~760 px); 232 px kenar menü (gruplar, "Takip", gecikmiş vade sayısı rozeti, kullanıcı kartı, ikonlar); üst çubukta genel arama ve "Yeni kayıt" açılır menüsü; telefonda alt menü ve yüzen + düğmesi.
+- Ortak bileşenleri bölüm 4.4'e göre yenile: düğmeler (birincil, kenarlı, tehlike), input/select, segment, filtre etiketi, rozet, panel ve panel başlığı, özet kutusu, liste satırı, tablo, sekmeler, boş durum. Bağlantıların altı çizili olmasın.
+- Özet (7.1), Şantiyeler (7.2) ve İşlemler (7.4) ekranlarını taslaktaki düzene getir: dönem segmentli 5 özet kutusu ve 2×2 panel; şantiye sekmeleri + masaüstü tablo + telefon kartı; tek satır araç çubuğu + Filtreler paneli + etiketler + toplam şeridi + yeni tablo sütunları.
 - İade gösterimi: kaynak hareketin rengi ve "−" öneki, tür yazısı görünür (bölüm 4.1).
 
-Yapma: iş kuralı, API veya veri değişikliği; yeni ekran veya alan ekleme; belge, rapor, demo, yönetim ve tanıtım sitesi işleri.
+Yapma: diğer ekranların düzenini değiştirme (ortak bileşen değişikliğiyle kendiliğinden yenilenmeleri yeterli; bozulan bir şey olursa yalnız onu düzelt); iş kuralı, API veya veri değişikliği; yeni ekran veya alan.
 
 Bitti sayılması için:
-- Özet, İşlemler ve Şantiyeler ekranları masaüstünde (1440 px ve 1920 px) ve telefonda (375 px) taslakla aynı düzende; geniş ekranda iki yanda büyük boşluk yok.
+- Özet, İşlemler ve Şantiyeler masaüstünde (1440 ve 1920 px) ve telefonda (375 px) taslakla aynı düzende; geniş ekranda iki yanda büyük boşluk yok.
+- Kenar menü, üst çubuk, alt menü ve "Yeni kayıt" menüsü her ekranda çalışıyor.
+- Diğer ekranlar açılıyor ve kullanılabilir (görünümleri 4b-2'de tamamlanacak).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz. Üç ekranın masaüstü ve telefon görüntülerini rapora ekle; 4b-2'ye kalan ekranların listesini yaz.
+```
+
+### Adım 4b-2 — Kalan ekranların uyarlanması
+
+```text
+ADIM 4b-2 — Görsel revizyon: kalan ekranlar
+Okunacaklar: şartnamede bölüm 4.1 ve 4.4 (renk kuralları ve bileşenler) ile uyarladığın ekranın bölüm 7 tarifi. Önce 4b-1'de oluşturulan ortak bileşenleri ve Özet/İşlemler ekranlarının kodunu örnek olarak incele; taslak dosyasını yeniden okumana gerek yok.
+
+Yap (4b-1'in bileşenleriyle, yeni bileşen icat etmeden):
+- Kişiler (liste, detay, form), Anlaşmalar ve başlangıç kayıtları (liste, detay, formlar, ödeme), Vadeler (boş gruplar tek satır, tarih aralığı küçük seçici), Arama sonuçları, Silinenler, Ayarlar (profil, şifre, firma, kategoriler, hakkında).
+- İşlem ve şantiye detay sayfaları, gelir/gider formu ve paylaştırma, iade, düzeltme, bedel/vade/iptal ve silme/geri yükleme dialogları (etki önizlemesi kutusu dahil), 409 karşılaştırma ekranı, kaydetme durumu çubuğu.
+- Giriş, ilk şifre ve şifremi unuttum ekranları (giriş arkası gradyan, bölüm 4.1).
+- Bütün ekranlarda: beyaz paneller, nötr metin, ikonlar, altı çizgisiz bağlantılar, kart içinde kart yok; telefonda tablolar kart.
+
+Yapma: Özet, İşlemler ve Şantiyeler'in düzenini yeniden değiştirme; iş kuralı, API veya veri değişikliği; yeni ekran veya alan.
+
+Bitti sayılması için:
 - Uygulama içinde mor/lacivert gövde metni kalmadı; renkler yalnız token dosyasından geliyor.
-- Adım 4'te geçen bütün akışlar (giriş → ilk şifre → şantiye → gider → anlaşma → kısmi ödeme → paylaştırma → iade → sil/geri al) yeni görünümle çalışıyor; ekran tutarları API ile aynı.
-- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz. Masaüstü ve telefon ekran görüntülerini rapora ekle.
+- Adım 4'teki akış (giriş → ilk şifre → şantiye → gider → anlaşma → kısmi ödeme → paylaştırma → iade → sil/geri al) yeni görünümle masaüstünde ve 375 px'te çalışıyor; ekran tutarları API ile aynı.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz. Uyarlanan ekranlardan birkaçının masaüstü ve telefon görüntüsünü rapora ekle.
 ```
 
 ## Adım 5 — Belgeler

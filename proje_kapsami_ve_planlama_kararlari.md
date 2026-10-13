@@ -775,7 +775,8 @@ Geliştirme sırası ve çalışma biçimi kullanıcı tarafından kabul edildi.
 | 2 — API temeli | Modeller, müşteri ve ürün sahibi kimliği (TOTP dahil), firma ayrımı, hizmet durumu erişimi, güvenli tekrar, çakışma kontrolü, temel yönetim API'si | Firma yalıtımı, erişim tablosu ve kimlik testleri geçer |
 | 3 — Finans API'si | Şantiye, kişi, kategori, işlem (paylar ve iadeler), anlaşma, silme/geri yükleme, pano, vade, arama | Senaryolar API üzerinden aynı tutarları üretir; entegrasyon testleri geçer |
 | 4 — Uygulama ekranları | Tasarım sistemi, yerleşim, giriş ekranları ve bütün uygulama ekranları | Telefon ve masaüstünde temel akışlar çalışır; ekran tutarları API ile aynı |
-| 4b — Görsel revizyon | Onaylanan taslağa göre tasarım sistemi, yerleşim ve bütün ekranların görünümü | Özet, İşlemler, Şantiyeler taslakla aynı; geniş ekranda boşluk yok; akışlar yeni görünümle çalışır |
+| 4b-1 — Görsel revizyon: temel | Token'lar, ikonlar, uygulama kabuğu, ortak bileşenler; Özet, İşlemler, Şantiyeler | Üç ekran taslakla aynı; geniş ekranda boşluk yok; diğer ekranlar kullanılabilir |
+| 4b-2 — Görsel revizyon: kalan ekranlar | Diğer bütün ekranlar, formlar ve dialoglar 4b-1 bileşenleriyle | Mor/lacivert gövde metni kalmadı; akışlar yeni görünümle çalışır |
 | 5 — Belgeler | Depolama, yükleme akışı, önizleme, kapasite | Sınırlar eşzamanlı yüklemede de korunur; belge hatası kaydı tekrarlamaz |
 | 6 — Raporlar | Dört standart rapor, Excel/CSV/PDF, tam firma veri çıkışı | Dosya toplamları ekran ve API ile aynı |
 | 7 — Ürün sahibi yönetimi | Yönetim ekranları, hizmet yaşam döngüsü, kalıcı silme | Firma açılışından kalıcı silmeye kadar akış testli |
@@ -904,7 +905,7 @@ Adım 4 ekranları işlevsel olarak kabul edildi, ancak kullanıcı görünümü
 - **Yerleşim:** İçerik genişlik sınırı kaldırıldı; kenar menü gruplu ve ikonlu; arama ve "Yeni kayıt" üst çubukta; telefonda alt menü ve yüzen + düğmesi.
 - **Ekranlar:** Özet'te dönem segmentli 5 kutu ve 2×2 panel; İşlemler'de tek satır araç çubuğu, Filtreler paneli ve yeni tablo; Şantiyeler'de sekmeler ve masaüstü tablo.
 - **İade gösterimi:** Uygulamadaki hali korunur: iade kaynak hareketin renginde ve "−" önekiyle, tür yazısı görünür.
-- **Uygulama:** Şartname bölüm 4 baştan yazıldı; 5.2, 7.1, 7.2, 7.4 ve 11 güncellendi. 10.9'daki Adım 4 kararları da şartnameye işlendi. Görsel revizyon **Adım 4b** olarak görev metinlerine eklendi ve Adım 5'ten önce yapılacak.
+- **Uygulama:** Şartname bölüm 4 baştan yazıldı; 5.2, 7.1, 7.2, 7.4 ve 11 güncellendi. 10.9'daki Adım 4 kararları da şartnameye işlendi. Görsel revizyon Adım 5'ten önce yapılacak; kullanım limitine sığması için **Adım 4b-1** (temel, yerleşim ve üç ana ekran) ve **Adım 4b-2** (kalan ekranlar) olarak iki oturuma bölündü. Bu adımlarda şartnamenin yalnız ilgili bölümleri okunur.
 
 ## 11. Açık ürün ve teknik kararlar
 
