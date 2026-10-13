@@ -1,0 +1,610 @@
+<title>Şantiye Hesap Taslağı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@500;600;700&display=swap">
+<style>
+/* Yerleşim: üstte taslak kontrol çubuğu, altında uygulama çerçevesi. Uygulama kendi genişliğine göre (container query) masaüstü/telefon düzenine geçer. Tek tema (ürün açık temalı). */
+:root{
+  --page:#ECEBF0; --page-ink:#1B1838; --page-muted:#6B6785; --page-line:#D9D6E2;
+  --font-display:"Outfit",ui-sans-serif,system-ui,sans-serif;
+  --font-body:"DM Sans",ui-sans-serif,system-ui,sans-serif;
+  color-scheme:light;
+}
+body{background:var(--page);color:var(--page-ink);font-family:var(--font-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:16px 40px}
+
+/* ---------- Paletler ---------- */
+.app{
+  /* Onaylanan palet: A — Marka, rafine */
+  --surface:#F7F6FA; --panel:#FFFFFF; --ink:#1B1838; --ink-2:#4A4668; --muted:#7A76A8; --line:#E7E4F0; --line-2:#F0EEF5;
+  --primary:#4D12EE; --primary-hover:#3F0CCB; --on-primary:#FFFFFF; --primary-soft:rgba(77,18,238,.08); --primary-soft-2:rgba(77,18,238,.14);
+  --accent:#3FD1CB; --accent-soft:rgba(63,209,203,.18); --accent-ink:#0E6E6A;
+  --side-bg:#FFFFFF; --side-ink:#4A4668; --side-muted:#8E8AAE; --side-active-bg:rgba(77,18,238,.08); --side-active-ink:#4D12EE; --side-line:#ECEAF3; --side-brand:#2F24C1; --brand-mark:#4D12EE; --brand-mark-ink:#FFFFFF;
+  --income:#166534; --income-soft:rgba(22,101,52,.10); --expense:#DC2626; --expense-soft:rgba(220,38,38,.09);
+  --warn:#B45309; --warn-soft:rgba(217,119,6,.12);
+  --shadow:0 1px 2px rgba(27,24,56,.04),0 2px 8px rgba(27,24,56,.04);
+}
+/* ---------- Taslak kontrol çubuğu ---------- */
+.controls{max-width:1600px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end}
+.controls h1{font-family:var(--font-display);font-size:20px;font-weight:700;margin:0;letter-spacing:-.3px;flex-basis:100%}
+.controls h1 small{font-family:var(--font-body);font-weight:400;font-size:13px;color:var(--page-muted);margin-left:8px;letter-spacing:0}
+.cgroup{display:flex;flex-direction:column;gap:5px}
+.cgroup>span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--page-muted)}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--page-line);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:13px;font-weight:500;border:0;background:transparent;color:var(--page-ink);padding:6px 11px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.seg button[aria-pressed="true"]{background:var(--page-ink);color:#fff}
+.seg button:focus-visible,.app button:focus-visible,.app a:focus-visible,.app input:focus-visible,.app select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.sw{display:inline-flex;gap:2px}.sw i{width:10px;height:10px;border-radius:3px;display:block}
+.note{max-width:1600px;margin:0 auto 14px;font-size:13px;color:var(--page-muted)}
+.note b{color:var(--page-ink);font-weight:600}
+
+/* ---------- Uygulama çerçevesi ---------- */
+.stage{max-width:1600px;margin:0 auto}
+.app{container-type:inline-size;container-name:app;background:var(--surface);color:var(--ink);border:1px solid var(--page-line);border-radius:14px;overflow:hidden;position:relative}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:860px}
+.stage[data-device="phone"] .app{width:390px;max-width:100%;margin:0 auto;border-radius:28px;border:8px solid #1B1838}
+.stage[data-device="phone"] .shell{height:804px;min-height:0}
+.app a{color:inherit;text-decoration:none}
+.app button{font:inherit;color:inherit}
+
+/* Kenar menü */
+.side{background:var(--side-bg);border-right:1px solid var(--side-line);display:flex;flex-direction:column;padding:18px 12px 14px;gap:18px;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--brand-mark);color:var(--brand-mark-ink);display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:14px;letter-spacing:-.5px;flex:none}
+.brand b{display:block;font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--side-brand);letter-spacing:-.3px;line-height:1.1}
+.brand small{display:block;font-size:12px;color:var(--side-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.navgroup{display:flex;flex-direction:column;gap:2px}
+.navlabel{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--side-muted);padding:0 10px 4px}
+.nav{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-weight:500;font-size:14px;cursor:pointer;border:0;background:transparent;text-align:left;width:100%}
+.nav svg{width:18px;height:18px;stroke-width:1.9;flex:none}
+.nav:hover{background:var(--side-active-bg)}
+.nav[aria-current="page"]{background:var(--side-active-bg);color:var(--side-active-ink);font-weight:600}
+.nav .count{margin-left:auto;font-size:11px;font-weight:700;background:var(--expense);color:#fff;border-radius:999px;padding:1px 7px}
+.side .spacer{flex:1}
+.usercard{display:flex;align-items:center;gap:10px;padding:10px 8px 0;border-top:1px solid var(--side-line)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--primary-soft-2);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.usercard div{min-width:0;flex:1}
+.usercard b{display:block;font-size:13px;font-weight:600;color:var(--side-brand);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usercard small{font-size:12px;color:var(--side-muted)}
+.iconbtn{border:0;background:transparent;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;cursor:pointer;color:inherit;flex:none}
+.iconbtn svg{width:18px;height:18px}
+.iconbtn:hover{background:var(--primary-soft)}
+.side .iconbtn{color:var(--side-muted)}
+
+/* Ana alan */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 32px;border-bottom:1px solid var(--line);background:var(--panel)}
+.search{flex:1;max-width:460px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 12px;height:38px;color:var(--muted)}
+.search svg{width:16px;height:16px;flex:none}
+.search input{border:0;background:transparent;outline:none;font:inherit;font-size:14px;color:var(--ink);width:100%;min-width:0}
+.search kbd{font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 5px;color:var(--muted)}
+.topbar .grow{flex:1}
+.menuwrap{position:relative}
+.btn{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:10px;border:1px solid transparent;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn svg{width:17px;height:17px}
+.btn.primary{background:var(--primary);color:var(--on-primary)}
+.btn.primary:hover{background:var(--primary-hover)}
+.btn.ghost{background:var(--panel);border-color:var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--muted)}
+.btn.small{height:34px;padding:0 11px;font-size:13px}
+.dropdown{position:absolute;right:0;top:46px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(20,20,40,.14);padding:6px;width:230px;z-index:20}
+.dropdown button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:9px 10px;border-radius:8px;cursor:pointer;text-align:left;font-size:14px}
+.dropdown button:hover{background:var(--primary-soft)}
+.dropdown .dot{width:28px;height:28px;border-radius:8px;display:grid;place-items:center}
+.dropdown .dot svg{width:16px;height:16px}
+.dropdown small{display:block;color:var(--muted);font-size:12px}
+.content{padding:28px 32px 40px;display:flex;flex-direction:column;gap:22px;overflow:auto;min-height:0;flex:1}
+.pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pagehead h2{font-family:var(--font-display);font-size:28px;font-weight:600;letter-spacing:-.6px;margin:0;line-height:1.15;text-wrap:balance}
+.pagehead p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Kart ve bileşenler */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0}
+.panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 10px}
+.panelhead h3{font-family:var(--font-display);font-size:17px;font-weight:600;letter-spacing:-.2px;margin:0;display:flex;align-items:center;gap:8px}
+.panelhead h3 svg{width:18px;height:18px;color:var(--muted)}
+.more{font-size:13px;font-weight:600;color:var(--primary);display:inline-flex;align-items:center;gap:3px}
+.more svg{width:15px;height:15px}
+.more:hover{text-decoration:underline}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.inc{color:var(--income)}.exp{color:var(--expense)}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill svg{width:13px;height:13px}
+.pill.red{background:var(--expense-soft);color:var(--expense)}
+.pill.green{background:var(--income-soft);color:var(--income)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.soft{background:var(--primary-soft);color:var(--primary)}
+.pill.grey{background:var(--line-2);color:var(--ink-2)}
+.pill.accent{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* Özet metrikleri */
+.metrics-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.metrics-top .meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.metrics-top .meta svg{width:14px;height:14px}
+.miniseg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.miniseg button{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-2)}
+.miniseg button[aria-pressed="true"]{background:var(--primary-soft-2);color:var(--primary);font-weight:600}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) repeat(2,minmax(0,1fr));gap:14px}
+.metric{padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.metric .lbl{font-size:13px;font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.metric .lbl i.ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
+.metric .lbl svg{width:15px;height:15px}
+.metric .val{font-family:var(--font-display);font-size:28px;font-weight:600;letter-spacing:-.6px;line-height:1.1}
+.metric .sub{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.metric.balance{background:var(--panel)}
+.metric.balance .val{font-size:24px}
+.ic.green{background:var(--income-soft);color:var(--income)}
+.ic.red{background:var(--expense-soft);color:var(--expense)}
+.ic.primary{background:var(--primary-soft);color:var(--primary)}
+.ic.grey{background:var(--line-2);color:var(--ink-2)}
+.divider-v{border-left:1px solid var(--line)}
+
+/* Izgaralar */
+.grid-2{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px}
+.grid-2b{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+
+/* Satır listeleri */
+.rows{display:flex;flex-direction:column;padding:0 6px 8px}
+.row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:10px}
+.row:hover{background:var(--surface)}
+.row+.row{border-top:1px solid var(--line-2)}
+.row .t{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.row .r .num{font-weight:600;font-size:14px}
+.kind{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}
+.kind svg{width:17px;height:17px}
+.kind.inc{background:var(--income-soft)}.kind.exp{background:var(--expense-soft)}.kind.ref{background:var(--line-2);color:var(--ink-2)}
+.subhead{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 18px 4px;display:flex;justify-content:space-between}
+.empty{padding:14px 18px 18px;color:var(--muted);font-size:13px}
+
+/* Araç çubuğu ve filtre */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px}
+.toolbar .search{max-width:none;flex:1 1 260px;background:var(--surface)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 12px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;padding:4px 6px 4px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary)}
+.chip button{border:0;background:transparent;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:inherit}
+.chip button svg{width:12px;height:12px}
+.chips .clear{font-size:12.5px;font-weight:600;color:var(--muted);border:0;background:transparent;cursor:pointer;padding:4px 6px}
+.filterpanel{border-top:1px solid var(--line);padding:14px 12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12px;font-weight:600;color:var(--ink-2)}
+.field select,.field input{font:inherit;font-size:14px;height:38px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:0 10px;color:var(--ink);min-width:0;width:100%}
+.checks{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-2);grid-column:1/-1}
+.checks label{display:inline-flex;gap:6px;align-items:center}
+.summarybar{display:flex;gap:0;flex-wrap:wrap}
+.summarybar>div{padding:14px 20px;display:flex;flex-direction:column;gap:2px;min-width:160px;flex:1}
+.summarybar>div+div{border-left:1px solid var(--line)}
+.summarybar span{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.summarybar b{font-family:var(--font-display);font-size:21px;font-weight:600;letter-spacing:-.4px}
+.summarybar small{font-size:12px;color:var(--muted)}
+
+/* Tablo */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 14px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tbody tr:hover td{background:var(--surface)}
+tbody tr:last-child td{border-bottom:0}
+td.right,th.right{text-align:right}
+td .sub{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.typecell{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.typecell .kind{width:28px;height:28px;border-radius:8px}
+.typecell .kind svg{width:15px;height:15px}
+.linkish{font-weight:600;color:var(--ink)}
+.linkish:hover{color:var(--primary)}
+.recno{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.splitnote{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent-ink);background:var(--accent-soft);border-radius:6px;padding:1px 6px;margin-top:3px}
+.splitnote svg{width:12px;height:12px}
+.muted{color:var(--muted)}
+.pinbtn{border:0;background:transparent;cursor:pointer;color:var(--line);width:28px;height:28px;display:grid;place-items:center;border-radius:7px}
+.pinbtn svg{width:16px;height:16px}
+.pinbtn[aria-pressed="true"]{color:var(--accent-ink)}
+.app .pinbtn[aria-pressed="true"]{color:var(--primary)}
+.pinbtn:hover{background:var(--primary-soft);color:var(--ink-2)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 12px}
+.tabs button{border:0;background:transparent;padding:12px 10px;font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;gap:7px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tabs .cnt{font-size:11.5px;background:var(--line-2);color:var(--ink-2);border-radius:999px;padding:1px 7px;font-weight:600}
+.bar{height:6px;border-radius:999px;background:var(--line-2);overflow:hidden;width:90px;display:inline-block;vertical-align:middle}
+.bar i{display:block;height:100%;background:var(--primary)}
+
+/* Telefon alt menü */
+.bottomnav{display:none}
+.fab{display:none}
+
+/* ---------- Telefon düzeni (uygulama 760 px altı) ---------- */
+@container app (max-width:760px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .topbar{padding:10px 16px}
+  .topbar .search kbd,.topbar .menuwrap{display:none}
+  .content{padding:18px 16px 96px;gap:16px}
+  .pagehead h2{font-size:24px}
+  .pagehead .actions{display:none}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .metrics .metric.wide{grid-column:1/-1}
+  .metric{padding:13px 14px}
+  .metric .val{font-size:22px}
+  .metric.balance .val{font-size:19px}
+  .grid-2,.grid-2b{grid-template-columns:1fr}
+  .filterpanel{grid-template-columns:1fr 1fr}
+  .summarybar>div{min-width:0;padding:12px 14px}
+  .summarybar>div+div{border-left:0;border-top:1px solid var(--line)}
+  .summarybar{flex-direction:column}
+  table.cardify thead{display:none}
+  table.cardify,table.cardify tbody,table.cardify tr,table.cardify td{display:block;width:100%}
+  table.cardify tr{padding:12px 14px;border-bottom:1px solid var(--line-2);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px}
+  table.cardify td{padding:0;border:0}
+  table.cardify td[data-hide-phone]{display:none}
+  table.cardify td.lead{grid-column:1}
+  table.cardify td.amount{grid-column:2;grid-row:1;text-align:right}
+  table.cardify td.extra{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+  .bottomnav{display:grid;grid-template-columns:repeat(5,1fr);position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(8px + env(safe-area-inset-bottom,0px));z-index:10}
+  .bottomnav button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;padding:4px 0}
+  .bottomnav button svg{width:21px;height:21px}
+  .bottomnav button[aria-current="page"]{color:var(--primary);font-weight:600}
+  .fab{display:grid;place-items:center;position:absolute;right:16px;bottom:76px;width:54px;height:54px;border-radius:16px;background:var(--primary);color:var(--on-primary);border:0;box-shadow:0 8px 20px rgba(20,20,60,.25);cursor:pointer;z-index:11}
+  .fab svg{width:24px;height:24px}
+  .phone-only{display:inline-flex !important}
+  .desk-only{display:none !important}
+  .proj-desktop{display:none}
+  .proj-cards{display:grid !important}
+}
+.phone-only{display:none}
+.proj-cards{display:none;grid-template-columns:1fr;gap:10px}
+.pcard{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.pcard .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.pcard .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.pcard .kv span{display:block;font-size:12px;color:var(--muted)}
+.pcard .kv b{font-size:14px;font-weight:600}
+
+/* Kendi ekranı dar olan gerçek telefon */
+@media (max-width:520px){
+  .controls{gap:10px}
+  .stage[data-device="phone"] .app{border-width:0;border-radius:14px}
+  .stage[data-device="phone"] .shell{height:780px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="controls" role="region" aria-label="Taslak ayarları">
+  <h1>Şantiye Hesap — onaylanan görsel taslak <small>Örnek veriler · 13 Ekim 2026</small></h1>
+  <div class="cgroup"><span>Ekran</span>
+    <div class="seg" id="c-screen">
+      <button data-v="ozet">Özet</button><button data-v="islemler">İşlemler</button><button data-v="santiyeler">Şantiyeler</button>
+    </div></div>
+  <div class="cgroup"><span>Görünüm</span>
+    <div class="seg" id="c-device"><button data-v="desktop">Masaüstü</button><button data-v="phone">Telefon</button></div></div>
+</div>
+<p class="note"><b>Onaylanan seçimler (13 Ekim 2026):</b> A paleti (marka renkleri, nötr metin); ödeme iadesi kaynak hareketin renginde ve "−" önekiyle, tür yazısı görünür. Bu dosya geliştirme için görsel başvuru kaynağıdır; kurallar şartname bölüm 4 ve 7'dedir.</p>
+
+<div class="stage" id="stage">
+  <div class="app" id="app">
+   <div class="shell">
+    <aside class="side" aria-label="Ana menü">
+      <div class="brand"><div class="mark">ŞH</div><div><b>Şantiye Hesap</b><small>Demirtaş Yapı</small></div></div>
+      <div class="navgroup" id="nav-main"></div>
+      <div class="navgroup" id="nav-track"><div class="navlabel">Takip</div></div>
+      <div class="spacer"></div>
+      <div class="navgroup" id="nav-bottom"></div>
+      <div class="usercard"><div class="avatar">EK</div><div><b>Emre Kılıç</b><small>Demirtaş Yapı</small></div><button class="iconbtn" aria-label="Çıkış yap"><i data-lucide="log-out"></i></button></div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <button class="iconbtn phone-only" aria-label="Menü"><i data-lucide="menu"></i></button>
+        <label class="search"><i data-lucide="search"></i><input id="globalsearch" placeholder="Şantiye, kişi, tutar veya kayıt no ara" aria-label="Genel arama"><kbd>/</kbd></label>
+        <div class="grow"></div>
+        <div class="menuwrap">
+          <button class="btn primary" id="newbtn" aria-haspopup="menu" aria-expanded="false"><i data-lucide="plus"></i>Yeni kayıt<i data-lucide="chevron-down"></i></button>
+          <div class="dropdown" id="newmenu" role="menu" hidden>
+            <button role="menuitem"><span class="dot ic green"><i data-lucide="arrow-down-left"></i></span><span>Gelir ekle<small>Tahsilat veya doğrudan gelir</small></span></button>
+            <button role="menuitem"><span class="dot ic red"><i data-lucide="arrow-up-right"></i></span><span>Gider ekle<small>Ödeme veya doğrudan gider</small></span></button>
+            <button role="menuitem"><span class="dot ic primary"><i data-lucide="handshake"></i></span><span>Anlaşma ekle<small>Ödenecek veya tahsil edilecek</small></span></button>
+          </div>
+        </div>
+      </div>
+      <main class="content" id="content"></main>
+    </div>
+   </div>
+    <nav class="bottomnav" id="bottomnav" aria-label="Alt menü"></nav>
+    <button class="fab" aria-label="Yeni kayıt"><i data-lucide="plus"></i></button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<script>
+(function(){
+const TODAY = "13 Eki 2026";
+const S = {screen:"ozet", palette:"a", device:"desktop", refund:"minus", period:"month", type:"all", q:"", filtersOpen:false, tab:"active"};
+try{ const saved = JSON.parse(localStorage.getItem("sh-taslak")||"{}"); if(saved.screen) S.screen=saved.screen; if(saved.device) S.device=saved.device; }catch(e){}
+function save(){ try{ localStorage.setItem("sh-taslak", JSON.stringify({screen:S.screen,device:S.device})); }catch(e){} }
+
+const ICON = n => `<i data-lucide="${n}"></i>`;
+const fmt = (n, dec) => new Intl.NumberFormat("tr-TR",{style:"currency",currency:"TRY",minimumFractionDigits:dec?2:0,maximumFractionDigits:dec?2:0}).format(Math.abs(n));
+const signed = (n, dec) => (n<0?"−":"") + fmt(n, dec);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- Örnek veriler (tutarlı) ---------- */
+const TOTALS = {
+  month:{income:150000, expense:184500, refundNote:"Ödeme iadesi düşüldü: ₺5.000", label:"Ekim 2026"},
+  all:{income:970000, expense:748000, refundNote:"Ödeme iadeleri düşüldü: ₺5.000", label:"Tüm zamanlar"}
+};
+const BAL = {payable:160000, payableOverdue:12000, receivable:995000, receivableOverdue:85000, activeProjects:3};
+
+const TX = [
+  {no:18,date:"13 Eki 2026",kind:"income",desc:"2. hakediş",party:"Ayşe Demir",scope:["Kadıköy Villa"],agr:"Villa yapım işi",cat:"—",amount:150000},
+  {no:17,date:"13 Eki 2026",kind:"expense",desc:"Elektrik tesisatı 2. ödeme",party:"Yılmaz Elektrik",scope:["Kadıköy Villa"],agr:"Elektrik işi",cat:"Taşeron",amount:60000},
+  {no:16,date:"11 Eki 2026",kind:"expense",desc:"İnşaat demiri Ø12",party:"Çelik Yapı Market",scope:["Kadıköy Villa"],agr:null,cat:"Malzeme",amount:42000},
+  {no:15,date:"9 Eki 2026",kind:"expense",desc:"Elektrik ortak ödeme",party:"Yılmaz Elektrik",scope:["Kadıköy Villa","Ataşehir Konut"],split:"₺25.000 + ₺15.000",agr:"Elektrik işi, Elektrik işi B",cat:"Taşeron",amount:40000},
+  {no:14,date:"8 Eki 2026",kind:"refund",desc:"Fazla ödeme iadesi",party:"Yılmaz Elektrik",scope:["Kadıköy Villa"],agr:"Elektrik işi",cat:"Taşeron",amount:5000},
+  {no:13,date:"5 Eki 2026",kind:"expense",desc:"Ekim ofis kirası",party:"Kaya Gayrimenkul",scope:["Firma geneli"],agr:null,cat:"Kira",amount:18500},
+  {no:12,date:"3 Eki 2026",kind:"expense",desc:"Hazır beton C30",party:"Akdeniz Beton",scope:["Ataşehir Konut"],agr:null,cat:"Malzeme",amount:21000},
+  {no:11,date:"2 Eki 2026",kind:"expense",desc:"Usta yevmiyesi",party:null,scope:["Beykoz Depo"],agr:null,cat:"İşçilik",amount:8000}
+];
+
+const DUES = {
+  overdue:[
+    {party:"Selin Aydın",agr:"Son hakediş",scope:"Maltepe Dükkân",dir:"rec",due:"15 Eyl 2026",days:28,amount:25000},
+    {party:"Mert Kaya",agr:"Daire satışı",scope:"Ataşehir Konut",dir:"rec",due:"30 Eyl 2026",days:13,amount:60000},
+    {party:"Akdeniz Beton",agr:"Beton tedariği",scope:"Kadıköy Villa",dir:"pay",due:"5 Eki 2026",days:8,amount:12000}
+  ],
+  soon:[
+    {party:"Kuzey Yalıtım",agr:"Çatı izolasyonu",scope:"Beykoz Depo",dir:"pay",due:"24 Eki 2026",left:11,amount:20000}
+  ]
+};
+
+const AGR = [
+  {title:"Villa yapım işi",party:"Ayşe Demir",scope:"Kadıköy Villa",dir:"rec",total:1200000,paid:450000,remaining:750000,due:null},
+  {title:"Daire satışı",party:"Mert Kaya",scope:"Ataşehir Konut",dir:"rec",total:400000,paid:180000,remaining:220000,overdue:true},
+  {title:"Kalıp işi",party:"Usta Hasan",scope:"Kadıköy Villa",dir:"pay",total:48000,paid:0,remaining:48000,opening:true},
+  {title:"Elektrik işi B",party:"Yılmaz Elektrik",scope:"Ataşehir Konut",dir:"pay",total:60000,paid:15000,remaining:45000},
+  {title:"Elektrik işi",party:"Yılmaz Elektrik",scope:"Kadıköy Villa",dir:"pay",total:155000,paid:120000,remaining:35000}
+];
+
+let PROJ = [
+  {name:"Kadıköy Villa",addr:"Moda, Kadıköy",status:"active",pinned:true,income:450000,expense:312500,payable:95000,receivable:750000,overdue:12000,last:"13 Eki 16:02"},
+  {name:"Ataşehir Konut",addr:"Barbaros Mah., Ataşehir",status:"active",pinned:false,income:180000,expense:96000,payable:45000,receivable:220000,overdue:60000,last:"11 Eki 11:58"},
+  {name:"Beykoz Depo",addr:"Kavacık, Beykoz",status:"active",pinned:false,income:0,expense:30000,payable:20000,receivable:0,overdue:0,last:"2 Eki 09:40"},
+  {name:"Maltepe Dükkân",addr:"Bağdat Cad., Maltepe",status:"completed",pinned:false,income:340000,expense:291000,payable:0,receivable:25000,overdue:25000,last:"28 Eyl 14:10"}
+];
+
+/* ---------- Menü ---------- */
+const NAV_MAIN = [["ozet","layout-dashboard","Özet"],["santiyeler","hard-hat","Şantiyeler"],["islemler","arrow-left-right","İşlemler"],["kisiler","users","Kişiler"],["anlasmalar","handshake","Anlaşmalar"]];
+const NAV_TRACK = [["vadeler","calendar-clock","Vadeler",3],["raporlar","file-text","Raporlar"]];
+const NAV_BOTTOM = [["silinenler","trash-2","Silinenler"],["ayarlar","settings","Ayarlar"]];
+const navBtn = ([k,ic,label,count]) => `<button class="nav" data-go="${k}" ${S.screen===k?'aria-current="page"':""}>${ICON(ic)}<span>${label}</span>${count?`<span class="count" aria-label="${count} gecikmiş">${count}</span>`:""}</button>`;
+function renderNav(){
+  document.getElementById("nav-main").innerHTML = NAV_MAIN.map(navBtn).join("");
+  document.getElementById("nav-track").innerHTML = `<div class="navlabel">Takip</div>` + NAV_TRACK.map(navBtn).join("");
+  document.getElementById("nav-bottom").innerHTML = NAV_BOTTOM.map(navBtn).join("");
+  const bn = [["ozet","layout-dashboard","Özet"],["santiyeler","hard-hat","Şantiyeler"],["islemler","arrow-left-right","İşlemler"],["kisiler","users","Kişiler"],["diger","menu","Diğer"]];
+  document.getElementById("bottomnav").innerHTML = bn.map(([k,ic,l]) => `<button data-go="${k}" ${S.screen===k?'aria-current="page"':""}>${ICON(ic)}${l}</button>`).join("");
+}
+
+/* ---------- Ortak parçalar ---------- */
+function kindIcon(kind){
+  if(kind==="income") return `<span class="kind inc inc">${ICON("arrow-down-left")}</span>`;
+  if(kind==="expense") return `<span class="kind exp exp">${ICON("arrow-up-right")}</span>`;
+  return S.refund==="in" ? `<span class="kind inc inc">${ICON("undo-2")}</span>` : `<span class="kind ref">${ICON("undo-2")}</span>`;
+}
+function kindLabel(kind){ return kind==="income"?"Gelir":kind==="expense"?"Gider":"Ödeme iadesi"; }
+function txAmount(t){
+  if(t.kind==="income") return `<span class="num inc">+${fmt(t.amount,true)}</span>`;
+  if(t.kind==="expense") return `<span class="num exp">−${fmt(t.amount,true)}</span>`;
+  return S.refund==="in" ? `<span class="num inc">+${fmt(t.amount,true)}</span>` : `<span class="num exp">−${fmt(t.amount,true)}</span>`;
+}
+// Ödeme iadesi tablo/listede: "Para girişi" seçeneğinde ödeme sütununa değil kasa yönüne göre gösterilir.
+
+/* ---------- Ekran: Özet ---------- */
+function screenOzet(){
+  const p = TOTALS[S.period];
+  const diff = p.income - p.expense;
+  const tx = TX.slice(0,5).map(t => `
+    <div class="row">${kindIcon(t.kind)}
+      <div style="min-width:0"><div class="t">${esc(t.desc)}</div><div class="m">${esc(t.scope.join(", "))}${t.party?" · "+esc(t.party):""} · ${t.date}</div></div>
+      <div class="r">${txAmount(t)}${t.kind==="refund"?'<span class="pill grey">Ödeme iadesi</span>':""}</div>
+    </div>`).join("");
+  const dueRow = (d, overdue) => `
+    <div class="row"><span class="kind ${d.dir==="rec"?"inc":"exp"}">${ICON(d.dir==="rec"?"arrow-down-left":"arrow-up-right")}</span>
+      <div style="min-width:0"><div class="t">${esc(d.party)}</div><div class="m">${esc(d.agr)} · ${esc(d.scope)} · Vade ${d.due}</div></div>
+      <div class="r"><span class="num ${d.dir==="rec"?"inc":"exp"}">${fmt(d.amount,true)}</span>${overdue?`<span class="pill red">${ICON("triangle-alert")}${d.days} gün gecikti</span>`:`<span class="pill warn">${ICON("clock")}${d.left} gün kaldı</span>`}</div>
+    </div>`;
+  const agr = AGR.map(a => `
+    <div class="row"><span class="kind ${a.dir==="rec"?"inc":"exp"}">${ICON(a.opening?"history":"handshake")}</span>
+      <div style="min-width:0"><div class="t">${esc(a.title)} ${a.opening?'<span class="pill grey">Başlangıç</span>':""}</div><div class="m">${esc(a.party)} · ${esc(a.scope)}</div></div>
+      <div class="r"><span class="num ${a.dir==="rec"?"inc":"exp"}">${fmt(a.remaining,true)}</span><span class="m" style="font-size:12px;color:var(--muted)">${a.dir==="rec"?"Kalan alacak":"Kalan borç"}${a.overdue?' · <span style="color:var(--expense);font-weight:600">gecikmiş</span>':""}</span></div>
+    </div>`).join("");
+  const proj = PROJ.filter(x=>x.status==="active").map(x => `
+    <div class="row"><span class="kind ref">${ICON("hard-hat")}</span>
+      <div style="min-width:0"><div class="t">${esc(x.name)}</div><div class="m">Son kullanım ${x.last}</div></div>
+      <div class="r"><span class="num" style="font-weight:600">${signed(x.income-x.expense,false)}</span><span class="m" style="font-size:12px;color:var(--muted)">Gelir − gider farkı</span></div>
+    </div>`).join("");
+  return `
+  <div class="pagehead">
+    <div><h2>Merhaba, Emre</h2><p>Firma geneli · tamamlanan ve arşivlenen şantiyeler dahil</p></div>
+    <div class="actions desk-only">
+      <button class="btn ghost">${ICON("arrow-down-left")}Gelir ekle</button>
+      <button class="btn ghost">${ICON("arrow-up-right")}Gider ekle</button>
+    </div>
+  </div>
+  <div class="metrics-top">
+    <div class="miniseg" role="group" aria-label="Dönem">
+      <button data-period="month" aria-pressed="${S.period==="month"}">Bu ay</button>
+      <button data-period="all" aria-pressed="${S.period==="all"}">Tüm zamanlar</button>
+    </div>
+    <span class="meta">${ICON("refresh-cw")}Hesaplandı: ${TODAY} 16:24</span>
+  </div>
+  <div class="metrics">
+    <div class="panel metric"><div class="lbl"><i class="ic green">${ICON("arrow-down-left")}</i>Tahsilat</div><div class="val num inc">${fmt(p.income)}</div><div class="sub">${p.label} · iadeler düşülmüş</div></div>
+    <div class="panel metric"><div class="lbl"><i class="ic red">${ICON("arrow-up-right")}</i>Ödeme</div><div class="val num exp">${fmt(p.expense)}</div><div class="sub">${p.refundNote}</div></div>
+    <div class="panel metric wide"><div class="lbl"><i class="ic grey">${ICON("scale")}</i>Gelir − gider farkı</div><div class="val num">${signed(diff)}</div><div class="sub">${p.label}</div></div>
+    <div class="panel metric balance"><div class="lbl"><i class="ic primary">${ICON("hand-coins")}</i>Kalan alacak</div><div class="val num">${fmt(BAL.receivable)}</div><div class="sub"><span class="pill red">${ICON("triangle-alert")}Gecikmiş ${fmt(BAL.receivableOverdue)}</span></div></div>
+    <div class="panel metric balance"><div class="lbl"><i class="ic primary">${ICON("wallet")}</i>Kalan borç</div><div class="val num">${fmt(BAL.payable)}</div><div class="sub"><span class="pill red">${ICON("triangle-alert")}Gecikmiş ${fmt(BAL.payableOverdue)}</span></div></div>
+  </div>
+  <div class="grid-2">
+    <section class="panel"><div class="panelhead"><h3>${ICON("arrow-left-right")}Son hareketler</h3><a class="more" href="#islemler" data-go="islemler">Tüm işlemler${ICON("chevron-right")}</a></div><div class="rows">${tx}</div></section>
+    <section class="panel"><div class="panelhead"><h3>${ICON("calendar-clock")}Vadeler</h3><a class="more" href="#vadeler">Tümü${ICON("chevron-right")}</a></div>
+      <div class="subhead"><span>Gecikmiş</span><span>${DUES.overdue.length}</span></div><div class="rows">${DUES.overdue.map(d=>dueRow(d,true)).join("")}</div>
+      <div class="subhead"><span>14 gün içinde</span><span>${DUES.soon.length}</span></div><div class="rows">${DUES.soon.map(d=>dueRow(d,false)).join("")}</div>
+    </section>
+  </div>
+  <div class="grid-2b">
+    <section class="panel"><div class="panelhead"><h3>${ICON("handshake")}Açık anlaşmalar</h3><a class="more" href="#anlasmalar">Tümü${ICON("chevron-right")}</a></div><div class="rows">${agr}</div></section>
+    <section class="panel"><div class="panelhead"><h3>${ICON("hard-hat")}Son kullanılan şantiyeler</h3><a class="more" href="#santiyeler" data-go="santiyeler">Tümü${ICON("chevron-right")}</a></div><div class="rows">${proj}</div></section>
+  </div>`;
+}
+
+/* ---------- Ekran: İşlemler ---------- */
+function screenIslemler(){
+  const q = S.q.trim().toLocaleLowerCase("tr");
+  const rows = TX.filter(t => (S.type==="all" || (S.type==="refund"?t.kind==="refund":t.kind===S.type)) &&
+    (!q || [t.desc,t.party,t.scope.join(" "),t.agr,"#"+t.no,String(t.amount)].join(" ").toLocaleLowerCase("tr").includes(q)));
+  const inc = rows.filter(t=>t.kind==="income").reduce((a,t)=>a+t.amount,0);
+  const exp = rows.filter(t=>t.kind==="expense").reduce((a,t)=>a+t.amount,0) - rows.filter(t=>t.kind==="refund").reduce((a,t)=>a+t.amount,0);
+  const refundSum = rows.filter(t=>t.kind==="refund").reduce((a,t)=>a+t.amount,0);
+  const tbody = rows.map(t => `
+    <tr>
+      <td class="lead"><div class="typecell">${kindIcon(t.kind)}<div style="min-width:0"><a class="linkish" href="#">${esc(t.desc)}</a><span class="sub"><span class="recno">#${t.no}</span> · ${t.date} · ${kindLabel(t.kind)}</span>${t.split?`<span class="splitnote">${ICON("split")}Paylaştırıldı: ${t.split}</span>`:""}</div></div></td>
+      <td data-hide-phone>${t.party?esc(t.party):'<span class="muted">Muhatapsız</span>'}</td>
+      <td data-hide-phone>${esc(t.scope.join(", "))}</td>
+      <td data-hide-phone>${t.agr?esc(t.agr):'<span class="muted">Bağlı değil</span>'}</td>
+      <td data-hide-phone class="muted">${esc(t.cat)}</td>
+      <td class="right amount">${txAmount(t)}</td>
+      <td class="extra phone-only" style="display:none">${esc(t.scope.join(", "))}${t.party?" · "+esc(t.party):""}</td>
+    </tr>`).join("");
+  const typeBtn = (v,l) => `<button data-type="${v}" aria-pressed="${S.type===v}">${l}</button>`;
+  return `
+  <div class="pagehead">
+    <div><h2>İşlemler</h2><p>Gelir, gider ve iadeler · işlem tarihine göre</p></div>
+    <div class="actions"><button class="btn ghost">${ICON("download")}Bu sonuçları indir</button></div>
+  </div>
+  <section class="panel">
+    <div class="toolbar">
+      <label class="search"><i data-lucide="search"></i><input id="txsearch" value="${esc(S.q)}" placeholder="Açıklama, kişi, şantiye, kayıt no veya tutar" aria-label="İşlemlerde ara"></label>
+      <div class="miniseg" role="group" aria-label="Tarih"><button aria-pressed="false">Bugün</button><button aria-pressed="true">Bu ay</button><button aria-pressed="false">Tümü</button><button aria-pressed="false">${ICON("calendar")}</button></div>
+      <div class="miniseg" role="group" aria-label="Tür">${typeBtn("all","Tümü")}${typeBtn("income","Gelir")}${typeBtn("expense","Gider")}${typeBtn("refund","İade")}</div>
+      <button class="btn ghost small" id="filtersbtn" aria-expanded="${S.filtersOpen}">${ICON("sliders-horizontal")}Filtreler<span class="pill soft">2</span></button>
+    </div>
+    <div class="chips"><span class="chip">Bu ay<button aria-label="Kaldır">${ICON("x")}</button></span><span class="chip">Kapsam: Tüm şantiyeler<button aria-label="Kaldır">${ICON("x")}</button></span><button class="clear">Filtreleri temizle</button></div>
+    ${S.filtersOpen?`<div class="filterpanel">
+      <div class="field"><label for="f1">Kapsam</label><select id="f1"><option>Tüm şantiyeler ve firma geneli</option><option>Kadıköy Villa</option><option>Firma geneli</option></select></div>
+      <div class="field"><label for="f2">Kişi / firma</label><input id="f2" placeholder="Ad veya telefon"></div>
+      <div class="field"><label for="f3">Gider kategorisi</label><select id="f3"><option>Tümü</option><option>Kategorisiz</option><option>Malzeme</option></select></div>
+      <div class="field"><label for="f4">Anlaşma bağlantısı</label><select id="f4"><option>Tümü</option><option>Bağlı</option><option>Bağlı değil</option></select></div>
+      <div class="field"><label for="f5">Kaydı oluşturan</label><select id="f5"><option>Herkes</option><option>Emre Kılıç</option></select></div>
+      <div class="field"><label for="f6">En az tutar</label><input id="f6" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="f7">En çok tutar</label><input id="f7" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label for="f8">Sıralama</label><select id="f8"><option>Yeniden eskiye</option><option>Eskiden yeniye</option><option>Tutar azalan</option></select></div>
+      <div class="checks"><label><input type="checkbox"> Muhatapsız kayıtlar</label><label><input type="checkbox"> Silinenleri göster</label></div>
+    </div>`:""}
+  </section>
+  <section class="panel summarybar" aria-label="Filtrelenmiş toplamlar">
+    <div><span>Tahsilat (net)</span><b class="num inc">${fmt(inc,true)}</b><small>${rows.filter(t=>t.kind==="income").length} kayıt</small></div>
+    <div><span>Ödeme (net)</span><b class="num exp">${fmt(exp,true)}</b><small>${refundSum?"Ödeme iadesi düşüldü: "+fmt(refundSum,true):"İade yok"}</small></div>
+    <div><span>Gelir − gider farkı</span><b class="num">${signed(inc-exp,true)}</b><small>${rows.length} kaydın tamamı</small></div>
+  </section>
+  <section class="panel">
+    <div class="tablewrap"><table class="cardify">
+      <thead><tr><th>İşlem</th><th>Kişi</th><th>Şantiye</th><th>Anlaşma</th><th>Kategori</th><th class="right">Tutar</th></tr></thead>
+      <tbody>${tbody || `<tr><td colspan="6" class="empty">Filtrelere uyan kayıt bulunamadı.</td></tr>`}</tbody>
+    </table></div>
+  </section>`;
+}
+
+/* ---------- Ekran: Şantiyeler ---------- */
+function screenSantiyeler(){
+  const counts = {active:PROJ.filter(p=>p.status==="active").length, completed:PROJ.filter(p=>p.status==="completed").length, archived:0, all:PROJ.length};
+  const list = PROJ.filter(p => S.tab==="all" || p.status===S.tab).sort((a,b)=>(b.pinned-a.pinned));
+  const statusPill = p => p.status==="active"?'<span class="pill green">Aktif</span>':p.status==="completed"?'<span class="pill grey">Tamamlandı</span>':'<span class="pill grey">Arşivlendi</span>';
+  const showStatus = S.tab==="all";
+  const rows = list.map((p,i) => `
+    <tr>
+      <td style="width:40px"><button class="pinbtn" data-pin="${p.name}" aria-pressed="${p.pinned}" aria-label="${p.pinned?"Sabitlemeyi kaldır":"Sabitle"}">${ICON("pin")}</button></td>
+      <td><a class="linkish" href="#">${esc(p.name)}</a><span class="sub">${esc(p.addr)} · Son kullanım ${p.last}</span></td>
+      ${showStatus?`<td>${statusPill(p)}</td>`:""}
+      <td class="right num inc">${fmt(p.income)}</td>
+      <td class="right num exp">${fmt(p.expense)}</td>
+      <td class="right num" style="font-weight:600">${signed(p.income-p.expense)}</td>
+      <td class="right num">${fmt(p.payable)}</td>
+      <td class="right num">${fmt(p.receivable)}${p.overdue?`<span class="sub" style="color:var(--expense);font-weight:600">Gecikmiş ${fmt(p.overdue)}</span>`:""}</td>
+      <td style="width:40px"><button class="iconbtn" aria-label="Diğer işlemler">${ICON("more-horizontal")}</button></td>
+    </tr>`).join("");
+  const cards = list.map(p => `
+    <article class="panel pcard">
+      <div class="top"><div><a class="linkish" href="#">${esc(p.name)}</a><span class="sub" style="display:block;font-size:12.5px;color:var(--muted)">${esc(p.addr)}</span></div><div style="display:flex;gap:4px;align-items:center">${showStatus?statusPill(p):""}<button class="pinbtn" data-pin="${p.name}" aria-pressed="${p.pinned}" aria-label="${p.pinned?"Sabitlemeyi kaldır":"Sabitle"}">${ICON("pin")}</button></div></div>
+      <div class="kv">
+        <div><span>Gelir − gider farkı</span><b class="num">${signed(p.income-p.expense)}</b></div>
+        <div><span>Son kullanım</span><b>${p.last}</b></div>
+        <div><span>Kalan borç</span><b class="num">${fmt(p.payable)}</b></div>
+        <div><span>Kalan alacak</span><b class="num">${fmt(p.receivable)}</b>${p.overdue?`<span style="color:var(--expense);font-weight:600">Gecikmiş ${fmt(p.overdue)}</span>`:""}</div>
+      </div>
+    </article>`).join("");
+  const tab = (k,l) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}<span class="cnt">${counts[k]}</span></button>`;
+  return `
+  <div class="pagehead">
+    <div><h2>Şantiyeler</h2><p>Sabitlenenler önce · son kullanılana göre</p></div>
+    <div class="actions"><button class="btn primary">${ICON("plus")}Yeni şantiye</button></div>
+  </div>
+  <section class="panel">
+    <div class="tabs" role="tablist">${tab("active","Aktif")}${tab("completed","Tamamlandı")}${tab("archived","Arşivlendi")}${tab("all","Tümü")}</div>
+    <div class="toolbar">
+      <label class="search"><i data-lucide="search"></i><input placeholder="Şantiye adı veya adres ara" aria-label="Şantiyelerde ara"></label>
+      <div class="field" style="flex:0 0 200px"><select aria-label="Sıralama"><option>Son kullanılan</option><option>Yeniden eskiye</option><option>Ada göre</option></select></div>
+    </div>
+    <div class="proj-desktop tablewrap">${list.length?`<table>
+      <thead><tr><th></th><th>Şantiye</th>${showStatus?"<th>Durum</th>":""}<th class="right">Tahsilat</th><th class="right">Ödeme</th><th class="right">Fark</th><th class="right">Kalan borç</th><th class="right">Kalan alacak</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>`:`<p class="empty">Arşivlenmiş şantiye yok.</p>`}</div>
+    <div class="proj-cards" style="padding:0 12px 12px">${cards || `<p class="empty">Arşivlenmiş şantiye yok.</p>`}</div>
+  </section>`;
+}
+
+function screenPlaceholder(name){
+  return `<div class="pagehead"><div><h2>${name}</h2><p>Bu taslakta yalnız Özet, İşlemler ve Şantiyeler ekranları çizildi.</p></div></div>
+  <section class="panel"><p class="empty">Üstteki "Ekran" seçiminden veya menüden Özet, İşlemler ya da Şantiyeler'e geçin.</p></section>`;
+}
+
+/* ---------- Çizim ---------- */
+const NAMES = {kisiler:"Kişiler",anlasmalar:"Anlaşmalar",vadeler:"Vadeler",raporlar:"Raporlar",silinenler:"Silinenler",ayarlar:"Ayarlar",diger:"Diğer"};
+function render(){
+  const app = document.getElementById("app");
+  app.dataset.palette = S.palette;
+  document.getElementById("stage").dataset.device = S.device;
+  for(const id of ["c-screen","c-device"]){
+    const key = {"c-screen":"screen","c-palette":"palette","c-device":"device","c-refund":"refund"}[id];
+    document.querySelectorAll(`#${id} button`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v===S[key])));
+  }
+  renderNav();
+  const c = document.getElementById("content");
+  c.innerHTML = S.screen==="ozet"?screenOzet():S.screen==="islemler"?screenIslemler():S.screen==="santiyeler"?screenSantiyeler():screenPlaceholder(NAMES[S.screen]||"");
+  if(window.lucide) window.lucide.createIcons({attrs:{"stroke-width":1.9,"aria-hidden":"true"}});
+  save();
+}
+
+/* ---------- Olaylar ---------- */
+document.querySelectorAll(".controls .seg").forEach(seg => seg.addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const key = {"c-screen":"screen","c-palette":"palette","c-device":"device","c-refund":"refund"}[seg.id];
+  S[key] = b.dataset.v; render();
+}));
+document.getElementById("app").addEventListener("click", e => {
+  const go = e.target.closest("[data-go]");
+  if(go){ e.preventDefault(); S.screen = go.dataset.go; render(); document.getElementById("content").scrollTop = 0; return; }
+  const per = e.target.closest("[data-period]"); if(per){ S.period = per.dataset.period; render(); return; }
+  const ty = e.target.closest("[data-type]"); if(ty){ S.type = ty.dataset.type; render(); return; }
+  const tb = e.target.closest("[data-tab]"); if(tb){ S.tab = tb.dataset.tab; render(); return; }
+  const pin = e.target.closest("[data-pin]"); if(pin){ const p = PROJ.find(x=>x.name===pin.dataset.pin); if(p){ p.pinned=!p.pinned; render(); } return; }
+  if(e.target.closest("#filtersbtn")){ S.filtersOpen = !S.filtersOpen; render(); return; }
+  const nb = e.target.closest("#newbtn");
+  const menu = document.getElementById("newmenu");
+  if(nb){ menu.hidden = !menu.hidden; nb.setAttribute("aria-expanded", String(!menu.hidden)); return; }
+  if(!e.target.closest("#newmenu")){ menu.hidden = true; document.getElementById("newbtn").setAttribute("aria-expanded","false"); }
+  const a = e.target.closest("a[href^='#']"); if(a) e.preventDefault();
+});
+document.getElementById("app").addEventListener("input", e => {
+  if(e.target.id==="txsearch"){ S.q = e.target.value; const pos = e.target.selectionStart; render(); const el = document.getElementById("txsearch"); el.focus(); el.setSelectionRange(pos,pos); }
+});
+document.addEventListener("keydown", e => { if(e.key==="Escape"){ const m=document.getElementById("newmenu"); m.hidden=true; } });
+render();
+})();
+</script>

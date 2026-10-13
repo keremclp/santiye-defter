@@ -41,6 +41,7 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 | İstemci durumu | Zustand | Oturum ve arayüz tercihleri |
 | Form | React Hook Form + Zod | API şemalarıyla aynı kurallar |
 | Stil | CSS Modules veya tek tasarım token dosyası | Aşağıdaki renkler sabit |
+| İkon | lucide-react | Bölüm 4.4 |
 | HTTP | Axios | `Authorization: Bearer` |
 | API | Node.js, Express, TypeScript | ESM veya derlenmiş TS |
 | Doğrulama | Zod | Gövde ve sorgu. Ortak şemalar yüklenince Zod'un hazır hata mesajları Türkçeye ayarlanır |
@@ -80,7 +81,7 @@ Ortam değişkenleri:
 | `APP_NAME` | Şantiye Hesap |
 | `WEB_ORIGIN` | CORS |
 | `VITE_API_URL` | Web'in API adresi |
-| `SUPPORT_CONTACT_TEXT` | Şifremi unuttum ve kapasite ekranlarında görünen ürün sahibi iletişim metni |
+| `SUPPORT_CONTACT_TEXT` | Şifremi unuttum ve kapasite ekranlarında görünen ürün sahibi iletişim metni. Web derlemesine gömülür (Vite `envPrefix`); değişirse web yeniden derlenir, boşsa genel yönlendirme metni gösterilir |
 | `PLATFORM_BOOTSTRAP_USERNAME` `PLATFORM_BOOTSTRAP_PASSWORD` | İlk ürün sahibi hesabını bir kez oluşturmak için; ilk girişte TOTP kurulumu zorunlu |
 | `PLATFORM_TOTP_ENCRYPTION_KEY` | TOTP gizli anahtarlarını veritabanında şifrelemek için (AES-256-GCM), en az 32 bayt |
 
@@ -166,80 +167,101 @@ Kimlik akışı:
 
 ## 4. Tasarım sistemi
 
-Bunu token olarak kodla. Yakın renk uydurma.
+Bunu token olarak kodla. Yakın renk uydurma. Onaylanan görsel başvuru: [`tasarim/taslak_v1.html`](tasarim/taslak_v1.html) (Özet, İşlemler, Şantiyeler; masaüstü ve telefon). Ölçü, renk veya düzen konusunda bu bölüm ile taslak çelişirse bu bölüm geçerlidir; bu bölümde olmayan görsel ayrıntıda taslağa uyulur.
+
+Genel ilke: Metin nötr ve koyu, marka moru yalnız etkileşim ve vurguda. Her şey aynı ağırlıkta olmasın; özet önce, ayrıntı sonra.
 
 ### 4.1 Renk
 
 | Token | Hex / değer | Kullanım |
 | --- | --- | --- |
-| `surface` | `#F8F6F6` | Sayfa zemini |
-| `surfaceTint` | `#EEECF8` | Input zemini |
-| `elevated` / `white` | `#FFFFFF` | Kart, panel, footer |
-| `primary` | `#4D12EE` | Ana düğme, vurgu, seçili sekme |
-| `navy` | `#2F24C1` | Başlık, koyu kart, metin vurgusu |
+| `surface` | `#F7F6FA` | Uygulama zemini |
+| `panel` / `white` | `#FFFFFF` | Kart, panel, üst çubuk, kenar menü, tablo |
+| `ink` | `#1B1838` | Başlıklar, gövde metni, tablo değerleri |
+| `ink2` | `#4A4668` | İkincil metin, etiketler, menü öğeleri |
+| `muted` | `#7A76A8` | Yardımcı metin, meta bilgi, placeholder, tablo başlığı |
+| `border` | `#E7E4F0` | Kart kenarı, ayırıcı, input kenarı |
+| `borderSoft` | `#F0EEF5` | Liste ve tablo satır ayırıcıları, nötr rozet zemini |
+| `primary` | `#4D12EE` | Birincil düğme, bağlantı, seçili menü/sekme, odak halkası |
+| `primaryHover` | `#3F0CCB` | Birincil düğme üzerine gelince |
+| `navy` | `#2F24C1` | Kelime markası "Şantiye Hesap" ve tanıtım sitesi başlıkları |
 | `navyDeep` | `#1E1878` | Tanıtım kahramanının koyu ucu |
-| `cyan` | `#3FD1CB` | İkincil vurgu, ikon, gradyan ucu |
-| `ink` | `#2F24C1` | Gövde başlığı |
-| `muted` | `#7A76A8` | Yardımcı metin, placeholder |
-| `border` | `#E4E1F0` | Çizgi, ayırıcı |
+| `cyan` | `#3FD1CB` | İkincil vurgu, gradyan ucu |
+| `cyanInk` | `#0E6E6A` | Cyan zemin üstündeki metin (ör. "Paylaştırıldı" notu) |
 | `income` / `success` | `#166534` | Gelir tutarı, başarı |
-| `expense` / `danger` | `#DC2626` | Gider tutarı, silme, zorunlu yıldız |
-| `onNavy` | `#FFFFFF` | Lacivert üstündeki metin |
-| `onNavyMuted` | `rgba(255,255,255,0.72)` | Lacivert üstündeki ikincil metin |
-| `overlay` | `rgba(47,36,193,0.45)` | Genel örtü |
+| `expense` / `danger` | `#DC2626` | Gider tutarı, silme, gecikme, zorunlu yıldız |
+| `warn` | `#B45309` | Yaklaşan vade ("11 gün kaldı") |
+| `onPrimary` | `#FFFFFF` | Mor ve lacivert üstündeki metin |
+| `onNavyMuted` | `rgba(255,255,255,0.72)` | Lacivert üstündeki ikincil metin (tanıtım sitesi) |
 | `backdrop` | `rgba(15,23,42,0.72)` | Modal arkası |
 
-Tint'ler, dolgu ve seçili chip için:
+Tint'ler (yumuşak zeminler):
 
-| Ad | Değer |
-| --- | --- |
-| primary %8 / %12 | `rgba(77,18,238,0.08)` / `0.12` |
-| navy %12 | `rgba(47,36,193,0.12)` |
-| cyan %12 / %18 | `rgba(63,209,203,0.12)` / `0.18` |
-| income %12 | `rgba(22,101,52,0.12)` |
-| expense %12 | `rgba(220,38,38,0.12)` |
+| Ad | Değer | Kullanım |
+| --- | --- | --- |
+| primary %8 / %14 | `rgba(77,18,238,0.08)` / `0.14` | Seçili menü zemini, filtre etiketi, seçili segment |
+| cyan %18 | `rgba(63,209,203,0.18)` | Paylaştırma notu, demo/görüntüleme bandı |
+| income %10 | `rgba(22,101,52,0.10)` | Gelir ikon kutusu, yeşil rozet |
+| expense %9 | `rgba(220,38,38,0.09)` | Gider ikon kutusu, kırmızı rozet |
+| warn %12 | `rgba(217,119,6,0.12)` | Yaklaşan vade rozeti |
 
-Gradyan (tanıtım kahramanı, giriş paneli arkası): `primary` → `navy` → `cyan`, sol üstten sağ alta.
+Gradyan yalnız tanıtım sitesinde ve giriş ekranı arkasında: `primary` → `navy` → `cyan`, sol üstten sağ alta. Uygulama ekranlarında gradyan yok.
 
-Gelir kartı zemini income %12, gider kartı zemini expense %12. Tutar rengini asla gri yapma. Gelir yeşil, gider kırmızı. İade satırları kendi yönünün rengini kullanır ama "Ödeme iadesi" / "Tahsilat iadesi" yazısı mutlaka görünür.
+Renk kuralları:
 
-Durum renkleri yeni token gerektirmez: gecikmiş vade `expense` metin + expense %12 rozet ve "Gecikmiş" yazısı; yaklaşan vade `primary` %12 rozet; fazla ödeme/tahsilat `danger` kenarlı uyarı kutusu; demo ve yalnız görüntüleme bandı `cyan` %18 zemin + `navy` metin.
+- **Metin rengi:** Gövde, başlık ve rakamlar `ink`; açıklamalar `ink2`/`muted`. Uygulama içinde başlık veya gövde metni mor/lacivert yapılmaz.
+- **Tutarlar:** Gelir `income` ve "+" önekli, gider `expense` ve "−" önekli. Tutar rengi asla gri yapılmaz. Gelir − gider farkı ve kalan borç/alacak gibi bakiyeler `ink` renginde; fark negatifse "−" önekli.
+- **İade:** İade, kaynak hareketin rengini taşır ve "−" önekiyle gösterilir: ödeme iadesi kırmızı "−₺5.000,00", tahsilat iadesi yeşil "−". Tür yazısı ("Ödeme iadesi" / "Tahsilat iadesi") her zaman görünür.
+- **Kartlar beyazdır.** Gelir/gider kutularına renkli zemin verilmez; renk yalnız rakamda ve küçük ikon kutusundadır.
+- **Durumlar:** Gecikmiş vade kırmızı rozet + uyarı ikonu + "N gün gecikti"; yaklaşan vade `warn` rozet + saat ikonu + "N gün kaldı"; fazla ödeme/tahsilat `danger` kenarlı uyarı kutusu; demo ve yalnız görüntüleme bandı cyan %18 zemin + `ink` metin. Anlam hiçbir yerde yalnız renge bırakılmaz.
 
 ### 4.2 Tipografi
 
 | Rol | Aile | Ağırlık | Boyut |
 | --- | --- | --- | --- |
-| Marka ve sayfa başlığı | Outfit | 700 | 40–56 px tanıtım, 28–34 px uygulama |
-| Kart başlığı | Outfit | 600 | 18–23 px |
-| Gövde | DM Sans | 400 | 16–17 px |
-| Etiket ve düğme | DM Sans | 500–700 | 15–16 px |
-| Küçük meta | DM Sans | 400 | 14 px |
+| Tanıtım başlığı | Outfit | 700 | 40–56 px |
+| Sayfa başlığı (uygulama) | Outfit | 600 | 28 px masaüstü, 24 px telefon; harf aralığı −0.6 px |
+| Panel başlığı | Outfit | 600 | 17 px |
+| Ana rakam (özet kutusu) | Outfit | 600 | 28 px (bakiye kutularında 24 px); telefonda 22 / 19 px |
+| Gövde, tablo hücresi, liste başlığı | DM Sans | 400–600 | 14–15 px |
+| Etiket, düğme, sekme | DM Sans | 500–600 | 13–14 px |
+| Meta, alt bilgi | DM Sans | 400 | 12–13 px, `muted` |
+| Tablo başlığı, grup etiketi | DM Sans | 600 | 11–11.5 px, büyük harf, harf aralığı 0.05–0.07em, `muted` |
 
-Google Fonts'tan Outfit ve DM Sans yükle. Satır yüksekliği gövdede 1.45. Başlıklarda harf aralığı hafif negatif (`-0.3px` ile `-1px`).
+Google Fonts'tan Outfit ve DM Sans yükle. Gövde satır yüksekliği 1.45. Bütün tutarlar `font-variant-numeric: tabular-nums` ile ve satır kırılmadan yazılır. Bu ölçeğin dışına çıkılmaz; açıklama için ek küçük gri metin satırları eklenmez, gerekirse bilgi ikonuna (ipucu) taşınır.
 
 ### 4.3 Ölçü
 
-| Token | px |
+| Token | Değer |
 | --- | --- |
-| xs / sm / md / lg / xl / xxl | 6 / 10 / 16 / 24 / 32 / 48 |
-| radius sm / md / lg / xl | 10 / 16 / 24 / 32 |
-
-Gölge kartta çok hafif: `0 3px 10px rgba(77,18,238,0.06)`. Modal daha belirgin: `0 -4px 16px rgba(0,0,0,0.18)`.
+| Boşluk | 4 / 6 / 8 / 10 / 12 / 14 / 16 / 22 / 28 / 32 px |
+| Radius | rozet 999 px; segment 6–7 px; input ve düğme 9–10 px; ikon kutusu 8–10 px; kart/panel 14 px |
+| Kart gölgesi | `0 1px 2px rgba(27,24,56,.04), 0 2px 8px rgba(27,24,56,.04)` |
+| Açılır menü gölgesi | `0 12px 32px rgba(20,20,40,.14)` |
+| Dokunma alanı | Telefonda düğme ve satırlar en az 44–48 px yükseklik |
 
 ### 4.4 Bileşenler
 
-- **Birincil düğme:** zemin `primary`, metin beyaz, yükseklik en az 48 px, radius `md`. Basılınca hafif küçülme.
-- **İkincil düğme:** zemin `cyan` veya beyaz + lacivert metin. Gelir kaydetmede yeşil, gider kaydetmede kırmızı varyant serbest; metin beyaz.
-- **Hayalet düğme:** zeminsiz, metin `primary`.
+- **İkonlar:** Lucide (`lucide-react`), çizgi kalınlığı 1.9; menüde 18 px, düğmede 17 px, satır ikon kutusunda 15–17 px. İkon yalnız süs değil, anlam taşır; ikonlu düğmenin ya metni ya `aria-label`ı vardır.
+- **Birincil düğme:** zemin `primary`, metin beyaz, yükseklik masaüstünde 40 px, telefonda en az 48 px, radius 10 px, ikon + metin.
+- **Kenarlı (ghost) düğme:** beyaz zemin, `border` kenar, `ink` metin; ikincil eylemler (Gelir ekle, Gider ekle, indir). Gelir/gider kaydetme düğmesinde yeşil/kırmızı varyant yalnız form içinde serbest.
 - **Tehlike:** zemin `danger`, beyaz metin. Silmede onay ve gerekçe sor.
-- **Input:** zemin `surfaceTint`, kenar `border`, radius `sm`, dikey padding 14 px, placeholder `muted`. Hata kenarı `danger`, hata metni alanın altında. Üstte etiket, zorunlu alanda kırmızı yıldız.
-- **Chip:** seçilmemiş beyaz kenarlı; seçili zemin vurgu rengi, metin beyaz.
-- **Kart:** beyaz, radius `md`, kenar `border`, iç boşluk `md`.
-- **Boş durum:** başlık + kısa açıklama + varsa eylem düğmesi. Ortala.
-- **Para:** `Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })`. Listede kompakt gösterim serbest; detayda kuruşlu.
-- **Tarih:** `tr-TR` uzun veya `d MMM yyyy`. Takvim alanı metin inputu değil, tarih seçici.
+- **Input / select:** zemin `surface`, kenar `border`, radius 9 px, yükseklik 38–40 px (telefonda 44 px), placeholder `muted`. Hata kenarı `danger`, hata metni alanın altında. Üstte etiket (12–13 px, 600), zorunlu alanda kırmızı yıldız.
+- **Segment (ör. Bu ay / Tüm zamanlar, Tümü / Gelir / Gider / İade):** beyaz kutu içinde düğme grubu; seçili öğe primary %14 zemin + `primary` metin.
+- **Filtre etiketi (chip):** primary %8 zemin, `primary` metin, kaldırmak için × düğmesi; yanında "Filtreleri temizle".
+- **Rozet (pill):** 12 px, 600, tam yuvarlak; yeşil, kırmızı, uyarı, nötr ve primary türleri.
+- **Kart / panel:** beyaz, radius 14 px, `border` kenar, hafif gölge. Kart içinde kart yok; panel içindeki listeler ince çizgiyle ayrılmış satırlardır.
+- **Panel başlığı:** solda ikon + başlık, sağda "Tümü ›" bağlantısı.
+- **Özet kutusu (metrik):** etiket + renkli ikon kutusu, büyük rakam, tek satır alt bilgi. Gecikmiş tutar bakiye kutusunun içinde kırmızı rozet olarak gösterilir, ayrı kutu açılmaz.
+- **Liste satırı:** solda 36 px ikon kutusu (tür rengi), ortada başlık (600) ve tek satır meta ("Şantiye · Kişi · Tarih"), sağda tutar ve gerekirse rozet. Uzun metin üç nokta ile kısalır.
+- **Tablo:** başlık satırı küçük büyük harf `muted`; satır ayırıcı `borderSoft`; üzerine gelince satır `surface` zemin; tutar sütunları sağa yaslı. İlk sütun bağlantılı ana bilgi + altında meta satırı.
+- **Sekmeler:** alt çizgili; seçili sekme `primary` metin ve 2 px alt çizgi; her sekmede sayı rozeti.
+- **Bağlantılar:** altı çizili değil; `ink` (600) veya `primary` renkte, üzerine gelince `primary` / alt çizgi.
+- **Boş durum:** kısa açıklama + varsa eylem. Boş grup tam kart değil, tek satırdır.
+- **Para:** `Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })`. Özet kutularında kuruşsuz, liste/tablo/detayda kuruşlu.
+- **Tarih:** `tr-TR` `d MMM yyyy` (13 Eki 2026). Takvim alanı metin inputu değil, tarih seçici.
 - **Toast / dialog:** tarayıcı `alert` kullanma. Markalı dialog: başlık, mesaj, Vazgeç ve onay. Kritik veya belirsiz durumlar (kayıt doğrulanıyor, belge yüklenemedi) yalnız kısa toast'ta kalmaz, sayfada kalıcı görünür.
-- **Etki önizlemesi:** Bedel değişikliği, iptal, iade, silme, geri yükleme ve düzeltme dialoglarında önce "önce → sonra" kutusu: etkilenen kalan borç/alacak, fazla tutar ve toplamlar. Altında zorunlu gerekçe alanı.
+- **Etki önizlemesi:** Bedel değişikliği, iptal, iade, silme, geri yükleme ve düzeltme dialoglarında önce "önce → sonra" kutusu: etkilenen kalan borç/alacak, fazla tutar ve toplamlar. Altında zorunlu gerekçe alanı. Silme, geri yükleme, iade ve düzeltme önizlemeleri `packages/shared` içindeki `previewAgreementBalance` ve `previewCashTotals` ile hesaplanır; bedel değişikliği ve iptalde API önizlemesi (`?preview=1`) kullanılır.
 - **Kaydetme durumu:** Kaydediliyor / Kaydedildi / Kaydedilemedi / Kaydın durumu doğrulanıyor. Dördü ayrı metin ve ikonla gösterilir, yalnız renkle değil.
 - **Belge satırı:** küçük önizleme veya dosya ikonu, ad, boyut, durum (bekliyor / yükleniyor / yüklendi / başarısız) ve yeniden dene.
 
@@ -247,13 +269,16 @@ Gölge kartta çok hafif: `0 3px 10px rgba(77,18,238,0.06)`. Modal daha belirgin
 
 | Genişlik | Davranış |
 | --- | --- |
-| ≥ 1100 px | Sol sabit menü 240 px, içerik max 1120 px |
-| 760–1099 px | Üst çubuk + içerik, menü drawer |
-| < 760 px | Tek kolon, alt menü (Özet, Şantiyeler, İşlemler, Kişiler, Diğer), birincil eylemler alta yapışık, tablolar kart listesine döner |
+| ≥ 1100 px | Sol sabit menü 232 px + üst çubuk + içerik. **İçerik genişlik sınırı yok**; menünün yanından başlar, iki yanda 32 px boşlukla ekranı doldurur. Yalnız formlar ve düz metin sayfaları okunabilirlik için en fazla ~760 px |
+| 760–1099 px | Üst çubuk + içerik, menü drawer; içerik iki yanda 24 px |
+| < 760 px | Tek kolon, iki yanda 16 px; kenar menü yok, **alt menü** (Özet, Şantiyeler, İşlemler, Kişiler, Diğer) ve sağ altta yüzen **+** düğmesi; tablolar kart listesine döner; özet kutuları iki sütun |
 
-Telefonda alt menünün ortasında veya üstünde her ekrandan erişilen bir **+ Kayıt** eylemi olsun: Gelir ekle, Gider ekle, Anlaşma ekle. Açıldığı bağlamdaki şantiye/anlaşma hazır seçilir.
+- **Kenar menü:** üstte logo kutusu + "Şantiye Hesap" + firma adı; ana grup (Özet, Şantiyeler, İşlemler, Kişiler, Anlaşmalar); "Takip" grubu (Vadeler — gecikmiş sayısı rozetiyle, Raporlar); altta Silinenler, Ayarlar ve kullanıcı kartı (baş harfler, ad, çıkış ikonu). Her öğe ikonlu.
+- **Üst çubuk:** genel arama kutusu (yer tutucu "Şantiye, kişi, tutar veya kayıt no ara"; `/` kısayolu; sonuçlar `/uygulama/ara` sayfasında) ve sağda **Yeni kayıt** düğmesi (açılır menü: Gelir ekle, Gider ekle, Anlaşma ekle; her biri ikon ve kısa açıklamalı).
+- **Sayfa başlığı:** solda başlık ve tek satır açıklama, sağda sayfanın ana eylemleri.
+- **+ Kayıt:** Telefonda yüzen + düğmesi aynı menüyü açar. Açıldığı bağlamdaki şantiye/anlaşma hazır seçilir.
 
-Klavye ve odak: her input görünür kalsın. Formlar sayfa içinde kayar. Modal uzunsa kendi içinde kayar, arka plan kilitlenir. `Esc` modalı kapatır. Odak tuzağı ve görünür odak halkası olsun.
+Klavye ve odak: her input görünür kalsın. Formlar sayfa içinde kayar. Modal uzunsa kendi içinde kayar, arka plan kilitlenir. `Esc` modalı ve açılır menüyü kapatır. Odak tuzağı ve görünür odak halkası (`primary`, 2 px) olsun.
 
 ---
 
@@ -314,7 +339,7 @@ Demo aynı rotaları `/demo/uygulama/...` altında, demo bandıyla kullanır.
 | `/uygulama/ayarlar/kategoriler` | Gider kategorileri |
 | `/uygulama/ayarlar/hakkinda` | Sürüm ve ürün notu |
 
-Sol menü: Özet, Şantiyeler, İşlemler, Kişiler, Anlaşmalar, Vadeler, Raporlar, Ara, Silinenler, Ayarlar. Üstte marka ve firma adı, altta kullanıcı adı ve çıkış. Telefonda "Diğer" sekmesi Anlaşmalar, Vadeler, Raporlar, Ara, Silinenler ve Ayarlar'ı listeler.
+Sol menü (bölüm 4.5): Özet, Şantiyeler, İşlemler, Kişiler, Anlaşmalar; "Takip" grubunda Vadeler ve Raporlar; altta Silinenler, Ayarlar ve kullanıcı kartı. Arama menüde değil, üst çubuktaki arama kutusundadır; sonuçlar `/uygulama/ara` sayfasında açılır. Telefonda "Diğer" sekmesi Anlaşmalar, Vadeler, Raporlar, Ara, Silinenler ve Ayarlar'ı listeler.
 
 ### 5.3 Yönetim (ürün sahibi)
 
@@ -374,36 +399,38 @@ Genel kurallar: Başlangıçta yeni gerçek firma boştur; örnek veri doldurma.
 
 ### 7.1 Özet
 
-Karşılama: "Merhaba, {ad}". Kapsam etiketi: "Firma geneli — tüm şantiyeler" (tamamlanan ve arşivlenenler dahil).
+Düzen onaylanan taslaktaki gibidir (`tasarim/taslak_v1.html`, Özet).
 
-Özet kutuları:
+Sayfa başlığı: "Merhaba, {ad}"; altında tek satır kapsam: "Firma geneli · tamamlanan ve arşivlenen şantiyeler dahil". Sağda kenarlı düğmeler: Gelir ekle, Gider ekle.
 
-| Kutu | Kaynak |
-| --- | --- |
-| Tahsilat | `totals.netIncome`, yeşil (tahsilatlar − tahsilat iadeleri) |
-| Ödeme | `totals.netExpense`, kırmızı (ödemeler − ödeme iadeleri) |
-| Gelir − gider farkı | `totals.difference`. "Kâr" veya "kasa" diye adlandırma |
-| Kalan borç | `totals.remainingPayable` |
-| Kalan alacak | `totals.remainingReceivable` |
-| Gecikmiş | `totals.overduePayable` ve `totals.overdueReceivable` ayrı |
-| Aktif şantiye | `activeProjectCount` |
+Özet kutularının üstünde dönem segmenti (**Bu ay** / **Tüm zamanlar**, varsayılan Bu ay) ve sağda "Hesaplandı: {tarih saat}". Ayrı bir "Bu ay şeridi" yoktur; dönem segmenti ilk üç kutunun değerini değiştirir.
 
-Bu ay şeridi: `monthly.netIncome`, `monthly.netExpense`, `monthly.difference`; işlem tarihine göre.
+| Kutu | Kaynak | Not |
+| --- | --- | --- |
+| Tahsilat | `monthly.netIncome` / `totals.netIncome` | Yeşil rakam; alt satır dönem adı |
+| Ödeme | `monthly.netExpense` / `totals.netExpense` | Kırmızı rakam; alt satır düşülen ödeme iadesi |
+| Gelir − gider farkı | `monthly.difference` / `totals.difference` | `ink` rakam, negatifse "−". "Kâr" veya "kasa" diye adlandırma |
+| Kalan alacak | `totals.remainingReceivable` | Dönemden bağımsız güncel bakiye; içinde kırmızı rozet "Gecikmiş {overdueReceivable}" |
+| Kalan borç | `totals.remainingPayable` | Dönemden bağımsız güncel bakiye; içinde kırmızı rozet "Gecikmiş {overduePayable}" |
 
-Listeler, her biri en fazla beş satır ve "tümünü gör":
+Masaüstünde beş kutu tek satırdadır; telefonda iki sütun, "Gelir − gider farkı" tam genişlik. Aktif şantiye sayısı ayrı kutu değildir; "Son kullanılan şantiyeler" panelinde görünür. Kalan alacak/borç anlaşmaları ve başlangıç kayıtlarını birlikte içerir (bölüm 9.1); kutunun ipucunda bu yazılır.
 
-- Son hareketler
-- Gecikmiş ve 14 gün içinde vadesi gelen tutarlar
-- Açık anlaşmalar (kalan > 0)
-- Son kullanılan şantiyeler
+Altında iki satır halinde dört panel (masaüstünde 2×2; ilk satırda sol panel daha geniş), her biri en fazla beş satır ve "Tümü ›" bağlantısı:
 
-Hızlı kayıt: Gelir ekle, Gider ekle. Satıra tıklayınca ilgili detaya git. Yüklenirken tutar kutularında `0 TL` gösterme, yükleniyor durumu göster. Hata halinde yeniden dene. Boş veride "İlk şantiyeni oluştur" ve "Başlangıç borç/alacağı gir" eylemlerine yönlendir; şantiye oluşturmak firma geneli kayıt için ön koşul değildir.
+- Son hareketler (liste satırı: tür ikonu, açıklama, "şantiye · kişi · tarih", işaretli tutar)
+- Vadeler: "Gecikmiş" ve "14 gün içinde" alt grupları; satırda kişi, anlaşma, şantiye, vade, tutar ve "N gün gecikti" / "N gün kaldı" rozeti
+- Açık anlaşmalar (kalan > 0): ad, kişi · şantiye, kalan ve "Kalan alacak/borç"; başlangıç kaydı "Başlangıç" rozetiyle
+- Son kullanılan şantiyeler: ad, son kullanım, gelir − gider farkı
+
+Hızlı kayıt: sayfa başlığındaki düğmeler ve üst çubuktaki **Yeni kayıt**. Satıra tıklayınca ilgili detaya git. Yüklenirken tutar kutularında `0 TL` gösterme, yükleniyor durumu göster. Hata halinde yeniden dene. Boş veride "İlk şantiyeni oluştur" ve "Başlangıç borç/alacağı gir" eylemlerine yönlendir; şantiye oluşturmak firma geneli kayıt için ön koşul değildir.
 
 ### 7.2 Şantiyeler
 
-Araç çubuğu: arama ("Proje ara…"), filtre (durum: aktif / tamamlandı / arşivlendi / tümü; varsayılan aktif), sıralama (son kullanılan, yeniden eskiye, eskiden yeniye, ada göre). Sabitleme önce gelsin.
+Düzen onaylanan taslaktaki gibidir (`tasarim/taslak_v1.html`, Şantiyeler).
 
-Yeni şantiye kartı listenin başında. Kartta ad, durum rozeti, son kullanım, gelir–gider farkı, kalan borç ve alacak.
+Sayfa başlığının sağında birincil **Yeni şantiye** düğmesi (listede ayrı "yeni şantiye" kartı yok). Durum sekmeleri sayı rozetli: Aktif (varsayılan) / Tamamlandı / Arşivlendi / Tümü. Altında arama ("Şantiye adı veya adres ara") ve sıralama (son kullanılan, yeniden eskiye, eskiden yeniye, ada göre). Sabitlenenler önce gelir.
+
+Masaüstünde tablo: sabitleme ikonu, şantiye adı (altında adres · son kullanım), tahsilat, ödeme, fark, kalan borç, kalan alacak (gecikmiş varsa altında kırmızı), satır sonunda "Diğer işlemler" menüsü. Durum sütunu yalnız "Tümü" sekmesinde görünür. Telefonda her şantiye bir kart: ad, adres, sabitleme, fark, son kullanım, kalan borç, kalan alacak.
 
 Form alanları:
 
@@ -427,7 +454,7 @@ Durum eylemleri ayrı düğmelerdir:
 - **Arşivle / arşivden çıkar:** Günlük listeden kaldırır; kayıt, belge ve açık tutarlar firma özetinde ve vade listelerinde kalır. Arşivlenen şantiye kayıt kuralları bakımından tamamlanan şantiye gibi davranır. Arşivden çıkınca önceki duruma döner: `completedAt` doluysa tamamlandı, boşsa aktif.
 - **Sil:** Yalnız hiç aktif hareketi ve anlaşması olmayan şantiyede, onay ve gerekçeyle, yumuşak. Kaydı olan şantiyede sil yerine arşivle önerilir.
 
-Detay üstü lacivert özet: tahsilat, ödeme, fark, ödenecek anlaşma toplamı, ödenen, kalan borç, tahsil edilecek anlaşma toplamı, tahsil edilen, kalan alacak, fazla ödeme/tahsilat varsa ayrı. Bloklar: son hareketler, anlaşmalar, vadeler, rapor bağlantısı. Gelir ekle, gider ekle ve anlaşma ekle bu projeye kilitli açılsın.
+Detay üstünde özet kutuları (bölüm 4.4, beyaz kart): tahsilat, ödeme, fark, ödenecek anlaşma toplamı, ödenen, kalan borç, tahsil edilecek anlaşma toplamı, tahsil edilen, kalan alacak, fazla ödeme/tahsilat varsa ayrı. Bloklar: son hareketler, anlaşmalar, vadeler, rapor bağlantısı. Gelir ekle, gider ekle ve anlaşma ekle bu projeye kilitli açılsın.
 
 ### 7.3 Kişiler
 
@@ -463,7 +490,11 @@ Eylemler: ilgili anlaşmaya ödeme yap / tahsilat al, yeni anlaşma, hesap dök�
 
 ### 7.4 İşlemler
 
-Liste satırında: kayıt no, tarih, tür (gelir / gider / ödeme iadesi / tahsilat iadesi), açıklama, şantiye veya "Firma geneli", kişi, anlaşma, tutar. Paylaştırılmış harekette "Paylaştırıldı" rozeti.
+Düzen onaylanan taslaktaki gibidir (`tasarim/taslak_v1.html`, İşlemler): sayfa başlığı (sağda "Bu sonuçları indir"), araç çubuğu paneli, toplam şeridi, tablo.
+
+- **Araç çubuğu tek satır:** arama kutusu; tarih segmenti (Bugün / Bu ay / Tümü / takvim ikonu ile aralık); tür segmenti (Tümü / Gelir / Gider / İade); **Filtreler** düğmesi (etkin ek filtre sayısı rozetli). Altında etkin filtre etiketleri ve "Filtreleri temizle". Diğer filtreler "Filtreler" düğmesiyle açılan panelde.
+- **Toplam şeridi:** Tahsilat (net), Ödeme (net, altında düşülen iade), Gelir − gider farkı ve kayıt sayısı; bütün filtrelenmiş sonuçları kapsar.
+- **Tablo sütunları:** İşlem (tür ikonu; açıklama bağlantısı; altında "#no · tarih · tür"; paylaştırılmışsa cyan "Paylaştırıldı: ₺25.000 + ₺15.000" notu), Kişi (yoksa "Muhatapsız"), Şantiye (veya "Firma geneli"), Anlaşma (yoksa "Bağlı değil"), Kategori, Tutar (sağa yaslı, işaretli ve renkli). Telefonda her satır kart olur: açıklama ve meta solda, tutar sağda, şantiye · kişi altta.
 
 Filtreler, birlikte çalışır:
 
@@ -476,7 +507,7 @@ Filtreler, birlikte çalışır:
 - Tutar alt-üst
 - Silinenleri göster
 
-Sıralama: yeniden eskiye, eskiden yeniye, tutar azalan, tutar artan. Arama: açıklama, kişi adı, şantiye/anlaşma adı, kayıt numarası, tutar. Türkçe büyük/küçük harf farkı engellemesin. Sayfalama 50. Liste özeti bütün filtrelenmiş sonuçları toplar. Şantiye filtresinde paylaştırılmış hareketin yalnız o şantiyeye düşen payı toplanır. Seçili filtreler, sonuç sayısı ve "Filtreleri temizle" görünür kalır; detaydan dönünce filtre ve konum korunur (URL sorgusu). Telefonda arama ve tarih/kapsam görünür, diğer filtreler açılır panelde.
+Sıralama: yeniden eskiye, eskiden yeniye, tutar azalan, tutar artan. Arama: açıklama, kişi adı, şantiye/anlaşma adı, kayıt numarası, tutar. Türkçe büyük/küçük harf farkı engellemesin. Sayfalama 50. Liste özeti bütün filtrelenmiş sonuçları toplar. Şantiye filtresinde paylaştırılmış hareketin yalnız o şantiyeye düşen payı toplanır. Seçili filtreler, sonuç sayısı ve "Filtreleri temizle" görünür kalır; detaydan dönünce filtre ve konum korunur (URL sorgusu). Telefonda arama, tarih ve tür segmenti görünür; diğer filtreler açılır panelde.
 
 Form:
 
@@ -942,7 +973,7 @@ Firmanın etkin durumu her istekte tarihlerden ve işaretlerden hesaplanır; zam
 | Kullanıcı pasif | Erişim mesajı | Kapalı | Kapalı | Kapalı |
 
 - **Gün sınırları:** D yürürlük günüdür. Görüntüleme dönemi D ile `viewUntil` (D+30) arasıdır ve iki gün de dahildir. `viewUntil`+1 ile `retainUntil` (D+180) arası arşiv saklamadır. `retainUntil`'den sonra durum "silme onayı bekliyor" olur. Ekranlarda ve yasal metinlerde gün sayısı yerine bu kesin tarihler gösterilir.
-- Görüntüleme döneminde sayfa üstünde bant: "Hizmetiniz sona erdi. {tarih}'e kadar kayıtlarınızı görüntüleyip dışa aktarabilirsiniz." Değişiklik düğmeleri kapalı ve nedeni yazılı.
+- Görüntüleme döneminde sayfa üstünde bant: "Hizmetiniz sona erdi. Kayıtlarınızı {tarih} tarihine kadar görüntüleyip dışa aktarabilirsiniz." (Tarih eki yanlış çekimlenmesin diye bu kalıp kullanılır.) Değişiklik düğmeleri kapalı ve nedeni yazılı.
 - Erişim kapalıyken boş firma gösterme; açıklayıcı erişim mesajı göster. Veri silinmiş gibi sunma.
 - `retainUntil` sonrasında veri kendiliğinden silinmez; ürün sahibinin onayını bekler. Hizmet bu süre içinde yeniden açılırsa firma geçmişiyle devam eder.
 - Kullanıcı pasifleştirme, geçici durdurma veya tek kayıt silme hizmet sonu sürecini başlatmaz.
@@ -979,6 +1010,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 | --- | --- | --- |
 | GET | `/company` | görünen ad, iletişim, depolama kullanımı, hizmet durumu |
 | PATCH | `/company` | `displayName, contact`, `expectedUpdatedAt` |
+| GET | `/company/users` | aynı firmanın kullanıcıları: kimlik, görünen ad, aktiflik (pasifler dahil; kullanıcı adı ve iletişim dönmez). "Kaydı oluşturan" filtresi için |
 | GET | `/categories` | `includeInactive` |
 | POST | `/categories` | oluştur |
 | PATCH | `/categories/:id` | ad, `isActive` |
@@ -1110,8 +1142,8 @@ Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 
 ## 11. Web davranışı
 
 - İlk açılışta token varsa `/auth/me` dene. Başarılıysa uygulamaya al. Ağ hatasında kayıtlı kullanıcıyla içeri al, sonraki istek yenilensin; bağlantı durumu görünür olsun.
-- Tanıtım ve uygulama aynı görsel dili kullansın. Tanıtım daha geniş ve gradyanlı, uygulama `surface` zeminli ve sıkı.
-- Tabloda masaüstünde satır, 760 px altında kart. Sütunlar: tarih, açıklama, şantiye veya kişi, tutar.
+- Tanıtım ve uygulama aynı renk ve yazı tipi sistemini kullansın. Tanıtım gradyanlı ve daha geniş aralıklı; uygulama `surface` zeminli, beyaz panelli ve derli toplu (bölüm 4).
+- Tabloda masaüstünde satır, 760 px altında kart. Sütunlar ekranın tarifindeki gibidir (ör. bölüm 7.4).
 - Form kaydı çift tıklamada iki kayıt açmasın. Düğme gönderim sürerken kilitli; `Idempotency-Key` bölüm 9.7'ye göre. API'de anahtarın isteğe bağlı olduğu şantiye, kişi ve kategori oluşturma dahil, web bütün oluşturma isteklerinde anahtar gönderir.
 - Kaydedilmemiş formdan çıkışta sor: "Kaydedilmemiş değişiklikler. Çıkmak istediğinize emin misiniz?" Bu uyarı sonucu belirsiz bir gönderimi iptal ettiğini iddia etmesin.
 - Boş liste, hata ve yükleniyor durumları her listede olsun. Sonsuz iskelet koyma. Yükleme veya erişim hatasını `0 TL` gibi gösterme. Filtre sonucu boşsa "Filtrelere uyan kayıt bulunamadı" + filtreleri temizle.
