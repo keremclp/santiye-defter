@@ -26,9 +26,58 @@
   gap: var(--space-22);
 }
 
-/* Formlar ve düz metin sayfaları okunabilirlik için dar. */
-.page--narrow {
-  max-width: calc(var(--readable-max-width) + 2 * var(--space-32));
+/*
+ * Formlar ve ayar sayfaları tam genişlikte iki sütun: solda ana bilgiler, sağda ikincil bilgiler
+ * (kullanıcı kararı, 14 Ekim 2026). Dar ekranda tek sütun; DOM sırası telefondaki sırayı belirler.
+ */
+.form-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-16);
+  align-items: start;
+}
+
+.form-columns > * {
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .form-columns {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+
+  /* İlk sütun dar yan bilgi (ör. iadede kaynak hareket), ikinci sütun asıl form. */
+  .form-columns--side-first {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  }
+}
+
+/* Ayarlar menüsü: her bölüm ayrı panel, geniş ekranda yan yana. */
+.settings-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: var(--space-16);
+}
+
+.settings-card {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-14);
+  padding: 18px;
+  color: inherit;
+}
+
+.settings-card .list-row__main {
+  flex: 1;
+}
+
+.settings-card:hover {
+  border-color: var(--color-primary);
+  text-decoration: none;
 }
 
 .page__header {
@@ -410,10 +459,6 @@
     gap: var(--space-16);
   }
 
-  .page--narrow {
-    max-width: none;
-  }
-
   h1 {
     font-size: var(--font-size-page-title-phone);
   }
@@ -499,6 +544,14 @@
   gap: var(--space-14);
 }
 
+.metrics--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metrics--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .dash-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
@@ -508,6 +561,14 @@
 
 .dash-grid--even {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+/* Bir sütun içinde alt alta paneller (detay sayfaları). */
+.dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
 }
 
 /* Telefonda şantiye kartları panel içinde çizgiyle ayrılmış satırlardır (kart içinde kart yok). */
@@ -559,6 +620,11 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .metrics--4,
+  .metrics--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .dash-grid,
   .dash-grid--even {
     grid-template-columns: minmax(0, 1fr);
@@ -600,12 +666,34 @@
   box-shadow: var(--shadow-menu);
 }
 
-.auth-card__brand {
-  font-family: var(--font-display);
-  font-size: var(--font-size-page-title);
-  font-weight: 700;
-  color: var(--color-navy);
-  letter-spacing: var(--letter-spacing-title);
+.auth-card .nav-brand {
+  padding: 0;
+}
+
+.auth-card .nav-brand__mark {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-body);
+}
+
+.auth-card .nav-brand__name {
+  font-size: 20px;
+}
+
+.auth-card__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-card__head p {
+  font-size: var(--font-size-label);
+  color: var(--color-muted);
+}
+
+.auth-card h1 {
+  font-size: var(--font-size-page-title-phone);
 }
 
 .auth-links {
@@ -613,4 +701,25 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--space-10);
+  padding-top: var(--space-14);
+  border-top: 1px solid var(--color-border-soft);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+}
+
+.auth-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.auth-links svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 759px) {
+  .auth-card {
+    padding: var(--space-28) var(--space-16);
+  }
 }

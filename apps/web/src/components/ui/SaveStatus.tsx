@@ -1,12 +1,14 @@
+import { CircleCheck, CircleX, LoaderCircle, RefreshCw, type LucideIcon } from 'lucide-react';
 import type { SaveState } from '../../api/submission';
 import { Button } from './Button';
+import { Icon } from './Icon';
 
-const TEXT = {
-  saving: { icon: '⏳', title: 'Kaydediliyor' },
-  saved: { icon: '✓', title: 'Kaydedildi' },
-  failed: { icon: '✕', title: 'Kaydedilemedi' },
-  verifying: { icon: '↻', title: 'Kaydın durumu doğrulanıyor. Lütfen yeni kayıt açmayın.' },
-} as const;
+const TEXT: Record<Exclude<SaveState['status'], 'idle'>, { icon: LucideIcon; title: string }> = {
+  saving: { icon: LoaderCircle, title: 'Kaydediliyor' },
+  saved: { icon: CircleCheck, title: 'Kaydedildi' },
+  failed: { icon: CircleX, title: 'Kaydedilemedi' },
+  verifying: { icon: RefreshCw, title: 'Kaydın durumu doğrulanıyor. Lütfen yeni kayıt açmayın.' },
+};
 
 /**
  * Kaydetme durumu (şartname 4.4, 9.7): dört durum ayrı metin ve ikonla, yalnız renge bırakılmaz.
@@ -26,8 +28,8 @@ export function SaveStatus({
 
   return (
     <div className={`save-status save-status--${state.status}`} role="status" aria-live={live}>
-      <span className="save-status__icon" aria-hidden="true">
-        {text.icon}
+      <span className="save-status__icon">
+        <Icon icon={text.icon} />
       </span>
       <div className="stack stack--sm">
         <span>{text.title}</span>
@@ -45,9 +47,16 @@ export function SaveStatus({
               Bağlantı dönünce kendiliğinden yeniden denenir. Aynı gönderim iki kayıt açmaz.
             </span>
             {onVerify ? (
-              <Button variant="secondary" size="small" onClick={onVerify} disabled={state.checking}>
-                {state.checking ? 'Kontrol ediliyor…' : 'Durumu şimdi kontrol et'}
-              </Button>
+              <span>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={onVerify}
+                  disabled={state.checking}
+                >
+                  {state.checking ? 'Kontrol ediliyor…' : 'Durumu şimdi kontrol et'}
+                </Button>
+              </span>
             ) : null}
           </>
         ) : null}

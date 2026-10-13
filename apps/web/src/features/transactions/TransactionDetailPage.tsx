@@ -1,15 +1,30 @@
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  ArchiveRestore,
+  Building2,
+  Copy,
+  HardHat,
+  History,
+  Paperclip,
+  Pencil,
+  Receipt,
+  Split,
+  Trash2,
+  Undo2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { apiDelete, apiPost, errorMessage, isApiError } from '../../api/client';
 import { invalidateRecords, useTransaction } from '../../api/queries';
 import type { DuplicateDraft, TransactionDetail } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
-import { Amount, Badge, KindBadge } from '../../components/ui/Amount';
+import { Amount, Badge, KindBadge, KindIcon } from '../../components/ui/Amount';
 import { Button, ButtonLink, DisabledAction } from '../../components/ui/Button';
-import { Card, DocumentPlaceholder, PageHeader } from '../../components/ui/Card';
+import { DocumentPlaceholder, PageHeader, Panel } from '../../components/ui/Card';
 import { Checkbox, Field, TextArea } from '../../components/ui/Field';
 import { HistoryList } from '../../components/ui/HistoryList';
+import { Icon } from '../../components/ui/Icon';
+import { ListRow, ListRows } from '../../components/ui/ListRow';
 import { ErrorState, Loading, Refreshing } from '../../components/ui/States';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useWriteAccess } from '../../hooks/useWriteAccess';
@@ -114,11 +129,50 @@ function TransactionDetailView({
         title={`#${t.recordNo} · ${kindLabel}`}
         subtitle={t.description || undefined}
         back={{ to: '/uygulama/islemler', label: 'İşlemler' }}
-        actions={<Refreshing active={refreshing} />}
+        actions={
+          <>
+            <Refreshing active={refreshing} />
+            {!canWrite ? null : deleted ? (
+              <Button onClick={() => setDialog('restore')}>
+                <Icon icon={ArchiveRestore} />
+                Geri al
+              </Button>
+            ) : (
+              <>
+                <ButtonLink variant="secondary" to={`/uygulama/islemler/${t.id}/duzenle`}>
+                  <Icon icon={Pencil} />
+                  Düzenle
+                </ButtonLink>
+                {isCash && (t.refundable ?? 0) > 0 ? (
+                  <ButtonLink variant="secondary" to={`/uygulama/islemler/${t.id}/iade`}>
+                    <Icon icon={Undo2} />
+                    İade kaydet
+                  </ButtonLink>
+                ) : null}
+                {isCash ? (
+                  <Button variant="secondary" onClick={() => void copy()}>
+                    <Icon icon={Copy} />
+                    Kopyala
+                  </Button>
+                ) : null}
+                <Button variant="danger" onClick={() => setDialog('delete')}>
+                  <Icon icon={Trash2} />
+                  Sil
+                </Button>
+              </>
+            )}
+          </>
+        }
       />
+      {!canWrite && closedReason ? (
+        <DisabledAction label="Değişiklik kapalı" reason={closedReason} />
+      ) : null}
       {deleted ? (
         <div className="alert alert--danger" role="status">
-          <p className="alert__title">Bu kayıt silindi</p>
+          <p className="alert__title alert__title--icon">
+            <Icon icon={Trash2} />
+            Bu kayıt silindi
+          </p>
           <p>
             {formatDateTime(t.deletedAt)} · {t.deletedBy?.name ?? 'Bilinmeyen kullanıcı'}
             {t.deleteReason ? ` · Gerekçe: ${t.deleteReason}` : ''}
@@ -126,173 +180,180 @@ function TransactionDetailView({
           <p className="meta">Silinen kayıt toplamlara girmez.</p>
         </div>
       ) : null}
-
-      <div className="page__actions">
-        {!canWrite && closedReason ? (
-          <DisabledAction label="Değişiklik kapalı" reason={closedReason} />
-        ) : deleted ? (
-          <Button onClick={() => setDialog('restore')}>Geri al</Button>
-        ) : (
-          <>
-            <ButtonLink variant="secondary" to={`/uygulama/islemler/${t.id}/duzenle`}>
-              Düzenle
-            </ButtonLink>
-            {isCash && (t.refundable ?? 0) > 0 ? (
-              <ButtonLink variant="secondary" to={`/uygulama/islemler/${t.id}/iade`}>
-                İade kaydet
-              </ButtonLink>
-            ) : null}
-            {isCash ? (
-              <Button variant="secondary" onClick={() => void copy()}>
-                Kopyala
-              </Button>
-            ) : null}
-            <Button variant="danger" onClick={() => setDialog('delete')}>
-              Sil
-            </Button>
-          </>
-        )}
-      </div>
       {copyError ? (
         <div className="alert alert--danger" role="alert">
           {copyError}
         </div>
       ) : null}
 
-      <Card>
-        <dl className="definition-list">
-          <dt>Tutar</dt>
-          <dd>
-            <Amount value={t.amount} kind={t.kind} showKind />
-          </dd>
-          <dt>Tür</dt>
-          <dd>
-            <span className="row">
-              <KindBadge kind={t.kind} />
-              {t.isSplit ? <Badge tone="cyan">Paylaştırıldı</Badge> : null}
-            </span>
-          </dd>
-          <dt>İşlem tarihi</dt>
-          <dd>{formatDate(t.date)}</dd>
-          <dt>Kişi/firma</dt>
-          <dd>
-            {t.party ? (
-              <Link to={`/uygulama/kisiler/${t.party.id}`}>{t.party.name}</Link>
-            ) : (
-              <span className="muted">Muhatapsız</span>
-            )}
-          </dd>
-          {t.kind === 'expense' || t.kind === 'expense_refund' ? (
-            <>
-              <dt>Kategori</dt>
-              <dd>{t.category?.name ?? <span className="muted">Kategorisiz</span>}</dd>
-            </>
-          ) : null}
-          <dt>Açıklama</dt>
-          <dd>{t.description || <span className="muted">—</span>}</dd>
-          {t.refundOf ? (
-            <>
-              <dt>İade kaynağı</dt>
+      <div className="dash-grid">
+        <div className="dash-col">
+          <Panel title="Kayıt" icon={Receipt}>
+            <div className="detail-amount">
+              <Amount value={t.amount} kind={t.kind} showKind />
+            </div>
+            <dl className="definition-list">
+              <dt>Tür</dt>
               <dd>
-                <Link to={`/uygulama/islemler/${t.refundOf.transactionId}`}>Kaynak kaydı aç</Link>
+                <span className="status-row">
+                  <KindBadge kind={t.kind} />
+                  {t.isSplit ? (
+                    <Badge tone="cyan">
+                      <Icon icon={Split} />
+                      Paylaştırıldı
+                    </Badge>
+                  ) : null}
+                </span>
               </dd>
-            </>
-          ) : null}
-          {t.excess ? (
-            <>
-              <dt>Fazla tutar</dt>
+              <dt>İşlem tarihi</dt>
+              <dd>{formatDate(t.date)}</dd>
+              <dt>Kişi/firma</dt>
               <dd>
-                {formatMoney(t.excess.amount)} — Gerekçe: {t.excess.reason}
+                {t.party ? (
+                  <Link to={`/uygulama/kisiler/${t.party.id}`}>{t.party.name}</Link>
+                ) : (
+                  <span className="muted">Muhatapsız</span>
+                )}
               </dd>
-            </>
-          ) : null}
-          <dt>Oluşturan</dt>
-          <dd>
-            {t.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(t.createdAt)}
-          </dd>
-          <dt>Son güncelleyen</dt>
-          <dd>
-            {t.updatedBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(t.updatedAt)}
-          </dd>
-        </dl>
-      </Card>
-
-      <Card title="Kapsam ve paylar">
-        <ul className="item-list">
-          {t.allocations.map((allocation) => (
-            <li key={allocation.id} className="item-card">
-              <div className="item-card__main">
-                <span className="item-card__title">
-                  {allocation.scope === 'company' ? (
-                    'Firma geneli'
-                  ) : allocation.project ? (
-                    <Link to={`/uygulama/projeler/${allocation.project.id}`}>
-                      {allocation.project.name}
+              {t.kind === 'expense' || t.kind === 'expense_refund' ? (
+                <>
+                  <dt>Kategori</dt>
+                  <dd>{t.category?.name ?? <span className="muted">Kategorisiz</span>}</dd>
+                </>
+              ) : null}
+              <dt>Açıklama</dt>
+              <dd>{t.description || <span className="muted">—</span>}</dd>
+              {t.refundOf ? (
+                <>
+                  <dt>İade kaynağı</dt>
+                  <dd>
+                    <Link to={`/uygulama/islemler/${t.refundOf.transactionId}`}>
+                      Kaynak kaydı aç
                     </Link>
-                  ) : (
-                    'Şantiye'
-                  )}
-                </span>
-                <span className="meta">
-                  {allocation.agreement ? (
-                    <Link to={`/uygulama/anlasmalar/${allocation.agreement.id}`}>
-                      {allocation.agreement.name}
-                    </Link>
-                  ) : (
-                    'Anlaşmaya bağlı değil'
-                  )}
-                </span>
-              </div>
-              <div className="item-card__side">
-                <span className="amount amount--neutral">{formatMoney(allocation.amount)}</span>
-                {allocation.refundedAmount > 0 ? (
-                  <span className="meta">
-                    İade edilen: {formatMoney(allocation.refundedAmount)}
-                  </span>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Card>
+                  </dd>
+                </>
+              ) : null}
+              {t.excess ? (
+                <>
+                  <dt>Fazla tutar</dt>
+                  <dd>
+                    <span className="text-danger">{formatMoney(t.excess.amount)}</span> — Gerekçe:{' '}
+                    {t.excess.reason}
+                  </dd>
+                </>
+              ) : null}
+              <dt>Oluşturan</dt>
+              <dd>
+                {t.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(t.createdAt)}
+              </dd>
+              <dt>Son güncelleyen</dt>
+              <dd>
+                {t.updatedBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(t.updatedAt)}
+              </dd>
+            </dl>
+          </Panel>
+        </div>
 
-      {isCash ? (
-        <Card title="İadeler">
-          {t.refunds.length === 0 ? (
-            <p className="muted">Bu kayda iade yok.</p>
-          ) : (
-            <ul className="item-list">
-              {t.refunds.map((refund) => (
-                <li key={refund.id}>
-                  <Link className="item-card" to={`/uygulama/islemler/${refund.id}`}>
-                    <div className="item-card__main">
-                      <span className="item-card__title">
-                        #{refund.recordNo} · {KIND_LABEL[refund.kind]}
+        <div className="dash-col">
+          <Panel title={t.isSplit ? 'Kapsam ve paylar' : 'Kapsam'} icon={HardHat}>
+            <ul className="list-rows">
+              {t.allocations.map((allocation) => (
+                <li key={allocation.id}>
+                  <div className="list-row list-row--static">
+                    <span className="icon-box icon-box--lg icon-box--neutral">
+                      <Icon icon={allocation.scope === 'company' ? Building2 : HardHat} />
+                    </span>
+                    <span className="list-row__main">
+                      <span className="list-row__title">
+                        <span className="list-row__title-text">
+                          {allocation.scope === 'company' ? (
+                            'Firma geneli'
+                          ) : allocation.project ? (
+                            <Link
+                              className="cell-link"
+                              to={`/uygulama/projeler/${allocation.project.id}`}
+                            >
+                              {allocation.project.name}
+                            </Link>
+                          ) : (
+                            'Şantiye'
+                          )}
+                        </span>
                       </span>
-                      <span className="meta">
-                        {formatDate(refund.date)} · {refund.description}
+                      <span className="list-row__meta block">
+                        {allocation.agreement ? (
+                          <Link to={`/uygulama/anlasmalar/${allocation.agreement.id}`}>
+                            {allocation.agreement.name}
+                          </Link>
+                        ) : (
+                          'Anlaşmaya bağlı değil'
+                        )}
                       </span>
-                      {refund.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
-                    </div>
-                    <Amount value={refund.amount} kind={refund.kind} />
-                  </Link>
+                    </span>
+                    <span className="list-row__side">
+                      <span className="amount amount--neutral">
+                        {formatMoney(allocation.amount)}
+                      </span>
+                      {allocation.refundedAmount > 0 ? (
+                        <span className="list-row__note">
+                          İade edilen: {formatMoney(allocation.refundedAmount)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
-          )}
-          {t.refundable !== null ? (
-            <p className="meta">Daha iade edilebilir: {formatMoney(t.refundable)}</p>
+          </Panel>
+
+          {isCash ? (
+            <Panel title="İadeler" icon={Undo2}>
+              {t.refunds.length === 0 ? (
+                <p className="list-empty">Bu kayda iade yok.</p>
+              ) : (
+                <ListRows label="İadeler">
+                  {t.refunds.map((refund) => (
+                    <ListRow
+                      key={refund.id}
+                      to={`/uygulama/islemler/${refund.id}`}
+                      icon={<KindIcon kind={refund.kind} />}
+                      title={refund.description || KIND_LABEL[refund.kind]}
+                      titleExtra={refund.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
+                      meta={
+                        <>
+                          <span className="record-no">#{refund.recordNo}</span> ·{' '}
+                          {formatDate(refund.date)}
+                        </>
+                      }
+                      side={
+                        <>
+                          <Amount value={refund.amount} kind={refund.kind} />
+                          <span className="list-row__note">{KIND_LABEL[refund.kind]}</span>
+                        </>
+                      }
+                    />
+                  ))}
+                </ListRows>
+              )}
+              {t.refundable !== null ? (
+                <p className="panel__note">Daha iade edilebilir: {formatMoney(t.refundable)}</p>
+              ) : null}
+            </Panel>
           ) : null}
-        </Card>
-      ) : null}
 
-      <Card title="Belgeler">
-        <DocumentPlaceholder titled={false} count={t.documentCount} />
-      </Card>
+          <Panel title="Belgeler" icon={Paperclip}>
+            <div className="panel__body">
+              <DocumentPlaceholder titled={false} count={t.documentCount} />
+            </div>
+          </Panel>
+        </div>
+      </div>
 
-      <Card title="Değişiklik geçmişi">
-        <HistoryList history={t.history} formatValue={historyValue} />
-      </Card>
+      <Panel title="Değişiklik geçmişi" icon={History}>
+        <div className="panel__body">
+          <HistoryList history={t.history} formatValue={historyValue} />
+        </div>
+      </Panel>
 
       <ActionDialog
         open={dialog === 'delete'}

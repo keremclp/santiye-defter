@@ -1,6 +1,6 @@
 # İnşaat Gelir–Gider Uygulaması — Kapsam ve Planlama Kararları
 
-Son güncelleme: 13 Ekim 2026
+Son güncelleme: 14 Ekim 2026
 
 Bu belge, proje görüşmelerinde kabul edilen kararları, henüz kesinleşmeyen ayrıntıları ve aşamaların durumunu kaydeder. Mevcut özellik raporunun yerine geçmez; raporun ticari ürün ve web kullanımına uyarlanması için karar kaynağıdır.
 
@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Adım 4 (uygulama ekranları) tamamlandı; 13 Ekim 2026 (bölüm 10.9). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Adım 4 (uygulama ekranları) tamamlandı; 13 Ekim 2026 (bölüm 10.9). Adım 4b-1 (görsel revizyon: temel) tamamlandı; 14 Ekim 2026 (bölüm 10.11). Adım 4b-2 (görsel revizyon: kalan ekranlar) tamamlandı; 14 Ekim 2026 (bölüm 10.12). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -923,8 +923,46 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 - **Telefonda sayfa eylemleri:** Taslak telefonda sayfa başlığı eylemlerini gizler. Özet'teki Gelir/Gider ekle düğmeleri telefonda gizlidir (yüzen + aynı işi görür); "Yeni şantiye" yüzen menüde olmadığı için telefonda görünür kalır.
 - **Yüzen + düğmesi:** Form sayfalarında (`/yeni`, `/duzenle`, `/iade`, `/odeme`) kaydet düğmelerini örtmemesi için gizlenir.
 - **Kart içinde kart yok:** Telefondaki şantiye kartları panel içinde çizgiyle ayrılmış satırlar olarak çizilir; taslaktaki iç içe kart kullanılmadı.
-- **Dar sayfalar:** Formlar, ayarlar ve düz metin sayfaları en fazla ~760 px genişliktedir (`page--narrow`).
+- **Dar sayfalar:** Formlar, ayarlar ve düz metin sayfaları en fazla ~760 px genişliktedir (`page--narrow`). *14 Ekim 2026'da değişti: genişlik sınırı kaldırıldı, formlar ve ayar sayfaları iki sütunlu tam genişlik düzene geçti (bölüm 10.12).*
 - **Geliştirme altyapısı:** `lucide-react` eklendi; `tasarim/` klasörü Prettier denetiminden çıkarıldı; web testlerinde asenkron bekleme süresi, paket paralel koşarken tembel yüklenen rotalar için 3 saniyeye çıkarıldı.
+
+### 10.12. Adım 4b-2'de kabul edilen görsel revizyon kararları (14 Ekim 2026)
+
+Adım 4b-2 (kalan ekranların görsel revizyonu) tamamlandı ve kabul edildi. Kişiler, anlaşmalar ve başlangıç kayıtları, Vadeler, Arama, Silinenler, Ayarlar, işlem ve şantiye detayları, formlar, dialoglar, 409 karşılaştırma ekranı, kaydetme durumu çubuğu ve giriş ekranları 4b-1'in bileşenleriyle yenilendi. Adım 4'teki akış (giriş → ilk şifre → şantiye → gider → anlaşma → kısmi ödeme → paylaştırma → iade → sil/geri al) masaüstünde (1440 px) ve telefonda (375 px) arayüz üzerinden çalıştırıldı; ekran tutarları API ile aynı çıktı. Uygulama içinde mor/lacivert gövde metni kalmadı: mor yalnız bağlantı, seçili menü/sekme/segment, filtre etiketi ve rozette; lacivert yalnız kelime markasında.
+
+Teslimden sonra kullanıcının geri bildirimiyle iki değişiklik yapıldı:
+
+- **Form ve ayar sayfalarında iki sütunlu tam genişlik düzen (kullanıcı kararı):** Kullanıcı ~760 px genişlik sınırının geniş ekranda sağda büyük boşluk bıraktığını belirtti. Sunulan üç seçenekten (iki sütunlu form, formu ortalama, tam genişlikte tek kart) **iki sütunlu form** seçildi; ayar sayfalarının düzeni her sayfaya uygun biçimde belirlenmek üzere geliştiriciye bırakıldı. Bölüm 10.11'deki "Dar sayfalar" kararı bununla değişti. Geniş ekranda (900 px ve üstü) solda ana bilgiler, sağda ikincil bilgiler yer alır; daha dar ekranda tek sütundur ve telefondaki sıra değişmez. `page--narrow` sınıfı ve `--readable-max-width` token'ı kaldırıldı, yerine `.form-columns` geldi.
+
+  | Sayfa | Sol sütun | Sağ sütun |
+  |---|---|---|
+  | Gelir/gider, anlaşmaya ödeme | Tutar, tarih, kişi, kapsam, anlaşma, paylar | Kategori, açıklama, belgeler |
+  | Anlaşma / başlangıç kaydı | Ad, yön, kişi, kapsam, bedel, tarihler | Açıklama, belgeler |
+  | Şantiye formu | Ad, adres, başlangıç tarihi | Açıklama |
+  | Kişi formu | Ad, tür, etiketler | İletişim, not |
+  | İade | Kaynak hareket | İade formu ve etki önizlemesi |
+  | Finansal düzeltme | Alanlar | Değişiklik önizlemesi |
+  | Profil | Görünen ad, telefon, e-posta | Kullanıcı adı ve şifre sayfasına bağlantı |
+  | Şifre | Form | Şifre kuralları |
+  | Firma | Firma bilgileri | Belge alanı, hizmet durumu |
+  | Kategoriler | Yeni kategori ve kurallar | Kategori listesi |
+  | Hakkında | Ürün, sürüm, dil | Veriler notu |
+
+  Ayarlar menüsü yan yana panellere, Raporlar yer tutucusu ve "Sayfa bulunamadı" tam genişliğe geçti. Bu düzen için üç küçük ekleme yapıldı: düzeltme sayfasında finansal alan değişmediğinde sağ panelde kısa açıklama, profilde şifre sayfasına bağlantı, kategori kurallarının sayfa alt başlığından yan panele taşınması. Şartname 4.5'teki "formlar ~760 px" kuralı henüz güncellenmedi; önceki adımlarda olduğu gibi kullanıcı isterse şartnameye işlenir.
+- **Yeni kayıt menüsüyle tür değişimi hatası düzeltildi:** Gelir ekle açıkken üst çubuktaki Yeni kayıt menüsünden Gider ekle seçilince (veya tersi) yalnız başlık değişiyor, form ilk açıldığı türde kalıyordu. Neden, iki sayfanın aynı adreste açılıp yalnız `?tur=` sorgusunun değişmesiydi. Form artık her yeni gezintide sıfırdan kurulur; anlaşma ve başlangıç formlarına da aynı düzeltme uygulandı. Formda kaydedilmemiş bilgi varsa mevcut "Kaydedilmemiş değişiklikler" uyarısı geçişten önce sorar.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **Detay sayfası düzeni:** Şantiye, kişi, anlaşma ve işlem detaylarında sık eylemler sayfa başlığında ikonlu düğmelerdir; seyrek eylemler (düzenle, sabitle, tamamla, arşivle, iptal, sil vb.) "Diğer" menüsündedir. Başlığın altında özet kutuları, onun altında iki sütunlu paneller gelir; değişiklik geçmişi en alttadır.
+- **Detay sayfalarındaki özet kutuları kuruşludur:** Şartname 4.4 "özet kutularında kuruşsuz, detayda kuruşlu" der. Detay sayfasının üstündeki kutular detay sayıldı ve ekran tutarlarının API ile birebir aynı olması için kuruşlu gösterildi. Özet sayfasındaki kutular kuruşsuz kalır (bölüm 10.11).
+- **Bakiyeler bütün listelerde `ink`:** Anlaşma tablosu, vade listesi, kişi detayındaki kapsam dağılımı ve arama sonuçlarında kalan borç/alacak artık yeşil/kırmızı değil, `ink` renktedir. Yön ikon kutusundan ve "Kalan borç/alacak" yazısından anlaşılır. Fazla ödeme/tahsilat kırmızı rozetle gösterilir.
+- **Gecikme gün sayısı:** Anlaşma detay cevabında gecikme gün sayısı olmadığı için rozet yalnız "Gecikmiş" yazıyordu. Web, eksik olduğunda gün sayısını `packages/shared` içindeki `overdueDaysOf` ile hesaplar ("13 gün gecikti"). Vadeler listesinde rozet durumu satırın grubundan alınır.
+- **Kart içinde kart yok:** Değişiklik geçmişi, paylaştırma payları ve belge alanı panel içinde çizgiyle ayrılmış satırlardır. Etki önizlemesi kenarsız, gömülü bir kutudur (`surface` zemin).
+- **Durumlar yalnız renge bırakılmaz:** Kaydetme durumunun dört hali ayrı Lucide ikonu ve metinle gösterilir; 409 karşılaştırmasında farklı alanlar görünür "Farklı" rozeti taşır.
+- **Kişi detayında anlaşmasız hareketler:** "Anlaşmaya bağlı değil" işareti nötr rozettir (cyan zemin yalnız paylaştırma notu ve demo/görüntüleme bandında kullanılır).
+- **Kişi seçici:** Öneriler ve "yeni kişi/firma ekle" seçeneği alanın altında açılır liste olarak gösterilir.
+- **Doğrulama yöntemi:** Uygulama içi tarayıcı paneli görünüm boyutunu kendi kendine sıfırladığı için ekran görüntüleri ve 375 px akışı, yerel Chrome'u başsız çalıştıran ve depoya eklenmeyen bir betikle alındı. Yerel geliştirme veritabanında üç deneme firması kaldı ("E2E Deneme İnşaat (Adım 4b-2)", "E2E Deneme Telefon (Adım 4b-2)", "E2E Deneme Telefon 2 (Adım 4b-2)").
+- **Açık nokta:** `TransactionForm.test.tsx` içindeki bir test, tam test paketi üç kez çalıştırıldığında bir kez zamanlama kaynaklı düştü; diğer çalıştırmalarda ve tek başına geçti. Nedeni doğrulanmadı; test değiştirilmedi.
 
 ## 11. Açık ürün ve teknik kararlar
 
@@ -981,3 +1019,4 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 | 13 Ekim 2026 | Adım 4 (uygulama ekranları) tamamlandı ve kabul edildi (bölüm 10.9). Şartnamedeki boşluklar için iki karar alındı: "Kaydı oluşturan kullanıcı" filtresi için firma kullanıcılarını yalnız kimlik, ad ve aktiflikle döndüren `GET /company/users` ucu eklendi; `SUPPORT_CONTACT_TEXT` web derlemesine gömülür. Şartnamede olup API'de eksik kalan `later` vade grubu eklendi; etki önizlemeleri için `packages/shared` içine önizleme fonksiyonları eklendi. İade tutar rengi, görüntüleme bandı metni, açık formun korunması ve demo/tanıtım/rapor yer tutucuları sonraki adımlar için kaydedildi. |
 | 13 Ekim 2026 | Adım 4 işlevsel olarak kabul edildi; görünüm için görsel revizyon kararlaştırıldı (bölüm 10.10). Üç paletli taslaktan A paleti (marka renkleri, nötr metin) ve taslak düzeni onaylandı; Lucide ikonları eklenecek; içerik genişlik sınırı kaldırıldı; ödeme iadesi kırmızı ve "−" önekli kalacak. Şartname bölüm 4 yeniden yazıldı, 5.2/7.1/7.2/7.4/11 güncellendi, 10.9 kararları şartnameye işlendi. Adım 4b (görsel revizyon) Adım 5'ten önce yapılacak. |
 | 14 Ekim 2026 | Adım 4b-1 (token'lar, uygulama kabuğu, ortak bileşenler; Özet, İşlemler, Şantiyeler) tamamlandı ve kabul edildi (bölüm 10.11). Kullanıcı, şartnamenin istediği değerler için yalnız okuma cevaplarının genişletilmesini onayladı: şantiye kart özetine net tahsilat/ödeme ve gecikmiş alacak, panodaki son şantiyelere özet, pano toplamlarına düşülen ödeme iadesi. Kuruşsuz gösterim fonksiyonu, bakiyelerin `ink` renkte gösterilmesi, tutar önekleri, devre dışı indirme düğmesi, telefonda sayfa eylemleri ve yüzen + davranışı sonraki adımlar için kaydedildi. Sıradaki iş Adım 4b-2. |
+| 14 Ekim 2026 | Adım 4b-2 (kalan ekranların görsel revizyonu) tamamlandı ve kabul edildi (bölüm 10.12). Akış masaüstünde ve 375 px'te yeni görünümle çalıştı; mor/lacivert gövde metni kalmadı. Kullanıcının geri bildirimiyle 10.11'deki ~760 px "dar sayfa" kararı değişti: geniş ekranda sağda boşluk kaldığı için formlar ve ayar sayfaları iki sütunlu tam genişlik düzene geçti. Yeni kayıt menüsüyle gelir/gider arasında geçince formun eski türde kalması hatası düzeltildi. Detay sayfası düzeni, detay özet kutularının kuruşlu olması, bakiyelerin bütün listelerde `ink` renkte gösterilmesi ve gecikme gün sayısının ortak fonksiyonla hesaplanması sonraki adımlar için kaydedildi. Şartname 4.5'teki ~760 px kuralı henüz güncellenmedi. |

@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { Building2, UserPlus, UserRound } from 'lucide-react';
 import { useDeferredValue, useId, useState } from 'react';
 import { apiPost, errorMessage } from '../../api/client';
 import { invalidateRecords, usePartySuggest } from '../../api/queries';
@@ -7,6 +8,7 @@ import type { Party } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { ChipGroup } from '../../components/ui/Chips';
 import { Field, SelectInput, TextInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { PROJECT_STATUS_LABEL } from '../../lib/labels';
 import { projectById, useProjectOptions } from './project-options';
 
@@ -117,37 +119,44 @@ export function PartyPicker({
               setOpen(true);
             }}
           />
-          {open ? (
-            <ul id={listId} className="item-list" role="listbox" aria-label="Öneriler">
+          {open && (items.length > 0 || suggest.isFetching || query.trim()) ? (
+            <ul
+              id={listId}
+              className="dropdown dropdown--inline"
+              role="listbox"
+              aria-label="Öneriler"
+            >
               {items.map((item) => (
                 <li key={item.id} role="option" aria-selected={false}>
                   <button
                     type="button"
-                    className="btn btn--secondary btn--block"
+                    className="dropdown__item"
                     onClick={() => {
                       onChange({ id: item.id, name: item.name });
                       setQuery('');
                       setOpen(false);
                     }}
                   >
+                    <Icon icon={item.kind === 'company' ? Building2 : UserRound} />
                     {item.name}
                   </button>
                 </li>
               ))}
               {suggest.isFetching && items.length === 0 ? (
-                <li className="meta">Aranıyor…</li>
+                <li className="dropdown__note">Aranıyor…</li>
               ) : null}
               {query.trim() && !exact ? (
                 <li>
-                  <Button
-                    variant="ghost"
-                    block
-                    loading={adding}
-                    loadingText="Ekleniyor…"
+                  <button
+                    type="button"
+                    className="dropdown__item"
+                    disabled={adding}
+                    aria-busy={adding || undefined}
                     onClick={() => void quickAdd()}
                   >
-                    “{query.trim()}” adıyla yeni kişi/firma ekle
-                  </Button>
+                    <Icon icon={UserPlus} />
+                    {adding ? 'Ekleniyor…' : `“${query.trim()}” adıyla yeni kişi/firma ekle`}
+                  </button>
                 </li>
               ) : null}
             </ul>

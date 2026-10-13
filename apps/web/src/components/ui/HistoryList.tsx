@@ -10,7 +10,10 @@ function show(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** Değişiklik geçmişi: eski → yeni, kim, ne zaman, gerekçe (şartname 7.4). */
+/**
+ * Değişiklik geçmişi: eski → yeni, kim, ne zaman, gerekçe (şartname 7.4). Panel içinde ince
+ * çizgiyle ayrılmış satırlar; kart içinde kart yok.
+ */
 export function HistoryList({
   history,
   formatValue,
@@ -22,17 +25,17 @@ export function HistoryList({
   if (history.length === 0) return <p className="muted">Geçmiş yok.</p>;
   const entries = [...history].reverse();
   return (
-    <ol className="item-list">
+    <ol className="history-list">
       {entries.map((entry, index) => (
-        <li key={`${entry.at}-${index}`} className="card">
-          <div className="row row--between">
-            <strong>{HISTORY_ACTION_LABEL[entry.action] ?? entry.action}</strong>
+        <li key={`${entry.at}-${index}`} className="history-list__item">
+          <div className="history-list__head">
+            <span>{HISTORY_ACTION_LABEL[entry.action] ?? entry.action}</span>
             <span className="meta">
               {formatDateTime(entry.at)} · {entry.by?.name ?? 'Bilinmeyen kullanıcı'}
             </span>
           </div>
           {entry.changes.length > 0 ? (
-            <ul className="meta">
+            <ul className="history-list__changes">
               {entry.changes.map((change) => (
                 <li key={change.field}>
                   {FIELD_LABEL[change.field] ?? change.field}:{' '}

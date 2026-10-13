@@ -4,8 +4,10 @@ import { apiPatch, errorMessage, isApiError } from '../../api/client';
 import { keys, useCompany } from '../../api/queries';
 import type { SaveState } from '../../api/submission';
 import type { CompanyInfo } from '../../api/types';
+import { Building2, HardDrive, ShieldCheck } from 'lucide-react';
+import { Badge } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
-import { Card, PageHeader } from '../../components/ui/Card';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { ConflictView } from '../../components/ui/ConflictView';
 import { Field, TextInput } from '../../components/ui/Field';
 import { SaveStatus } from '../../components/ui/SaveStatus';
@@ -26,15 +28,17 @@ export function CompanySettingsPage() {
   usePageMeta('Firma');
   const company = useCompany();
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader title="Firma" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <QueryView query={company}>
         {(data) => (
-          <>
+          <div className="form-columns">
             <CompanyForm company={data} />
-            <StorageCard company={data} />
-            <ServiceCard company={data} />
-          </>
+            <div className="dash-col">
+              <StorageCard company={data} />
+              <ServiceCard company={data} />
+            </div>
+          </div>
         )}
       </QueryView>
     </main>
@@ -95,7 +99,7 @@ function CompanyForm({ company }: { company: CompanyInfo }) {
 
   return (
     <form
-      className="card stack"
+      className="stack"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -103,7 +107,6 @@ function CompanyForm({ company }: { company: CompanyInfo }) {
       }}
     >
       {dialog}
-      <h2>Firma bilgileri</h2>
       {conflict ? (
         <ConflictView
           fields={(
@@ -134,60 +137,64 @@ function CompanyForm({ company }: { company: CompanyInfo }) {
           }}
         />
       ) : null}
-      <p className="meta">
-        Bütün firma kullanıcıları düzenleyebilir; değişiklikler geçmişe yazılır.
-      </p>
-      <Field label="Firma görünen adı">
-        {(props) => (
-          <TextInput
-            {...props}
-            value={values.displayName}
-            onChange={(e) => set({ displayName: e.target.value })}
-          />
-        )}
-      </Field>
-      <div className="form-grid">
-        <Field label="Yetkili kişi">
-          {(props) => (
-            <TextInput
-              {...props}
-              value={values.person}
-              onChange={(e) => set({ person: e.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="Telefon">
-          {(props) => (
-            <TextInput
-              {...props}
-              type="tel"
-              value={values.phone}
-              onChange={(e) => set({ phone: e.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="E-posta">
-          {(props) => (
-            <TextInput
-              {...props}
-              type="email"
-              value={values.email}
-              onChange={(e) => set({ email: e.target.value })}
-            />
-          )}
-        </Field>
-      </div>
-      {!canWrite ? <p className="meta">{reason}</p> : null}
-      <SaveStatus state={state} />
-      <div className="form-actions">
-        <Button
-          type="submit"
-          loading={state.status === 'saving'}
-          disabled={!dirty || !canWrite || Boolean(conflict)}
-        >
-          Kaydet
-        </Button>
-      </div>
+      <Panel title="Firma bilgileri" icon={Building2}>
+        <div className="panel__body stack">
+          <p className="meta">
+            Bütün firma kullanıcıları düzenleyebilir; değişiklikler geçmişe yazılır.
+          </p>
+          <Field label="Firma görünen adı">
+            {(props) => (
+              <TextInput
+                {...props}
+                value={values.displayName}
+                onChange={(e) => set({ displayName: e.target.value })}
+              />
+            )}
+          </Field>
+          <div className="form-grid">
+            <Field label="Yetkili kişi">
+              {(props) => (
+                <TextInput
+                  {...props}
+                  value={values.person}
+                  onChange={(e) => set({ person: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Telefon">
+              {(props) => (
+                <TextInput
+                  {...props}
+                  type="tel"
+                  value={values.phone}
+                  onChange={(e) => set({ phone: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="E-posta">
+              {(props) => (
+                <TextInput
+                  {...props}
+                  type="email"
+                  value={values.email}
+                  onChange={(e) => set({ email: e.target.value })}
+                />
+              )}
+            </Field>
+          </div>
+          {!canWrite ? <p className="meta">{reason}</p> : null}
+          <SaveStatus state={state} />
+          <div className="form-actions">
+            <Button
+              type="submit"
+              loading={state.status === 'saving'}
+              disabled={!dirty || !canWrite || Boolean(conflict)}
+            >
+              Kaydet
+            </Button>
+          </div>
+        </div>
+      </Panel>
     </form>
   );
 }
@@ -196,47 +203,53 @@ function StorageCard({ company }: { company: CompanyInfo }) {
   const { usedBytes, quotaBytes } = company.storage;
   const full = usedBytes >= quotaBytes;
   return (
-    <Card title="Belge alanı">
-      <p>
-        Kullanılan: <strong>{formatBytes(usedBytes)}</strong> / {formatBytes(quotaBytes)}
-      </p>
-      <progress
-        value={Math.min(usedBytes, quotaBytes)}
-        max={quotaBytes}
-        aria-label="Belge alanı kullanımı"
-      />
-      {full ? (
-        <div className="alert alert--danger">
-          Belge alanı doldu. Kayıt girmeye devam edebilirsiniz; yeni belge için ürün sahibiyle
-          görüşün.
-        </div>
-      ) : null}
-      <p className="meta">
-        Orijinal, önizleme ve silinmiş ama geri alınabilir belgelerin ayrı dökümü belge yükleme
-        açıldığında burada görünecek.
-      </p>
-      <p className="meta">Kapasite artırımı için: {SUPPORT_CONTACT_TEXT}</p>
-    </Card>
+    <Panel title="Belge alanı" icon={HardDrive}>
+      <div className="panel__body stack stack--sm">
+        <p>
+          Kullanılan: <strong>{formatBytes(usedBytes)}</strong> / {formatBytes(quotaBytes)}
+        </p>
+        <progress
+          value={Math.min(usedBytes, quotaBytes)}
+          max={quotaBytes}
+          aria-label="Belge alanı kullanımı"
+        />
+        {full ? (
+          <div className="alert alert--danger">
+            Belge alanı doldu. Kayıt girmeye devam edebilirsiniz; yeni belge için ürün sahibiyle
+            görüşün.
+          </div>
+        ) : null}
+        <p className="meta">
+          Orijinal, önizleme ve silinmiş ama geri alınabilir belgelerin ayrı dökümü belge yükleme
+          açıldığında burada görünecek.
+        </p>
+        <p className="meta">Kapasite artırımı için: {SUPPORT_CONTACT_TEXT}</p>
+      </div>
+    </Panel>
   );
 }
 
 function ServiceCard({ company }: { company: CompanyInfo }) {
   const { service } = company;
   return (
-    <Card title="Hizmet durumu">
-      <p>
-        <strong>{SERVICE_STATE_LABEL[service.state]}</strong>
-      </p>
-      {service.serviceEndedAt ? (
-        <dl className="definition-list">
-          <dt>Hizmet sonu</dt>
-          <dd>{formatLongDate(service.serviceEndedAt)}</dd>
-          <dt>Son görüntüleme günü</dt>
-          <dd>{formatLongDate(service.viewUntil)}</dd>
-          <dt>Saklama bitişi</dt>
-          <dd>{formatLongDate(service.retainUntil)}</dd>
-        </dl>
-      ) : null}
-    </Card>
+    <Panel title="Hizmet durumu" icon={ShieldCheck}>
+      <div className="panel__body stack stack--sm">
+        <p>
+          <Badge tone={service.state === 'active' ? 'income' : 'warn'}>
+            {SERVICE_STATE_LABEL[service.state]}
+          </Badge>
+        </p>
+        {service.serviceEndedAt ? (
+          <dl className="definition-list">
+            <dt>Hizmet sonu</dt>
+            <dd>{formatLongDate(service.serviceEndedAt)}</dd>
+            <dt>Son görüntüleme günü</dt>
+            <dd>{formatLongDate(service.viewUntil)}</dd>
+            <dt>Saklama bitişi</dt>
+            <dd>{formatLongDate(service.retainUntil)}</dd>
+          </dl>
+        ) : null}
+      </div>
+    </Panel>
   );
 }

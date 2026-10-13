@@ -1,5 +1,26 @@
 import { todayInIstanbul } from '@santiye/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  CalendarClock,
+  CircleCheck,
+  Ellipsis,
+  FileText,
+  HandCoins,
+  Handshake,
+  History,
+  Info,
+  Pencil,
+  Pin,
+  RotateCcw,
+  Scale,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { apiDelete, apiPost } from '../../api/client';
@@ -13,17 +34,25 @@ import {
 import type { Project, ProjectSummary } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
 import { Badge } from '../../components/ui/Amount';
-import { Button, ButtonLink, DisabledAction } from '../../components/ui/Button';
-import { Card, PageHeader } from '../../components/ui/Card';
+import { ButtonLink, DisabledAction } from '../../components/ui/Button';
+import { Metric, PageHeader, Panel } from '../../components/ui/Card';
 import { DateInput, Field } from '../../components/ui/Field';
 import { HistoryList } from '../../components/ui/HistoryList';
+import { Icon } from '../../components/ui/Icon';
+import { Menu } from '../../components/ui/Menu';
 import { ErrorState, Loading, QueryView, Refreshing } from '../../components/ui/States';
+import { usePhone } from '../../hooks/useMediaQuery';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useWriteAccess } from '../../hooks/useWriteAccess';
-import { formatDate, formatDateTime, formatMoney, formatTl } from '../../lib/format';
+import { formatDate, formatDateTime, formatMoney, formatSigned, formatTl } from '../../lib/format';
 import { PROJECT_STATUS_LABEL } from '../../lib/labels';
 import { toast } from '../../stores/ui';
-import { AgreementTable, TransactionTable } from '../common/RecordTables';
+import {
+  AgreementTable,
+  BalanceFlags,
+  DirectionIcon,
+  TransactionTable,
+} from '../common/RecordTables';
 
 type DialogName = 'complete' | 'reactivate' | 'archive' | 'delete' | null;
 
@@ -48,44 +77,180 @@ export function ProjectDetailPage() {
   );
 }
 
-/** Lacivert özet: tahsilat, ödeme, fark; borç ve alacak ayrı (şartname 7.2). */
-function SummaryHero({ summary }: { summary: ProjectSummary }) {
-  const item = (label: string, value: number, hint?: string) => (
-    <div className="summary-hero__item">
-      <span className="summary-hero__label">{label}</span>
-      <span className="summary-hero__value">{formatMoney(value)}</span>
-      {hint ? <span className="summary-hero__label">{hint}</span> : null}
-    </div>
-  );
-  const { cash, payable, receivable, openings } = summary;
+const BALANCE_INFO = 'Anlaşmalar ve başlangıç kayıtları birlikte; dönemden bağımsız güncel bakiye.';
+
+/**
+ * Şantiye özet kutuları (şartname 7.2, 4.4): beyaz kart, renk yalnız rakamda; bakiyeler `ink`.
+ * Detayda tutarlar kuruşludur.
+ */
+function SummaryMetrics({ summary }: { summary: ProjectSummary }) {
+  const { cash, payable, receivable } = summary;
   return (
-    <section className="summary-hero" aria-label="Şantiye özeti">
-      {item('Tahsilat (gelir)', cash.netIncome)}
-      {item('Ödeme (gider)', cash.netExpense)}
-      {item('Gelir − gider farkı', cash.difference)}
-      <p className="summary-hero__section">Ödenecek — anlaşmalar ve başlangıç kayıtları</p>
-      {item('Anlaşma toplamı', payable.totalAmount)}
-      {item('Ödenen', payable.netSettled)}
-      {item(
-        'Kalan borç',
-        payable.remaining,
-        openings.payable.totalAmount > 0
-          ? `Başlangıç kalanı ${formatMoney(openings.payable.remaining)}`
-          : undefined,
-      )}
-      {payable.excess > 0 ? item('Fazla ödeme', payable.excess) : null}
-      <p className="summary-hero__section">Tahsil edilecek — anlaşmalar ve başlangıç kayıtları</p>
-      {item('Anlaşma toplamı', receivable.totalAmount)}
-      {item('Tahsil edilen', receivable.netSettled)}
-      {item(
-        'Kalan alacak',
-        receivable.remaining,
-        openings.receivable.totalAmount > 0
-          ? `Başlangıç kalanı ${formatMoney(openings.receivable.remaining)}`
-          : undefined,
-      )}
-      {receivable.excess > 0 ? item('Fazla tahsilat', receivable.excess) : null}
+    <section className="metrics" aria-label="Şantiye özeti">
+      <Metric
+        label="Tahsilat"
+        icon={ArrowDownLeft}
+        tone="income"
+        value={formatMoney(cash.netIncome)}
+        valueClassName="amount--income"
+        sub={
+          cash.incomeRefund > 0
+            ? `Tahsilat iadesi düşüldü: ${formatMoney(cash.incomeRefund)}`
+            : 'Tüm zamanlar'
+        }
+        info="Tahsilatlar − tahsilat iadeleri."
+      />
+      <Metric
+        label="Ödeme"
+        icon={ArrowUpRight}
+        tone="expense"
+        value={formatMoney(cash.netExpense)}
+        valueClassName="amount--expense"
+        sub={
+          cash.expenseRefund > 0
+            ? `Ödeme iadesi düşüldü: ${formatMoney(cash.expenseRefund)}`
+            : 'Tüm zamanlar'
+        }
+        info="Ödemeler − ödeme iadeleri."
+      />
+      <Metric
+        label="Gelir − gider farkı"
+        icon={Scale}
+        tone="neutral"
+        className="metric--wide"
+        value={formatSigned(cash.difference)}
+        sub="Tüm zamanlar"
+      />
+      <Metric
+        label="Kalan alacak"
+        icon={HandCoins}
+        tone="primary"
+        balance
+        value={formatMoney(receivable.remaining)}
+        info={BALANCE_INFO}
+        sub={<BalanceFlags summary={receivable} payable={false} />}
+      />
+      <Metric
+        label="Kalan borç"
+        icon={Wallet}
+        tone="primary"
+        balance
+        value={formatMoney(payable.remaining)}
+        info={BALANCE_INFO}
+        sub={<BalanceFlags summary={payable} payable />}
+      />
     </section>
+  );
+}
+
+/** Ödenecek ve tahsil edilecek anlaşma dökümü: toplam, ödenen, kalan, fazla, başlangıç kalanı. */
+function ObligationBreakdown({ summary }: { summary: ProjectSummary }) {
+  const phone = usePhone();
+  const rows = [
+    {
+      key: 'payable',
+      label: 'Ödenecek',
+      settled: 'Ödenen',
+      data: summary.payable,
+      opening: summary.openings.payable,
+    },
+    {
+      key: 'receivable',
+      label: 'Tahsil edilecek',
+      settled: 'Tahsil edilen',
+      data: summary.receivable,
+      opening: summary.openings.receivable,
+    },
+  ];
+  if (phone) {
+    return (
+      <ul className="card-list">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <div className="card-list__item">
+              <span className="list-row__main">
+                <span className="list-row__title">{row.label}</span>
+                <span className="list-row__meta block">
+                  Toplam {formatMoney(row.data.totalAmount)} ·{' '}
+                  {row.settled.toLocaleLowerCase('tr-TR')} {formatMoney(row.data.netSettled)}
+                </span>
+              </span>
+              <span className="list-row__side">
+                <span className="amount amount--neutral">{formatMoney(row.data.remaining)}</span>
+                <span className="list-row__note">Kalan</span>
+              </span>
+              {row.data.excess > 0 || row.opening.totalAmount > 0 ? (
+                <span className="card-list__extra">
+                  {row.opening.totalAmount > 0
+                    ? `Başlangıç kalanı ${formatMoney(row.opening.remaining)} dahil`
+                    : null}
+                  {row.data.excess > 0 ? (
+                    <span className="text-danger"> Fazla {formatMoney(row.data.excess)}</span>
+                  ) : null}
+                </span>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="table-wrap">
+      <table className="data-table data-table--static">
+        <thead>
+          <tr>
+            <th scope="col">Yön</th>
+            <th scope="col" className="num">
+              Anlaşma toplamı
+            </th>
+            <th scope="col" className="num">
+              Ödenen / tahsil edilen
+            </th>
+            <th scope="col" className="num">
+              Kalan
+            </th>
+            <th scope="col" className="num">
+              Fazla
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key}>
+              <td>
+                <div className="type-cell">
+                  <DirectionIcon
+                    agreement={{ direction: row.key === 'payable' ? 'payable' : 'receivable' }}
+                    size="md"
+                  />
+                  <div>
+                    <span className="list-row__title">{row.label}</span>
+                    {row.opening.totalAmount > 0 ? (
+                      <span className="cell-sub">
+                        Başlangıç kalanı {formatMoney(row.opening.remaining)} dahil
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </td>
+              <td className="num">{formatMoney(row.data.totalAmount)}</td>
+              <td className="num">{formatMoney(row.data.netSettled)}</td>
+              <td className="num">
+                <span className="amount amount--neutral">{formatMoney(row.data.remaining)}</span>
+              </td>
+              <td className="num">
+                {row.data.excess > 0 ? (
+                  <span className="text-danger">{formatMoney(row.data.excess)}</span>
+                ) : (
+                  <span className="muted">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -130,124 +295,200 @@ function ProjectView({
           </>
         }
         back={{ to: '/uygulama/projeler', label: 'Şantiyeler' }}
-        actions={<Refreshing active={refreshing} />}
+        actions={
+          <>
+            <Refreshing active={refreshing} />
+            {canWrite ? (
+              <>
+                <ButtonLink variant="secondary" to={`/uygulama/islemler/yeni?tur=gelir&${ctx}`}>
+                  <Icon icon={ArrowDownLeft} />
+                  Gelir ekle
+                </ButtonLink>
+                <ButtonLink variant="secondary" to={`/uygulama/islemler/yeni?tur=gider&${ctx}`}>
+                  <Icon icon={ArrowUpRight} />
+                  Gider ekle
+                </ButtonLink>
+                {active ? (
+                  <ButtonLink variant="secondary" to={`/uygulama/anlasmalar/yeni?${ctx}`}>
+                    <Icon icon={Handshake} />
+                    Anlaşma ekle
+                  </ButtonLink>
+                ) : null}
+              </>
+            ) : null}
+            <Menu
+              label="Diğer işlemler"
+              buttonClassName="btn btn--secondary"
+              buttonContent={
+                <>
+                  <Icon icon={Ellipsis} />
+                  Diğer
+                </>
+              }
+            >
+              {(close) => {
+                const open = (name: DialogName) => () => {
+                  close();
+                  setDialog(name);
+                };
+                return (
+                  <>
+                    <Link
+                      className="dropdown__item"
+                      role="menuitem"
+                      to={`/uygulama/projeler/${p.id}/rapor`}
+                      onClick={close}
+                    >
+                      <Icon icon={FileText} />
+                      Şantiye raporu
+                    </Link>
+                    {canWrite ? (
+                      <>
+                        <Link
+                          className="dropdown__item"
+                          role="menuitem"
+                          to={`/uygulama/projeler/${p.id}/duzenle`}
+                          onClick={close}
+                        >
+                          <Icon icon={Pencil} />
+                          Düzenle
+                        </Link>
+                        {active ? (
+                          <button
+                            type="button"
+                            className="dropdown__item"
+                            role="menuitem"
+                            onClick={open('complete')}
+                          >
+                            <Icon icon={CircleCheck} />
+                            Tamamla
+                          </button>
+                        ) : null}
+                        {p.status === 'completed' ? (
+                          <button
+                            type="button"
+                            className="dropdown__item"
+                            role="menuitem"
+                            onClick={open('reactivate')}
+                          >
+                            <Icon icon={RotateCcw} />
+                            Yeniden aktifleştir
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="dropdown__item"
+                          role="menuitem"
+                          onClick={open('archive')}
+                        >
+                          <Icon icon={p.status === 'archived' ? ArchiveRestore : Archive} />
+                          {p.status === 'archived' ? 'Arşivden çıkar' : 'Arşivle'}
+                        </button>
+                        <div className="dropdown__sep" role="separator" />
+                        <button
+                          type="button"
+                          className="dropdown__item dropdown__item--danger"
+                          role="menuitem"
+                          onClick={open('delete')}
+                        >
+                          <Icon icon={Trash2} />
+                          Sil
+                        </button>
+                      </>
+                    ) : null}
+                  </>
+                );
+              }}
+            </Menu>
+          </>
+        }
       />
-      <span className="row">
+      <span className="status-row">
         <Badge tone={active ? 'income' : 'neutral'}>{PROJECT_STATUS_LABEL[p.status]}</Badge>
-        {p.pinned ? <Badge tone="primary">Sabit</Badge> : null}
+        {p.pinned ? (
+          <Badge tone="primary">
+            <Icon icon={Pin} />
+            Sabit
+          </Badge>
+        ) : null}
       </span>
+      {!canWrite && closedReason ? (
+        <DisabledAction label="Değişiklik kapalı" reason={closedReason} />
+      ) : null}
       {!active ? (
         <div className="alert alert--info">
-          Bu şantiye {p.status === 'completed' ? 'tamamlandı' : 'arşivlendi'}. Anlaşmaya bağlı
-          ödeme, tahsilat, iade ve düzeltme serbesttir; anlaşmaya bağlı olmayan yeni gider gerekçe
-          ister. Yeni anlaşma için önce şantiyeyi yeniden aktifleştirin.
+          <p className="alert__title alert__title--icon">
+            <Icon icon={Info} />
+            Bu şantiye {p.status === 'completed' ? 'tamamlandı' : 'arşivlendi'}
+          </p>
+          <p>
+            Anlaşmaya bağlı ödeme, tahsilat, iade ve düzeltme serbesttir; anlaşmaya bağlı olmayan
+            yeni gider gerekçe ister. Yeni anlaşma için önce şantiyeyi yeniden aktifleştirin.
+          </p>
         </div>
       ) : null}
 
       <QueryView query={summary} loadingLabel="Özet yükleniyor…">
-        {(data) => <SummaryHero summary={data} />}
+        {(data) => <SummaryMetrics summary={data} />}
       </QueryView>
 
-      {canWrite ? (
-        <div className="page__actions">
-          <ButtonLink variant="income" to={`/uygulama/islemler/yeni?tur=gelir&${ctx}`}>
-            Gelir ekle
-          </ButtonLink>
-          <ButtonLink variant="expense" to={`/uygulama/islemler/yeni?tur=gider&${ctx}`}>
-            Gider ekle
-          </ButtonLink>
-          {active ? (
-            <ButtonLink variant="secondary" to={`/uygulama/anlasmalar/yeni?${ctx}`}>
-              Anlaşma ekle
-            </ButtonLink>
-          ) : (
-            <DisabledAction
-              label="Anlaşma ekle"
-              reason="Yeni anlaşma için şantiyeyi yeniden aktifleştirin."
-            />
-          )}
-        </div>
-      ) : (
-        <DisabledAction label="Değişiklik kapalı" reason={closedReason ?? ''} />
-      )}
-
-      {canWrite ? (
-        <div className="page__actions">
-          <ButtonLink variant="ghost" to={`/uygulama/projeler/${p.id}/duzenle`}>
-            Düzenle
-          </ButtonLink>
-          {active ? (
-            <Button variant="secondary" onClick={() => setDialog('complete')}>
-              Tamamla
-            </Button>
-          ) : null}
-          {p.status === 'completed' ? (
-            <Button variant="secondary" onClick={() => setDialog('reactivate')}>
-              Yeniden aktifleştir
-            </Button>
-          ) : null}
-          <Button variant="secondary" onClick={() => setDialog('archive')}>
-            {p.status === 'archived' ? 'Arşivden çıkar' : 'Arşivle'}
-          </Button>
-          <Button variant="danger" onClick={() => setDialog('delete')}>
-            Sil
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="grid grid--2">
-        <Card
+      <div className="dash-grid">
+        <Panel
           title="Son hareketler"
-          actions={<Link to={`/uygulama/islemler?kapsam=${p.id}&donem=tumu`}>Tümünü gör</Link>}
+          icon={ArrowLeftRight}
+          more={{ to: `/uygulama/islemler?kapsam=${p.id}&donem=tumu`, label: 'Tüm işlemler' }}
         >
           <QueryView query={transactions}>
             {(data) =>
               data.items.length === 0 ? (
-                <p className="muted">Bu şantiyede hareket yok.</p>
+                <p className="list-empty">Bu şantiyede hareket yok.</p>
               ) : (
                 <TransactionTable items={data.items} compact showScopedAmount />
               )
             }
           </QueryView>
-        </Card>
-        <Card title="Vadeler" actions={<Link to="/uygulama/vadeler">Tümünü gör</Link>}>
+        </Panel>
+        <Panel title="Vadeler" icon={CalendarClock} more={{ to: '/uygulama/vadeler' }}>
           {agreements.isPending ? (
             <Loading />
           ) : dues.length === 0 ? (
-            <p className="muted">Gecikmiş veya 30 gün içinde vadesi gelen tutar yok.</p>
+            <p className="list-empty">Gecikmiş veya 30 gün içinde vadesi gelen tutar yok.</p>
           ) : (
-            <AgreementTable items={dues} />
+            <AgreementTable items={dues} compact />
           )}
-        </Card>
+        </Panel>
       </div>
 
-      <Card
+      <Panel
         title="Anlaşmalar ve başlangıç kayıtları"
-        actions={<Link to={`/uygulama/anlasmalar?kapsam=${p.id}`}>Tümünü gör</Link>}
+        icon={Handshake}
+        more={{ to: `/uygulama/anlasmalar?kapsam=${p.id}` }}
       >
+        <QueryView query={summary}>{(data) => <ObligationBreakdown summary={data} />}</QueryView>
         <QueryView query={agreements}>
           {(data) =>
             data.items.length === 0 ? (
-              <p className="muted">Bu şantiyede anlaşma yok.</p>
+              <p className="list-empty">Bu şantiyede anlaşma yok.</p>
             ) : (
-              <AgreementTable items={data.items} />
+              <div className="panel__section">
+                <AgreementTable items={data.items} />
+              </div>
             )
           }
         </QueryView>
-      </Card>
+        {!active && canWrite ? (
+          <p className="panel__note">Yeni anlaşma için şantiyeyi yeniden aktifleştirin.</p>
+        ) : null}
+      </Panel>
 
-      <Card title="Rapor">
-        <p>
-          <Link to={`/uygulama/projeler/${p.id}/rapor`}>Şantiye özeti ve hareket dökümü</Link>
-        </p>
-      </Card>
-
-      <Card title="Değişiklik geçmişi">
-        <HistoryList history={p.history ?? []} />
-        <p className="meta">
-          Oluşturan: {p.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(p.createdAt)}
-        </p>
-      </Card>
+      <Panel title="Değişiklik geçmişi" icon={History}>
+        <div className="panel__body stack stack--sm">
+          <HistoryList history={p.history ?? []} />
+          <p className="meta">
+            Oluşturan: {p.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(p.createdAt)}
+          </p>
+        </div>
+      </Panel>
 
       <ActionDialog
         open={dialog === 'complete'}

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { passwordSchema } from '@santiye/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { KeyRound, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router';
@@ -9,6 +10,7 @@ import { apiPatch, apiPost, errorMessage, isApiError } from '../../api/client';
 import type { PasswordChangeResult } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { Field, TextInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { applyServerErrors } from '../../lib/forms';
 import { useSession } from '../../stores/session';
@@ -95,12 +97,22 @@ export function FirstPasswordPage() {
   return (
     <main className="auth-layout">
       <div className="auth-card">
-        <p className="auth-card__brand">Şantiye Hesap</p>
-        <h1>Kişisel şifrenizi oluşturun</h1>
-        <p className="muted">
-          Merhaba {user.name}. Devam etmek için geçici şifrenizin yerine kendi şifrenizi belirleyin.
-          Yeni şifre en az 8 karakter olmalı.
-        </p>
+        <div className="nav-brand">
+          <span className="nav-brand__mark" aria-hidden="true">
+            ŞH
+          </span>
+          <span className="nav-brand__text">
+            <span className="nav-brand__name">Şantiye Hesap</span>
+            <span className="nav-brand__company">{user.name}</span>
+          </span>
+        </div>
+        <div className="auth-card__head">
+          <h1>Kişisel şifrenizi oluşturun</h1>
+          <p>
+            Devam etmek için geçici şifrenizin yerine kendi şifrenizi belirleyin. Yeni şifre en az 8
+            karakter olmalı.
+          </p>
+        </div>
         <form className="stack" onSubmit={(event) => void onSubmit(event)} noValidate>
           <Field label="Geçici şifre" required error={errors.currentPassword?.message}>
             {(props) => (
@@ -138,12 +150,16 @@ export function FirstPasswordPage() {
             </div>
           ) : null}
           <Button type="submit" block loading={isSubmitting}>
+            <Icon icon={KeyRound} />
             Şifremi Kaydet
           </Button>
         </form>
-        <Button variant="ghost" onClick={() => void logout()}>
-          Çıkış yap
-        </Button>
+        <div className="auth-links">
+          <Button variant="ghost" size="small" onClick={() => void logout()}>
+            <Icon icon={LogOut} />
+            Çıkış yap
+          </Button>
+        </div>
       </div>
     </main>
   );

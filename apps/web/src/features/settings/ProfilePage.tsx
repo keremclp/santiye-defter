@@ -8,8 +8,10 @@ import { apiPatch, errorMessage, isApiError } from '../../api/client';
 import { keys, useMe } from '../../api/queries';
 import type { SaveState } from '../../api/submission';
 import type { Profile } from '../../api/types';
-import { Button } from '../../components/ui/Button';
-import { PageHeader } from '../../components/ui/Card';
+import { KeyRound, UserRound } from 'lucide-react';
+import { Button, ButtonLink } from '../../components/ui/Button';
+import { Icon } from '../../components/ui/Icon';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { ConflictView } from '../../components/ui/ConflictView';
 import { Field, TextInput } from '../../components/ui/Field';
 import { SaveStatus } from '../../components/ui/SaveStatus';
@@ -35,7 +37,7 @@ export function ProfilePage() {
   usePageMeta('Profil');
   const me = useMe();
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader title="Profil" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <QueryView query={me}>{(data) => <ProfileForm profile={data.user} />}</QueryView>
     </main>
@@ -87,7 +89,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
   });
 
   return (
-    <form className="card stack" noValidate onSubmit={(event) => void onSubmit(event)}>
+    <form className="stack" noValidate onSubmit={(event) => void onSubmit(event)}>
       {dialog}
       {conflict ? (
         <ConflictView
@@ -111,29 +113,47 @@ function ProfileForm({ profile }: { profile: Profile }) {
           }}
         />
       ) : null}
-      <Field label="Kullanıcı adı" hint="Kullanıcı adını yalnız ürün sahibi değiştirebilir.">
-        {(props) => <TextInput {...props} value={profile.username} readOnly />}
-      </Field>
-      <Field label="Görünen ad" required error={errors.name?.message}>
-        {(props) => <TextInput {...props} {...register('name')} autoComplete="name" />}
-      </Field>
-      <Field label="Telefon" error={errors.phone?.message}>
-        {(props) => <TextInput {...props} {...register('phone')} type="tel" autoComplete="tel" />}
-      </Field>
-      <Field label="E-posta" error={errors.email?.message}>
-        {(props) => (
-          <TextInput {...props} {...register('email')} type="email" autoComplete="email" />
-        )}
-      </Field>
-      <SaveStatus state={state} />
-      <div className="form-actions">
-        <Button
-          type="submit"
-          loading={state.status === 'saving'}
-          disabled={!isDirty || Boolean(conflict)}
-        >
-          Kaydet
-        </Button>
+      <div className="form-columns">
+        <Panel title="Profil bilgileri" icon={UserRound}>
+          <div className="panel__body stack">
+            <Field label="Görünen ad" required error={errors.name?.message}>
+              {(props) => <TextInput {...props} {...register('name')} autoComplete="name" />}
+            </Field>
+            <Field label="Telefon" error={errors.phone?.message}>
+              {(props) => (
+                <TextInput {...props} {...register('phone')} type="tel" autoComplete="tel" />
+              )}
+            </Field>
+            <Field label="E-posta" error={errors.email?.message}>
+              {(props) => (
+                <TextInput {...props} {...register('email')} type="email" autoComplete="email" />
+              )}
+            </Field>
+            <SaveStatus state={state} />
+            <div className="form-actions">
+              <Button
+                type="submit"
+                loading={state.status === 'saving'}
+                disabled={!isDirty || Boolean(conflict)}
+              >
+                Kaydet
+              </Button>
+            </div>
+          </div>
+        </Panel>
+        <Panel title="Hesap" icon={KeyRound}>
+          <div className="panel__body stack">
+            <Field label="Kullanıcı adı" hint="Kullanıcı adını yalnız ürün sahibi değiştirebilir.">
+              {(props) => <TextInput {...props} value={profile.username} readOnly />}
+            </Field>
+            <div>
+              <ButtonLink variant="secondary" to="/uygulama/ayarlar/sifre">
+                <Icon icon={KeyRound} />
+                Şifreyi değiştir
+              </ButtonLink>
+            </div>
+          </div>
+        </Panel>
       </div>
     </form>
   );

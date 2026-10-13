@@ -1,17 +1,40 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  Ban,
+  CalendarClock,
+  CircleCheck,
+  Coins,
+  Ellipsis,
+  HandCoins,
+  Handshake,
+  History,
+  Paperclip,
+  Pencil,
+  RotateCcw,
+  Split,
+  Trash2,
+  TriangleAlert,
+  Wallet,
+} from 'lucide-react';
 import { useDeferredValue, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { apiDelete, apiPatch, apiPost } from '../../api/client';
 import { invalidateRecords, useAgreement } from '../../api/queries';
 import type { AgreementDetail, AmountPreview } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
-import { Amount } from '../../components/ui/Amount';
+import { Amount, Badge, KindIcon } from '../../components/ui/Amount';
 import { Button, ButtonLink, DisabledAction } from '../../components/ui/Button';
-import { Card, DocumentPlaceholder, PageHeader } from '../../components/ui/Card';
+import { DocumentPlaceholder, Metric, PageHeader, Panel } from '../../components/ui/Card';
 import { ChipGroup } from '../../components/ui/Chips';
 import { DateInput, Field, TextArea, TextInput } from '../../components/ui/Field';
 import { HistoryList } from '../../components/ui/HistoryList';
+import { Icon } from '../../components/ui/Icon';
 import { ImpactPreview } from '../../components/ui/ImpactPreview';
+import { ListRow, ListRows } from '../../components/ui/ListRow';
+import { Menu } from '../../components/ui/Menu';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { ErrorState, Loading, Refreshing } from '../../components/ui/States';
 import { usePageMeta } from '../../hooks/usePageMeta';
@@ -25,7 +48,7 @@ import {
   WORK_STATUS_LABEL,
 } from '../../lib/labels';
 import { toast } from '../../stores/ui';
-import { AgreementStatusBadges } from '../common/RecordTables';
+import { AgreementStatusBadges, DueBadge } from '../common/RecordTables';
 
 type DialogName = 'amount' | 'due' | 'work' | 'cancel' | 'edit' | 'delete' | null;
 
@@ -148,6 +171,15 @@ function AgreementView({
       'Şantiye'
     );
 
+  const openAmount = () => {
+    setNewAmount('');
+    setDialog('amount');
+  };
+  const openDue = () => {
+    setNewDue(a.dueDate ?? '');
+    setDialog('due');
+  };
+
   return (
     <>
       <PageHeader
@@ -159,21 +191,140 @@ function AgreementView({
           </>
         }
         back={{ to: '/uygulama/anlasmalar', label: 'Anlaşmalar' }}
-        actions={<Refreshing active={refreshing} />}
+        actions={
+          <>
+            <Refreshing active={refreshing} />
+            {canWrite ? (
+              <>
+                <ButtonLink to={`/uygulama/anlasmalar/${a.id}/odeme`}>
+                  <Icon icon={payable ? ArrowUpRight : ArrowDownLeft} />
+                  {payable ? 'Ödeme yap' : 'Tahsilat al'}
+                </ButtonLink>
+                {finalLocked ? null : (
+                  <Button variant="secondary" onClick={openAmount}>
+                    <Icon icon={Coins} />
+                    {a.settlementPending ? 'Kesin bedeli kaydet' : 'Bedeli değiştir'}
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={openDue}>
+                  <Icon icon={CalendarClock} />
+                  Vadeyi değiştir
+                </Button>
+                <Menu
+                  label="Diğer işlemler"
+                  buttonClassName="btn btn--secondary"
+                  buttonContent={
+                    <>
+                      <Icon icon={Ellipsis} />
+                      Diğer
+                    </>
+                  }
+                >
+                  {(close) => (
+                    <>
+                      {isAgreement && !cancelled ? (
+                        <button
+                          type="button"
+                          className="dropdown__item"
+                          role="menuitem"
+                          onClick={() => {
+                            close();
+                            setDialog('work');
+                          }}
+                        >
+                          <Icon icon={a.workStatus === 'completed' ? RotateCcw : CircleCheck} />
+                          {a.workStatus === 'completed'
+                            ? 'İşi devam ediyor yap'
+                            : 'İşi tamamlandı olarak işaretle'}
+                        </button>
+                      ) : null}
+                      {isAgreement ? (
+                        <button
+                          type="button"
+                          className="dropdown__item"
+                          role="menuitem"
+                          onClick={() => {
+                            close();
+                            setEdit({
+                              title: a.title,
+                              description: a.description,
+                              agreementDate: a.agreementDate ?? '',
+                            });
+                            setDialog('edit');
+                          }}
+                        >
+                          <Icon icon={Pencil} />
+                          Bilgileri düzenle
+                        </button>
+                      ) : null}
+                      {finalLocked ? (
+                        <button type="button" className="dropdown__item" role="menuitem" disabled>
+                          <Icon icon={Coins} />
+                          <span>
+                            Bedeli değiştir
+                            <small>
+                              İptal edilen anlaşmanın kesin bedeli kayıtlı; bedel değiştirilemez.
+                            </small>
+                          </span>
+                        </button>
+                      ) : null}
+                      <div className="dropdown__sep" role="separator" />
+                      {isAgreement && !cancelled ? (
+                        <button
+                          type="button"
+                          className="dropdown__item dropdown__item--danger"
+                          role="menuitem"
+                          onClick={() => {
+                            close();
+                            setNewAmount('');
+                            setCancelMode('final');
+                            setDialog('cancel');
+                          }}
+                        >
+                          <Icon icon={Ban} />
+                          İptal et
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="dropdown__item dropdown__item--danger"
+                        role="menuitem"
+                        onClick={() => {
+                          close();
+                          setDialog('delete');
+                        }}
+                      >
+                        <Icon icon={Trash2} />
+                        Sil
+                      </button>
+                    </>
+                  )}
+                </Menu>
+              </>
+            ) : null}
+          </>
+        }
       />
       <AgreementStatusBadges agreement={a} />
+      {!canWrite && closedReason ? (
+        <DisabledAction label="Değişiklik kapalı" reason={closedReason} />
+      ) : null}
       {a.settlementPending ? (
         <div className="alert alert--danger" role="status">
-          <p className="alert__title">İptal — hesap kesinleşmedi</p>
+          <p className="alert__title alert__title--icon">
+            <Icon icon={Ban} />
+            İptal — hesap kesinleşmedi
+          </p>
           <p>
-            Kesin bedel girilene kadar kalan tutar görünür kalır. Kesin bedeli “Bedeli değiştir” ile
-            kaydedin.
+            Kesin bedel girilene kadar kalan tutar görünür kalır. Kesin bedeli “Kesin bedeli kaydet”
+            ile kaydedin.
           </p>
         </div>
       ) : null}
       {a.excess > 0 ? (
         <div className="alert alert--danger" role="status">
-          <p className="alert__title">
+          <p className="alert__title alert__title--icon">
+            <Icon icon={TriangleAlert} />
             {payable ? 'Fazla ödeme' : 'Fazla tahsilat'}: {formatTl(a.excess)}
           </p>
           <p>
@@ -183,235 +334,219 @@ function AgreementView({
         </div>
       ) : null}
 
-      <section className="summary-hero" aria-label="Anlaşma özeti">
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">Güncel bedel</span>
-          <span className="summary-hero__value">{formatMoney(a.currentAmount)}</span>
-          {a.initialAmount !== a.currentAmount ? (
-            <span className="summary-hero__label">İlk bedel {formatMoney(a.initialAmount)}</span>
-          ) : null}
-        </div>
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">
-            {payable ? 'Net ödenen' : 'Net tahsil edilen'}
-          </span>
-          <span className="summary-hero__value">{formatMoney(a.netSettled)}</span>
-        </div>
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">{payable ? 'Kalan borç' : 'Kalan alacak'}</span>
-          <span className="summary-hero__value">{formatMoney(a.remaining)}</span>
-        </div>
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">{payable ? 'Fazla ödeme' : 'Fazla tahsilat'}</span>
-          <span className="summary-hero__value">{formatMoney(a.excess)}</span>
-        </div>
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">Vade</span>
-          <span className="summary-hero__value">
-            {a.dueDate ? formatDate(a.dueDate) : 'Belirlenmemiş'}
-          </span>
-          {a.dueState ? (
-            <span className="summary-hero__label">{DUE_STATE_LABEL[a.dueState]}</span>
-          ) : null}
-        </div>
-        <div className="summary-hero__item">
-          <span className="summary-hero__label">Ödeme durumu</span>
-          <span className="summary-hero__value">
-            {paymentStatusLabel(a.paymentStatus, a.direction)}
-          </span>
-          {a.workStatus ? (
-            <span className="summary-hero__label">İş: {WORK_STATUS_LABEL[a.workStatus]}</span>
-          ) : null}
-        </div>
-      </section>
-
-      <div className="page__actions">
-        {!canWrite && closedReason ? (
-          <DisabledAction label="Değişiklik kapalı" reason={closedReason} />
-        ) : (
-          <>
-            <ButtonLink
-              variant={payable ? 'expense' : 'income'}
-              to={`/uygulama/anlasmalar/${a.id}/odeme`}
-            >
-              {payable ? 'Ödeme yap' : 'Tahsilat al'}
-            </ButtonLink>
-            {finalLocked ? (
-              <DisabledAction
-                label="Bedeli değiştir"
-                reason="İptal edilen anlaşmanın kesin bedeli kayıtlı; bedel değiştirilemez."
-              />
-            ) : (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setNewAmount('');
-                  setDialog('amount');
-                }}
-              >
-                {a.settlementPending ? 'Kesin bedeli kaydet' : 'Bedeli değiştir'}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setNewDue(a.dueDate ?? '');
-                setDialog('due');
-              }}
-            >
-              Vadeyi değiştir
-            </Button>
-            {isAgreement && !cancelled ? (
-              <Button variant="secondary" onClick={() => setDialog('work')}>
-                {a.workStatus === 'completed'
-                  ? 'İşi devam ediyor yap'
-                  : 'İşi tamamlandı olarak işaretle'}
-              </Button>
-            ) : null}
-            {isAgreement && !cancelled ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setNewAmount('');
-                  setCancelMode('final');
-                  setDialog('cancel');
-                }}
-              >
-                İptal et
-              </Button>
-            ) : null}
-            {isAgreement ? (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEdit({
-                    title: a.title,
-                    description: a.description,
-                    agreementDate: a.agreementDate ?? '',
-                  });
-                  setDialog('edit');
-                }}
-              >
-                Bilgileri düzenle
-              </Button>
-            ) : null}
-            <Button variant="danger" onClick={() => setDialog('delete')}>
-              Sil
-            </Button>
-          </>
-        )}
-      </div>
-
-      <Card title="Bilgiler">
-        <dl className="definition-list">
-          <dt>Tür</dt>
-          <dd>{isAgreement ? 'Anlaşma' : payable ? 'Başlangıç borcu' : 'Başlangıç alacağı'}</dd>
-          {isAgreement ? (
-            <>
-              <dt>Anlaşma tarihi</dt>
-              <dd>{formatDate(a.agreementDate)}</dd>
-            </>
-          ) : (
-            <>
-              <dt>Takip başlangıcı</dt>
-              <dd>{formatDate(a.trackingStartDate)}</dd>
-            </>
-          )}
-          <dt>Açıklama</dt>
-          <dd>{a.description || <span className="muted">—</span>}</dd>
-          <dt>Oluşturan</dt>
-          <dd>
-            {a.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(a.createdAt)}
-          </dd>
-        </dl>
-        {!isAgreement ? (
-          <p className="meta">
-            Başlangıç kaydı yeni gelir/gider sayılmaz; ondan açılan ödeme/tahsilat bu kayda
-            bağlanır.
-          </p>
-        ) : null}
-      </Card>
-
-      <Card title="Bağlı hareketler ve iadeler">
-        {a.transactions.length === 0 ? (
-          <p className="muted">Henüz bağlı hareket yok. Anlaşma oluşturmak gelir/gider yazmaz.</p>
-        ) : (
-          <ul className="item-list">
-            {a.transactions.map((t) => (
-              <li key={t.id}>
-                <Link className="item-card" to={`/uygulama/islemler/${t.id}`}>
-                  <div className="item-card__main">
-                    <span className="item-card__title">
-                      #{t.recordNo} · {KIND_LABEL[t.kind]}
-                    </span>
-                    <span className="meta">
-                      {formatDate(t.date)}
-                      {t.description ? ` · ${t.description}` : ''}
-                    </span>
-                    {t.isSplit ? (
-                      <span className="meta">
-                        Paylaştırılmış kayıt; bu anlaşmaya düşen pay gösterilir.
-                      </span>
-                    ) : null}
-                  </div>
-                  <Amount value={t.agreementShare} kind={t.kind} />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {a.amountHistory.length > 0 ? (
-        <Card title="Bedel geçmişi">
-          <ul className="item-list">
-            {a.amountHistory.map((change, index) => (
-              <li key={index} className="card">
-                <strong>
-                  {formatMoney(change.old)} → {formatMoney(change.new)}
-                </strong>
-                <p className="meta">
-                  {formatDateTime(change.at)} · {change.by?.name} · Gerekçe: {change.reason}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-      {a.dueDateHistory.length > 0 ? (
-        <Card title="Vade geçmişi">
-          <ul className="item-list">
-            {a.dueDateHistory.map((change, index) => (
-              <li key={index} className="card">
-                <strong>
-                  {formatDate(change.old)} → {formatDate(change.new)}
-                </strong>
-                <p className="meta">
-                  {formatDateTime(change.at)} · {change.by?.name} · Gerekçe: {change.reason}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      <Card title="Belgeler">
-        <DocumentPlaceholder titled={false} />
-      </Card>
-      <Card title="Değişiklik geçmişi">
-        <HistoryList
-          history={a.history}
-          formatValue={(field, value) =>
-            field === 'currentAmount' && typeof value === 'number'
-              ? formatTl(value)
-              : field === 'dueDate' || field === 'agreementDate'
-                ? formatDate(value as string | null)
-                : field === 'workStatus' && typeof value === 'string'
-                  ? (WORK_STATUS_LABEL[value as keyof typeof WORK_STATUS_LABEL] ?? value)
-                  : null
+      <section className="metrics metrics--4" aria-label="Anlaşma özeti">
+        <Metric
+          label="Güncel bedel"
+          icon={Coins}
+          tone="neutral"
+          balance
+          value={formatMoney(a.currentAmount)}
+          sub={
+            a.initialAmount !== a.currentAmount
+              ? `İlk bedel ${formatMoney(a.initialAmount)}`
+              : 'İlk bedelden değişmedi'
           }
         />
-      </Card>
+        <Metric
+          label={payable ? 'Net ödenen' : 'Net tahsil edilen'}
+          icon={payable ? ArrowUpRight : ArrowDownLeft}
+          tone={payable ? 'expense' : 'income'}
+          balance
+          value={formatMoney(a.netSettled)}
+          valueClassName={payable ? 'amount--expense' : 'amount--income'}
+          sub={paymentStatusLabel(a.paymentStatus, a.direction)}
+          info={
+            payable
+              ? 'Bu anlaşmaya bağlı ödemeler − ödeme iadeleri.'
+              : 'Bu anlaşmaya bağlı tahsilatlar − tahsilat iadeleri.'
+          }
+        />
+        <Metric
+          label={payable ? 'Kalan borç' : 'Kalan alacak'}
+          icon={payable ? Wallet : HandCoins}
+          tone="primary"
+          balance
+          value={formatMoney(a.remaining)}
+          sub={
+            a.excess > 0 ? (
+              <Badge tone="danger">
+                {payable ? 'Fazla ödeme' : 'Fazla tahsilat'} {formatMoney(a.excess)}
+              </Badge>
+            ) : a.dueState === 'overdue' ? (
+              <DueBadge agreement={a} />
+            ) : (
+              'Fazla yok'
+            )
+          }
+        />
+        <Metric
+          label="Vade"
+          icon={CalendarClock}
+          tone="neutral"
+          balance
+          value={a.dueDate ? formatDate(a.dueDate) : 'Belirlenmemiş'}
+          sub={
+            a.dueState === 'overdue' || a.dueState === 'upcoming' ? (
+              <DueBadge agreement={a} />
+            ) : a.dueState ? (
+              DUE_STATE_LABEL[a.dueState]
+            ) : (
+              'Vade yok'
+            )
+          }
+        />
+      </section>
+
+      <div className="dash-grid">
+        <div className="dash-col">
+          <Panel title="Bağlı hareketler ve iadeler" icon={ArrowLeftRight}>
+            {a.transactions.length === 0 ? (
+              <p className="list-empty">
+                Henüz bağlı hareket yok. Anlaşma oluşturmak gelir/gider yazmaz.
+              </p>
+            ) : (
+              <ListRows label="Bağlı hareketler">
+                {a.transactions.map((t) => (
+                  <ListRow
+                    key={t.id}
+                    to={`/uygulama/islemler/${t.id}`}
+                    icon={<KindIcon kind={t.kind} />}
+                    title={t.description || KIND_LABEL[t.kind]}
+                    titleExtra={t.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
+                    meta={
+                      <>
+                        <span className="record-no">#{t.recordNo}</span> · {formatDate(t.date)} ·{' '}
+                        {KIND_LABEL[t.kind]}
+                      </>
+                    }
+                    side={
+                      <>
+                        <Amount value={t.agreementShare} kind={t.kind} />
+                        {t.isSplit ? (
+                          <span className="split-note">
+                            <Icon icon={Split} />
+                            Bu anlaşmaya düşen pay
+                          </span>
+                        ) : null}
+                      </>
+                    }
+                  />
+                ))}
+              </ListRows>
+            )}
+          </Panel>
+
+          {a.amountHistory.length > 0 || a.dueDateHistory.length > 0 ? (
+            <Panel title="Bedel ve vade geçmişi" icon={CalendarClock}>
+              <div className="panel__body">
+                <ol className="history-list">
+                  {[
+                    ...a.amountHistory.map((change) => ({
+                      at: change.at,
+                      title: `Bedel: ${formatMoney(change.old)} → ${formatMoney(change.new)}`,
+                      by: change.by?.name,
+                      reason: change.reason,
+                    })),
+                    ...a.dueDateHistory.map((change) => ({
+                      at: change.at,
+                      title: `Vade: ${formatDate(change.old)} → ${formatDate(change.new)}`,
+                      by: change.by?.name,
+                      reason: change.reason,
+                    })),
+                  ]
+                    .sort((x, y) => (x.at < y.at ? 1 : -1))
+                    .map((entry, index) => (
+                      <li key={`${entry.at}-${index}`} className="history-list__item">
+                        <div className="history-list__head">
+                          <span>{entry.title}</span>
+                          <span className="meta">
+                            {formatDateTime(entry.at)} · {entry.by ?? 'Bilinmeyen kullanıcı'}
+                          </span>
+                        </div>
+                        <p className="meta">Gerekçe: {entry.reason}</p>
+                      </li>
+                    ))}
+                </ol>
+              </div>
+            </Panel>
+          ) : null}
+        </div>
+
+        <div className="dash-col">
+          <Panel title="Bilgiler" icon={Handshake}>
+            <div className="panel__body stack stack--sm">
+              <dl className="definition-list">
+                <dt>Tür</dt>
+                <dd>
+                  {isAgreement ? 'Anlaşma' : payable ? 'Başlangıç borcu' : 'Başlangıç alacağı'}
+                </dd>
+                <dt>Kişi/firma</dt>
+                <dd>
+                  {a.party ? (
+                    <Link to={`/uygulama/kisiler/${a.party.id}`}>{a.party.name}</Link>
+                  ) : (
+                    '—'
+                  )}
+                </dd>
+                <dt>Kapsam</dt>
+                <dd>{scopeLink}</dd>
+                {a.workStatus ? (
+                  <>
+                    <dt>İş durumu</dt>
+                    <dd>{WORK_STATUS_LABEL[a.workStatus]}</dd>
+                  </>
+                ) : null}
+                {isAgreement ? (
+                  <>
+                    <dt>Anlaşma tarihi</dt>
+                    <dd>{formatDate(a.agreementDate)}</dd>
+                  </>
+                ) : (
+                  <>
+                    <dt>Takip başlangıcı</dt>
+                    <dd>{formatDate(a.trackingStartDate)}</dd>
+                  </>
+                )}
+                <dt>Açıklama</dt>
+                <dd>{a.description || <span className="muted">—</span>}</dd>
+                <dt>Oluşturan</dt>
+                <dd>
+                  {a.createdBy?.name ?? 'Bilinmeyen kullanıcı'} · {formatDateTime(a.createdAt)}
+                </dd>
+              </dl>
+              {!isAgreement ? (
+                <p className="meta">
+                  Başlangıç kaydı yeni gelir/gider sayılmaz; ondan açılan ödeme/tahsilat bu kayda
+                  bağlanır.
+                </p>
+              ) : null}
+            </div>
+          </Panel>
+
+          <Panel title="Belgeler" icon={Paperclip}>
+            <div className="panel__body">
+              <DocumentPlaceholder titled={false} />
+            </div>
+          </Panel>
+        </div>
+      </div>
+
+      <Panel title="Değişiklik geçmişi" icon={History}>
+        <div className="panel__body">
+          <HistoryList
+            history={a.history}
+            formatValue={(field, value) =>
+              field === 'currentAmount' && typeof value === 'number'
+                ? formatTl(value)
+                : field === 'dueDate' || field === 'agreementDate'
+                  ? formatDate(value as string | null)
+                  : field === 'workStatus' && typeof value === 'string'
+                    ? (WORK_STATUS_LABEL[value as keyof typeof WORK_STATUS_LABEL] ?? value)
+                    : null
+            }
+          />
+        </div>
+      </Panel>
 
       <ActionDialog
         open={dialog === 'amount'}

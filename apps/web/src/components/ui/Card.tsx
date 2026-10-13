@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Info, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, Paperclip, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Icon } from './Icon';
@@ -203,12 +203,17 @@ export function DocumentPlaceholder({
 }) {
   return (
     <div className="document-placeholder">
-      {titled ? <strong>Belgeler</strong> : null}
-      <p>
-        {count
-          ? `${count} belge kayıtlı. Belge görüntüleme yakında bu alanda olacak.`
-          : 'Belge ekleme yakında bu alanda olacak. Kaydı belgesiz kaydedebilirsiniz.'}
-      </p>
+      <span className="icon-box icon-box--lg icon-box--neutral">
+        <Icon icon={Paperclip} />
+      </span>
+      <div>
+        {titled ? <strong>Belgeler</strong> : null}
+        <p>
+          {count
+            ? `${count} belge kayıtlı. Belge görüntüleme yakında bu alanda olacak.`
+            : 'Belge ekleme yakında bu alanda olacak. Kaydı belgesiz kaydedebilirsiniz.'}
+        </p>
+      </div>
     </div>
   );
 }

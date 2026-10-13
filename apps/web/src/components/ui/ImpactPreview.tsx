@@ -1,5 +1,7 @@
+import { ArrowRightLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { formatMoney } from '../../lib/format';
+import { Icon } from './Icon';
 
 export interface ImpactRow {
   label: ReactNode;
@@ -33,7 +35,10 @@ export function ImpactPreview({
 
   return (
     <section className="impact" aria-label="Etki önizlemesi">
-      <p className="impact__title">{title}</p>
+      <p className="impact__title">
+        <Icon icon={ArrowRightLeft} />
+        {title}
+      </p>
       <table className="impact__table">
         <thead>
           <tr>

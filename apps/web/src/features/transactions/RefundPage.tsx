@@ -6,6 +6,7 @@ import {
   type CashKind,
 } from '@santiye/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { Receipt, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { apiPostFull, isApiError } from '../../api/client';
@@ -14,7 +15,7 @@ import { useCreateSubmission } from '../../api/submission';
 import type { Transaction, TransactionDetail } from '../../api/types';
 import { Amount } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
-import { Card, DocumentPlaceholder, PageHeader } from '../../components/ui/Card';
+import { DocumentPlaceholder, PageHeader, Panel } from '../../components/ui/Card';
 import { DateInput, Field, TextArea } from '../../components/ui/Field';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { SaveStatus } from '../../components/ui/SaveStatus';
@@ -36,8 +37,12 @@ export function RefundPage() {
   const query = useTransaction(id);
   usePageMeta('İade kaydet');
   return (
-    <main className="page page--narrow">
-      <PageHeader title="İade kaydet" back={{ to: `/uygulama/islemler/${id}`, label: 'Kayıt' }} />
+    <main className="page">
+      <PageHeader
+        title="İade kaydet"
+        subtitle="Geri gelen veya geri verilen gerçek para; kaynak hareketin tutarı değişmez"
+        back={{ to: `/uygulama/islemler/${id}`, label: 'Kayıt' }}
+      />
       {query.isPending ? (
         <Loading />
       ) : query.error || !query.data ? (
@@ -161,101 +166,104 @@ function RefundForm({ source }: { source: TransactionDetail }) {
       }}
     >
       {dialog}
-      <Card title="Kaynak hareket">
-        <dl className="definition-list">
-          <dt>Kayıt</dt>
-          <dd>
-            #{source.recordNo} · {KIND_LABEL[source.kind]} · {formatDate(source.date)}
-          </dd>
-          <dt>Tutar</dt>
-          <dd>
-            <Amount value={source.amount} kind={source.kind} />
-          </dd>
-          <dt>Kişi/firma</dt>
-          <dd>{source.party?.name ?? 'Muhatapsız'}</dd>
-          <dt>Önceki iadeler</dt>
-          <dd>
-            {source.refunds.filter((r) => !r.deletedAt).length === 0
-              ? 'Yok'
-              : source.refunds
-                  .filter((r) => !r.deletedAt)
-                  .map((r) => `#${r.recordNo} ${formatMoney(r.amount)}`)
-                  .join(', ')}
-          </dd>
-          <dt>En fazla iade edilebilir</dt>
-          <dd>
-            <strong>{formatMoney(source.refundable ?? 0)}</strong>
-          </dd>
-        </dl>
-      </Card>
+      <div className="form-columns form-columns--side-first">
+        <Panel title="Kaynak hareket" icon={Receipt}>
+          <div className="panel__body">
+            <dl className="definition-list">
+              <dt>Kayıt</dt>
+              <dd>
+                #{source.recordNo} · {KIND_LABEL[source.kind]} · {formatDate(source.date)}
+              </dd>
+              <dt>Tutar</dt>
+              <dd>
+                <Amount value={source.amount} kind={source.kind} />
+              </dd>
+              <dt>Kişi/firma</dt>
+              <dd>{source.party?.name ?? 'Muhatapsız'}</dd>
+              <dt>Önceki iadeler</dt>
+              <dd>
+                {source.refunds.filter((r) => !r.deletedAt).length === 0
+                  ? 'Yok'
+                  : source.refunds
+                      .filter((r) => !r.deletedAt)
+                      .map((r) => `#${r.recordNo} ${formatMoney(r.amount)}`)
+                      .join(', ')}
+              </dd>
+              <dt>En fazla iade edilebilir</dt>
+              <dd>
+                <strong>{formatMoney(source.refundable ?? 0)}</strong>
+              </dd>
+            </dl>
+          </div>
+        </Panel>
 
-      <Card title={kind === 'expense' ? 'Ödeme iadesi' : 'Tahsilat iadesi'}>
-        <div className="stack">
-          <p className="meta">
-            {kind === 'expense'
-              ? 'Ödemeden geri gelen para. İade başka anlaşmaya kendiliğinden dağıtılmaz; kaynak hareketin tutarı değişmez.'
-              : 'Müşteriye geri verilen tahsilat. İade başka anlaşmaya kendiliğinden dağıtılmaz; kaynak hareketin tutarı değişmez.'}
-          </p>
-          <div className="form-grid">
-            <Field label="İade tutarı" required error={errors.amount}>
-              {(props) => <MoneyInput {...props} value={amount} onChange={setAmount} />}
-            </Field>
-            <Field label="Gerçek tarih" required error={errors.date}>
+        <Panel title={kind === 'expense' ? 'Ödeme iadesi' : 'Tahsilat iadesi'} icon={Undo2}>
+          <div className="panel__body stack">
+            <p className="meta">
+              {kind === 'expense'
+                ? 'Ödemeden geri gelen para. İade başka anlaşmaya kendiliğinden dağıtılmaz; kaynak hareketin tutarı değişmez.'
+                : 'Müşteriye geri verilen tahsilat. İade başka anlaşmaya kendiliğinden dağıtılmaz; kaynak hareketin tutarı değişmez.'}
+            </p>
+            <div className="form-grid">
+              <Field label="İade tutarı" required error={errors.amount}>
+                {(props) => <MoneyInput {...props} value={amount} onChange={setAmount} />}
+              </Field>
+              <Field label="Gerçek tarih" required error={errors.date}>
+                {(props) => (
+                  <DateInput
+                    {...props}
+                    value={date}
+                    onChange={(event) => setDate(event.target.value)}
+                  />
+                )}
+              </Field>
+            </div>
+            {split ? (
+              <fieldset className="stack">
+                <legend className="field__label">Hangi paydan ne kadar?</legend>
+                {source.allocations.map((allocation) => (
+                  <Field
+                    key={allocation.id}
+                    label={`${allocation.scope === 'company' ? 'Firma geneli' : (allocation.project?.name ?? 'Şantiye')}${
+                      allocation.agreement ? ` — ${allocation.agreement.name}` : ''
+                    }`}
+                    hint={`Pay ${formatMoney(allocation.amount)} · en fazla ${formatMoney(refundableAmountOf(allocation))} iade edilebilir`}
+                    error={errors[`part-${allocation.id}`]}
+                  >
+                    {(props) => (
+                      <MoneyInput
+                        {...props}
+                        value={parts[allocation.id] ?? ''}
+                        onChange={(value) =>
+                          setParts((current) => ({ ...current, [allocation.id]: value }))
+                        }
+                      />
+                    )}
+                  </Field>
+                ))}
+                {errors.parts ? <p className="field__error">{errors.parts}</p> : null}
+              </fieldset>
+            ) : null}
+            <Field
+              label="Kısa gerekçe"
+              required
+              error={errors.reason}
+              hint="İade kaydının açıklaması olur."
+            >
               {(props) => (
-                <DateInput
+                <TextArea
                   {...props}
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
+                  rows={2}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
                 />
               )}
             </Field>
+            <DocumentPlaceholder />
+            {previewValid ? <ImpactBlock impact={impact} /> : null}
           </div>
-          {split ? (
-            <fieldset className="stack">
-              <legend className="field__label">Hangi paydan ne kadar?</legend>
-              {source.allocations.map((allocation) => (
-                <Field
-                  key={allocation.id}
-                  label={`${allocation.scope === 'company' ? 'Firma geneli' : (allocation.project?.name ?? 'Şantiye')}${
-                    allocation.agreement ? ` — ${allocation.agreement.name}` : ''
-                  }`}
-                  hint={`Pay ${formatMoney(allocation.amount)} · en fazla ${formatMoney(refundableAmountOf(allocation))} iade edilebilir`}
-                  error={errors[`part-${allocation.id}`]}
-                >
-                  {(props) => (
-                    <MoneyInput
-                      {...props}
-                      value={parts[allocation.id] ?? ''}
-                      onChange={(value) =>
-                        setParts((current) => ({ ...current, [allocation.id]: value }))
-                      }
-                    />
-                  )}
-                </Field>
-              ))}
-              {errors.parts ? <p className="field__error">{errors.parts}</p> : null}
-            </fieldset>
-          ) : null}
-          <Field
-            label="Kısa gerekçe"
-            required
-            error={errors.reason}
-            hint="İade kaydının açıklaması olur."
-          >
-            {(props) => (
-              <TextArea
-                {...props}
-                rows={2}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            )}
-          </Field>
-          <DocumentPlaceholder />
-        </div>
-      </Card>
-
-      {previewValid ? <ImpactBlock impact={impact} /> : null}
+        </Panel>
+      </div>
 
       {formError ? (
         <div className="alert alert--danger" role="alert">

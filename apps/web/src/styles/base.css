@@ -142,24 +142,8 @@ progress {
   gap: var(--space-4);
 }
 
-.grid {
-  display: grid;
-  gap: var(--space-16);
-  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
-}
-
-.plain-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .block {
   display: block;
-}
-
-.grid--2 {
-  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -6,7 +6,6 @@ import {
   HandCoins,
   Handshake,
   HardHat,
-  History,
   RefreshCw,
   Scale,
   TriangleAlert,
@@ -34,7 +33,7 @@ import {
 } from '../../lib/format';
 import { PROJECT_STATUS_LABEL } from '../../lib/labels';
 import { useSession } from '../../stores/session';
-import { DueBadge, TransactionRow } from '../common/RecordTables';
+import { DirectionIcon, DueBadge, TransactionRow } from '../common/RecordTables';
 
 const MONTHS = [
   'Ocak',
@@ -68,16 +67,6 @@ function isEmpty(data: Dashboard): boolean {
 }
 
 const scopeName = (a: Agreement) => (a.scope === 'company' ? 'Firma geneli' : a.project?.name);
-
-function DirectionIcon({ agreement, opening }: { agreement: Agreement; opening?: boolean }) {
-  const receivable = agreement.direction === 'receivable';
-  const glyph = opening ? History : receivable ? ArrowDownLeft : ArrowUpRight;
-  return (
-    <span className={`icon-box icon-box--lg icon-box--${receivable ? 'income' : 'expense'}`}>
-      <Icon icon={glyph} />
-    </span>
-  );
-}
 
 function DueRow({ agreement: a }: { agreement: Agreement }) {
   return (

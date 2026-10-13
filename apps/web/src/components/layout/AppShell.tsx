@@ -391,9 +391,18 @@ export function AppShell() {
     return (
       <div className="auth-layout">
         <div className="auth-card" role="alert">
-          <p className="auth-card__brand">Şantiye Hesap</p>
-          <h1>Erişim kapalı</h1>
-          <p>{closedError.message}</p>
+          <div className="nav-brand">
+            <span className="nav-brand__mark" aria-hidden="true">
+              ŞH
+            </span>
+            <span className="nav-brand__text">
+              <span className="nav-brand__name">Şantiye Hesap</span>
+            </span>
+          </div>
+          <div className="auth-card__head">
+            <h1>Erişim kapalı</h1>
+            <p>{closedError.message}</p>
+          </div>
           <p className="meta">Kayıtlarınız silinmiş değildir.</p>
           <Button variant="secondary" onClick={() => void logout()}>
             Çıkış yap

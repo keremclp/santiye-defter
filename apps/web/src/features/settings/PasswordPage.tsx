@@ -6,8 +6,9 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
 import { apiPatch, errorMessage, isApiError } from '../../api/client';
+import { KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { PageHeader } from '../../components/ui/Card';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { Field, TextInput } from '../../components/ui/Field';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { applyServerErrors } from '../../lib/forms';
@@ -59,56 +60,66 @@ export function PasswordPage() {
   });
 
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader title="Şifre" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
-      <form className="card stack" noValidate onSubmit={(event) => void onSubmit(event)}>
-        <p className="meta">Şifre değişince bu ve diğer bütün cihazlardaki oturumlar kapanır.</p>
-        <Field label="Mevcut şifre" required error={errors.currentPassword?.message}>
-          {(props) => (
-            <TextInput
-              {...props}
-              {...register('currentPassword')}
-              type="password"
-              autoComplete="current-password"
-            />
-          )}
-        </Field>
-        <Field
-          label="Yeni şifre"
-          required
-          error={errors.newPassword?.message}
-          hint="En az 8 karakter"
-        >
-          {(props) => (
-            <TextInput
-              {...props}
-              {...register('newPassword')}
-              type="password"
-              autoComplete="new-password"
-            />
-          )}
-        </Field>
-        <Field label="Yeni şifre (tekrar)" required error={errors.repeat?.message}>
-          {(props) => (
-            <TextInput
-              {...props}
-              {...register('repeat')}
-              type="password"
-              autoComplete="new-password"
-            />
-          )}
-        </Field>
-        {error ? (
-          <div className="alert alert--danger" role="alert">
-            {error}
-          </div>
-        ) : null}
-        <div className="form-actions">
-          <Button type="submit" loading={isSubmitting}>
-            Şifreyi Değiştir
-          </Button>
-        </div>
-      </form>
+      <div className="form-columns">
+        <Panel title="Şifreyi değiştir" icon={KeyRound}>
+          <form className="panel__body stack" noValidate onSubmit={(event) => void onSubmit(event)}>
+            <Field label="Mevcut şifre" required error={errors.currentPassword?.message}>
+              {(props) => (
+                <TextInput
+                  {...props}
+                  {...register('currentPassword')}
+                  type="password"
+                  autoComplete="current-password"
+                />
+              )}
+            </Field>
+            <Field
+              label="Yeni şifre"
+              required
+              error={errors.newPassword?.message}
+              hint="En az 8 karakter"
+            >
+              {(props) => (
+                <TextInput
+                  {...props}
+                  {...register('newPassword')}
+                  type="password"
+                  autoComplete="new-password"
+                />
+              )}
+            </Field>
+            <Field label="Yeni şifre (tekrar)" required error={errors.repeat?.message}>
+              {(props) => (
+                <TextInput
+                  {...props}
+                  {...register('repeat')}
+                  type="password"
+                  autoComplete="new-password"
+                />
+              )}
+            </Field>
+            {error ? (
+              <div className="alert alert--danger" role="alert">
+                {error}
+              </div>
+            ) : null}
+            <div className="form-actions">
+              <Button type="submit" loading={isSubmitting}>
+                Şifreyi Değiştir
+              </Button>
+            </div>
+          </form>
+        </Panel>
+        <Panel title="Bilmeniz gerekenler" icon={ShieldCheck}>
+          <ul className="panel__list">
+            <li>Yeni şifre en az 8 karakter olmalı.</li>
+            <li>Şifre değişince bu ve diğer bütün cihazlardaki oturumlar kapanır.</li>
+            <li>Değişiklikten sonra yeni şifrenizle yeniden giriş yaparsınız.</li>
+          </ul>
+        </Panel>
+      </div>
     </main>
   );
 }

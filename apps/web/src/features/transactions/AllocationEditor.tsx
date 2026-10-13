@@ -1,7 +1,9 @@
 import type { CashKind } from '@santiye/shared';
+import { Plus, Split, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ChipGroup } from '../../components/ui/Chips';
 import { Field, SelectInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { formatMoney, formatTl } from '../../lib/format';
 import { PROJECT_STATUS_LABEL } from '../../lib/labels';
@@ -42,8 +44,11 @@ export function AllocationEditor({
     onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
   return (
-    <fieldset className="stack" aria-describedby="allocation-summary">
-      <legend className="field__label">Paylar</legend>
+    <fieldset className="allocation-list" aria-describedby="allocation-summary">
+      <legend className="panel__title">
+        <Icon icon={Split} />
+        Paylar
+      </legend>
       {rows.map((row, index) => {
         const locked = Boolean(row.id && lockedRowIds.has(row.id));
         const options = agreementsForScope(
@@ -55,6 +60,7 @@ export function AllocationEditor({
         const target = options.find((agreement) => agreement.id === row.agreementId);
         return (
           <div key={row.key} className="allocation-row">
+            <span className="allocation-row__index">{index + 1}. pay</span>
             <div className="stack stack--sm">
               <span className="field__label">Kapsam</span>
               <ChipGroup
@@ -134,11 +140,12 @@ export function AllocationEditor({
                 aria-label={`${index + 1}. payı kaldır`}
                 onClick={() => onChange(rows.filter((_, i) => i !== index))}
               >
+                <Icon icon={Trash2} />
                 Kaldır
               </Button>
             </div>
             {locked ? (
-              <p className="meta" style={{ gridColumn: '1 / -1' }}>
+              <p className="meta allocation-row__note">
                 Bu payın bağlı iadesi var; kaldırılamaz, şantiyesi veya anlaşması değiştirilemez.
                 Hedef değişecekse önce iadeyi silin.
               </p>
@@ -146,9 +153,10 @@ export function AllocationEditor({
           </div>
         );
       })}
-      <div className="row row--between">
+      <div className="allocation-summary">
         <Button variant="secondary" size="small" onClick={() => onChange([...rows, emptyRow()])}>
-          + Satır ekle
+          <Icon icon={Plus} />
+          Satır ekle
         </Button>
         <span id="allocation-summary" className={unallocated ? 'field__error' : 'meta'}>
           {unallocated === null

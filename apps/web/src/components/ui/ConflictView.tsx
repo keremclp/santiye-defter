@@ -1,5 +1,7 @@
+import { GitCompareArrows } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from './Button';
+import { Icon } from './Icon';
 
 export interface ConflictField {
   key: string;
@@ -27,34 +29,37 @@ export function ConflictView({
 }) {
   return (
     <section className="alert alert--danger" aria-labelledby="conflict-title">
-      <p id="conflict-title" className="alert__title">
+      <p id="conflict-title" className="alert__title alert__title--icon">
+        <Icon icon={GitCompareArrows} />
         Kayıt başka bir yerde güncellendi
       </p>
       <p>
         Siz düzenlerken bu kayıt değişti. Değişiklikleri karşılaştırın; kaydetmeden önce yeniden
         değerlendirin.
       </p>
-      <table className="compare-table">
-        <thead>
-          <tr>
-            <th scope="col">Alan</th>
-            <th scope="col">Güncel kayıt</th>
-            <th scope="col">Sizin değişikliğiniz</th>
-          </tr>
-        </thead>
-        <tbody>
-          {fields.map((field) => (
-            <tr key={field.key} className={field.differs ? 'compare-table__diff' : undefined}>
-              <th scope="row">
-                {field.label}
-                {field.differs ? <span className="visually-hidden"> (farklı)</span> : null}
-              </th>
-              <td>{field.current}</td>
-              <td>{field.mine}</td>
+      <div className="table-wrap">
+        <table className="compare-table">
+          <thead>
+            <tr>
+              <th scope="col">Alan</th>
+              <th scope="col">Güncel kayıt</th>
+              <th scope="col">Sizin değişikliğiniz</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {fields.map((field) => (
+              <tr key={field.key} className={field.differs ? 'compare-table__diff' : undefined}>
+                <th scope="row">
+                  {field.label}
+                  {field.differs ? <span className="badge badge--danger">Farklı</span> : null}
+                </th>
+                <td>{field.current}</td>
+                <td>{field.mine}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="form-actions">
         <Button variant="secondary" onClick={onUseCurrent}>
           Güncel kaydı forma yükle

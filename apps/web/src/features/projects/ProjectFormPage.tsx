@@ -40,7 +40,7 @@ export function ProjectFormPage() {
   const [project, setProject] = useSnapshot(query.data);
   usePageMeta(id ? 'Şantiye düzenle' : 'Yeni şantiye');
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title={id ? 'Şantiye düzenle' : 'Yeni şantiye'}
         back={
@@ -200,33 +200,37 @@ function ProjectForm({ project, reload }: { project: Project | null; reload?: ()
           }}
         />
       ) : null}
-      <section className="card stack">
-        <Field
-          label="Proje adı"
-          required
-          error={errors.name?.message}
-          hint={
-            similarNames.length > 0
-              ? `Benzer adlı şantiye var: ${similarNames.join(', ')}. Aynı şantiye değilse devam edebilirsiniz.`
-              : 'Örn. Kadıköy Villa Şantiyesi'
-          }
-        >
-          {(props) => <TextInput {...props} {...register('name')} />}
-        </Field>
-        <Field label="Açıklama" error={errors.description?.message}>
-          {(props) => <TextArea {...props} {...register('description')} rows={3} />}
-        </Field>
-        <Field label="Adres / konum" error={errors.address?.message}>
-          {(props) => <TextInput {...props} {...register('address')} />}
-        </Field>
-        <Field
-          label="Başlangıç tarihi"
-          error={errors.startDate?.message}
-          hint="Bilinmiyorsa boş bırakın."
-        >
-          {(props) => <DateInput {...props} {...register('startDate')} />}
-        </Field>
-      </section>
+      <div className="form-columns">
+        <section className="card stack" aria-label="Ana bilgiler">
+          <Field
+            label="Proje adı"
+            required
+            error={errors.name?.message}
+            hint={
+              similarNames.length > 0
+                ? `Benzer adlı şantiye var: ${similarNames.join(', ')}. Aynı şantiye değilse devam edebilirsiniz.`
+                : 'Örn. Kadıköy Villa Şantiyesi'
+            }
+          >
+            {(props) => <TextInput {...props} {...register('name')} />}
+          </Field>
+          <Field label="Adres / konum" error={errors.address?.message}>
+            {(props) => <TextInput {...props} {...register('address')} />}
+          </Field>
+          <Field
+            label="Başlangıç tarihi"
+            error={errors.startDate?.message}
+            hint="Bilinmiyorsa boş bırakın."
+          >
+            {(props) => <DateInput {...props} {...register('startDate')} />}
+          </Field>
+        </section>
+        <section className="card stack" aria-label="Ek bilgiler">
+          <Field label="Açıklama" error={errors.description?.message}>
+            {(props) => <TextArea {...props} {...register('description')} rows={6} />}
+          </Field>
+        </section>
+      </div>
       {!canWrite ? <div className="alert alert--danger">{closedReason}</div> : null}
       <SaveStatus state={state} onVerify={() => void submission.verify()} />
       <div className="form-actions sticky-actions">

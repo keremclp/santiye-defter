@@ -1,4 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  ArchiveRestore,
+  ArrowLeftRight,
+  Handshake,
+  HardHat,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { apiPost } from '../../api/client';
@@ -6,7 +14,8 @@ import { invalidateRecords, useDeleted } from '../../api/queries';
 import type { DeletedItem, DeletedType } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
 import { ButtonLink, Button, DisabledAction } from '../../components/ui/Button';
-import { PageHeader, Pagination } from '../../components/ui/Card';
+import { PageHeader, Pagination, Panel } from '../../components/ui/Card';
+import { Icon } from '../../components/ui/Icon';
 import { ImpactPreview } from '../../components/ui/ImpactPreview';
 import { EmptyState, ErrorState, Loading } from '../../components/ui/States';
 import { usePageMeta } from '../../hooks/usePageMeta';
@@ -15,11 +24,11 @@ import { useWriteAccess } from '../../hooks/useWriteAccess';
 import { formatDateTime, formatMoney } from '../../lib/format';
 import { toast } from '../../stores/ui';
 
-const TABS: { value: DeletedType; label: string; path: string }[] = [
-  { value: 'transaction', label: 'İşlemler', path: 'transactions' },
-  { value: 'agreement', label: 'Anlaşmalar', path: 'agreements' },
-  { value: 'project', label: 'Şantiyeler', path: 'projects' },
-  { value: 'party', label: 'Kişiler', path: 'parties' },
+const TABS: { value: DeletedType; label: string; path: string; icon: LucideIcon }[] = [
+  { value: 'transaction', label: 'İşlemler', path: 'transactions', icon: ArrowLeftRight },
+  { value: 'agreement', label: 'Anlaşmalar', path: 'agreements', icon: Handshake },
+  { value: 'project', label: 'Şantiyeler', path: 'projects', icon: HardHat },
+  { value: 'party', label: 'Kişiler', path: 'parties', icon: Users },
 ];
 
 /**
@@ -40,73 +49,86 @@ export function DeletedPage() {
     <main className="page">
       <PageHeader
         title="Silinenler"
-        subtitle="Silinen kayıtlar normal toplamlara girmez. Geri alınan kaydın etkisi bir kez uygulanır."
+        subtitle="Silinen kayıtlar normal toplamlara girmez · geri alınan kaydın etkisi bir kez uygulanır"
       />
-      <div className="tabs" role="tablist" aria-label="Kayıt türü">
-        {TABS.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            role="tab"
-            className="tab"
-            aria-selected={item.value === type}
-            onClick={() => update({ tur: item.value })}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      {query.isPending ? (
-        <Loading />
-      ) : query.error || !query.data ? (
-        <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-      ) : query.data.items.length === 0 ? (
-        <EmptyState title="Silinen kayıt yok" />
-      ) : (
-        <>
-          <ul className="item-list">
+      {!canWrite && closedReason ? <DisabledAction label="Geri al" reason={closedReason} /> : null}
+      <Panel label="Silinen kayıtlar">
+        <div className="tabs" role="tablist" aria-label="Kayıt türü">
+          {TABS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              role="tab"
+              className="tab"
+              aria-selected={item.value === type}
+              onClick={() => update({ tur: item.value })}
+            >
+              <Icon icon={item.icon} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+        {query.isPending ? (
+          <Loading />
+        ) : query.error || !query.data ? (
+          <div className="panel__body">
+            <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+          </div>
+        ) : query.data.items.length === 0 ? (
+          <EmptyState title="Silinen kayıt yok" />
+        ) : (
+          <ul className="list-rows">
             {query.data.items.map((item) => (
-              <li key={item.id} className="item-card">
-                <div className="item-card__main">
-                  <span className="item-card__title">{item.label || '—'}</span>
-                  <span className="meta">
-                    {formatDateTime(item.deletedAt)} ·{' '}
-                    {item.deletedBy?.name ?? 'Bilinmeyen kullanıcı'}
+              <li key={item.id}>
+                <div className="list-row list-row--static">
+                  <span className="icon-box icon-box--lg icon-box--neutral">
+                    <Icon icon={tab.icon} />
                   </span>
-                  <span className="meta">Gerekçe: {item.deleteReason || '—'}</span>
-                </div>
-                <div className="item-card__side">
-                  {item.amount !== null ? (
-                    <span className="amount amount--neutral">{formatMoney(item.amount)}</span>
-                  ) : null}
-                  {!canWrite ? null : type === 'transaction' ? (
-                    <ButtonLink
-                      variant="secondary"
-                      size="small"
-                      to={`/uygulama/islemler/${item.id}`}
-                    >
-                      İncele ve geri al
-                    </ButtonLink>
-                  ) : (
-                    <Button variant="secondary" size="small" onClick={() => setRestoring(item)}>
-                      Geri al
-                    </Button>
-                  )}
+                  <span className="list-row__main">
+                    <span className="list-row__title">
+                      <span className="list-row__title-text">{item.label || '—'}</span>
+                    </span>
+                    <span className="list-row__meta block">
+                      {formatDateTime(item.deletedAt)} ·{' '}
+                      {item.deletedBy?.name ?? 'Bilinmeyen kullanıcı'}
+                    </span>
+                    <span className="list-row__meta block">
+                      Gerekçe: {item.deleteReason || '—'}
+                    </span>
+                  </span>
+                  <span className="list-row__side">
+                    {item.amount !== null ? (
+                      <span className="amount amount--neutral">{formatMoney(item.amount)}</span>
+                    ) : null}
+                    {!canWrite ? null : type === 'transaction' ? (
+                      <ButtonLink
+                        variant="secondary"
+                        size="small"
+                        to={`/uygulama/islemler/${item.id}`}
+                      >
+                        İncele ve geri al
+                      </ButtonLink>
+                    ) : (
+                      <Button variant="secondary" size="small" onClick={() => setRestoring(item)}>
+                        <Icon icon={ArchiveRestore} />
+                        Geri al
+                      </Button>
+                    )}
+                  </span>
                 </div>
               </li>
             ))}
           </ul>
-          {!canWrite && closedReason ? (
-            <DisabledAction label="Geri al" reason={closedReason} />
-          ) : null}
-          <Pagination
-            page={query.data.page}
-            limit={query.data.limit}
-            total={query.data.total}
-            onPage={(page) => update({ page: String(page) })}
-          />
-        </>
-      )}
+        )}
+      </Panel>
+      {query.data ? (
+        <Pagination
+          page={query.data.page}
+          limit={query.data.limit}
+          total={query.data.total}
+          onPage={(page) => update({ page: String(page) })}
+        />
+      ) : null}
 
       <ActionDialog
         open={restoring !== null}

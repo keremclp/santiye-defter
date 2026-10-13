@@ -133,8 +133,10 @@ export function TransactionNewPage() {
       else if (projectId) initial.projectId = projectId;
       if (party.data) initial.party = { id: party.data.id, name: party.data.name };
     }
+    // Aynı rotada yalnız sorgu değişince (ör. Yeni kayıt → Gider ekle) form yeni bağlamla sıfırdan kurulur.
     content = (
       <TransactionForm
+        key={location.key}
         initial={initial}
         lockKind={Boolean(tur) && !copy}
         lockedAgreement={copy ? null : (agreement.data ?? null)}
@@ -146,7 +148,7 @@ export function TransactionNewPage() {
   }
 
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title={title}
         subtitle={
@@ -169,7 +171,7 @@ export function AgreementPaymentPage() {
   usePageMeta(title);
 
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title={title}
         subtitle={

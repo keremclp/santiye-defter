@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { directionOfKind, excessMessage } from '@santiye/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowDownLeft, ArrowUpRight, Split, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router';
@@ -12,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { DocumentPlaceholder } from '../../components/ui/Card';
 import { ChipGroup } from '../../components/ui/Chips';
 import { Checkbox, DateInput, Field, SelectInput, TextArea } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { SaveStatus } from '../../components/ui/SaveStatus';
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
@@ -320,291 +322,303 @@ export function TransactionForm({
       ) : null}
       {!canWrite ? <div className="alert alert--danger">{closedReason}</div> : null}
 
-      <section className="card stack">
-        {lockKind || lockedAgreement ? (
-          <p>
-            <span className={isExpense ? 'badge badge--expense' : 'badge badge--income'}>
-              {lockedAgreement
-                ? direction === 'payable'
-                  ? 'Ödeme (gider)'
-                  : 'Tahsilat (gelir)'
-                : isExpense
-                  ? 'Gider'
-                  : 'Gelir'}
-            </span>
-          </p>
-        ) : (
-          <div className="stack stack--sm">
-            <span className="field__label">
-              Tür
-              <span className="field__required" aria-hidden="true">
-                *
-              </span>
-            </span>
-            <ChipGroup
-              label="Tür"
-              options={[
-                { value: 'expense', label: 'Gider' },
-                { value: 'income', label: 'Gelir' },
-              ]}
-              value={values.kind}
-              onChange={(kind) => {
-                setValue('kind', kind, { shouldDirty: true });
-                setValue('agreementId', '');
-                setValue('categoryId', '');
-                setValue(
-                  'allocations',
-                  values.allocations.map((row) => ({ ...row, agreementId: '' })),
-                );
-              }}
-            />
-          </div>
-        )}
-
-        <div className="form-grid">
-          <Controller
-            control={control}
-            name="amount"
-            render={({ field }) => (
-              <Field
-                label="Tutar"
-                required
-                error={errors.amount?.message}
-                hint={
-                  selectedAgreement && !values.split
-                    ? `Anlaşmanın kalanı: ${formatMoney(selectedAgreement.remaining)}`
-                    : undefined
-                }
-              >
-                {(props) => (
-                  <div className="stack stack--sm">
-                    <MoneyInput
-                      {...props}
-                      ref={field.ref}
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                    />
-                    {selectedAgreement && !values.split && selectedAgreement.remaining > 0 ? (
-                      <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={() =>
-                          setValue('amount', kurusToInput(selectedAgreement.remaining), {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          })
-                        }
-                      >
-                        Kalanın tamamı ({formatMoney(selectedAgreement.remaining)})
-                      </Button>
-                    ) : null}
-                  </div>
-                )}
-              </Field>
-            )}
-          />
-          <Field label="İşlem tarihi" required error={errors.date?.message}>
-            {(props) => <DateInput {...props} {...register('date')} />}
-          </Field>
-        </div>
-
-        <Controller
-          control={control}
-          name="party"
-          render={({ field }) => (
-            <PartyPicker
-              value={field.value}
-              onChange={(party) => {
-                field.onChange(party);
-                setValue('agreementId', '');
-                setValue(
-                  'allocations',
-                  values.allocations.map((row) => ({ ...row, agreementId: '' })),
-                );
-              }}
-              required={Boolean(values.agreementId)}
-              error={errors.party?.message}
-              locked={agreementLocked}
-              lockedReason="Anlaşmanın kişisi; anlaşma seçiliyken değişmez."
-            />
-          )}
-        />
-
-        {!values.split ? (
-          <>
-            <ScopePicker
-              value={{ scope: values.scope, projectId: values.projectId }}
-              onChange={(next) => {
-                setValue('scope', next.scope, { shouldDirty: true });
-                setValue('projectId', next.projectId, { shouldDirty: true, shouldValidate: true });
-                setValue('agreementId', '');
-              }}
-              error={errors.projectId?.message}
-              locked={agreementLocked}
-              lockedReason="Anlaşmanın kapsamı; anlaşma seçiliyken değişmez."
-            />
-            {selectedProject && selectedProject.status !== 'active' ? (
-              <p className="meta">
-                Bu şantiye {selectedProject.status === 'completed' ? 'tamamlandı' : 'arşivlendi'}.
-                Anlaşmaya bağlı ödeme/tahsilat serbesttir; anlaşmaya bağlı olmayan gider gerekçe
-                ister.
-              </p>
-            ) : null}
-            {lockedAgreement ? (
-              <Field label="Anlaşma" hint={`Kalan: ${formatMoney(lockedAgreement.remaining)}`}>
-                {(props) => (
-                  <input {...props} className="input" readOnly value={lockedAgreement.label} />
-                )}
-              </Field>
-            ) : (
-              <Field
-                label="Anlaşma (isteğe bağlı)"
-                hint={
-                  values.party
-                    ? 'Anlaşma otomatik bağlanmaz; ödeme yalnız seçerseniz anlaşmanın kalanından düşer.'
-                    : 'Anlaşmaya bağlamak için önce kişi/firma seçin.'
-                }
-              >
-                {(props) => (
-                  <SelectInput
-                    {...props}
-                    disabled={!values.party}
-                    value={values.agreementId}
-                    onChange={(event) => {
-                      if (event.target.value) selectAgreement(event.target.value);
-                      else setValue('agreementId', '', { shouldDirty: true });
-                    }}
-                  >
-                    <option value="">Anlaşmaya bağlı değil</option>
-                    {simpleOptions.map((agreement) => (
-                      <option key={agreement.id} value={agreement.id}>
-                        {agreementOptionLabel(agreement)}
-                      </option>
-                    ))}
-                  </SelectInput>
-                )}
-              </Field>
-            )}
-            {values.party && !values.agreementId && openAgreementsOfParty.length > 0 ? (
-              <div className="alert alert--info" role="status">
-                Bu kayıt anlaşmaya bağlı değil; anlaşmanın kalanı değişmez.
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        {agreementConfirmationRequired && !agreementConfirmed ? (
-          <div className="alert alert--danger" role="alert">
-            <p className="alert__title">Anlaşma bağlantısı onay gerekli</p>
+      <div className="form-columns">
+        <section className="card stack" aria-label="Ana bilgiler">
+          {lockKind || lockedAgreement ? (
             <p>
-              Kopyalanan kayıt bir anlaşmaya bağlıydı. Bu yeni kayıt da aynı anlaşmanın kalanından
-              düşecekse bağlantıyı onaylayın; değilse kaldırın.
+              <span className={isExpense ? 'badge badge--expense' : 'badge badge--income'}>
+                <Icon icon={isExpense ? ArrowUpRight : ArrowDownLeft} />
+                {lockedAgreement
+                  ? direction === 'payable'
+                    ? 'Ödeme (gider)'
+                    : 'Tahsilat (gelir)'
+                  : isExpense
+                    ? 'Gider'
+                    : 'Gelir'}
+              </span>
             </p>
-            <div className="form-actions">
-              <Button variant="secondary" size="small" onClick={() => setAgreementConfirmed(true)}>
-                Bağlantıyı onayla
-              </Button>
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => {
-                  setValue('agreementId', '', { shouldDirty: true });
+          ) : (
+            <div className="stack stack--sm">
+              <span className="field__label">
+                Tür
+                <span className="field__required" aria-hidden="true">
+                  *
+                </span>
+              </span>
+              <ChipGroup
+                label="Tür"
+                options={[
+                  { value: 'expense', label: 'Gider' },
+                  { value: 'income', label: 'Gelir' },
+                ]}
+                value={values.kind}
+                onChange={(kind) => {
+                  setValue('kind', kind, { shouldDirty: true });
+                  setValue('agreementId', '');
+                  setValue('categoryId', '');
                   setValue(
                     'allocations',
                     values.allocations.map((row) => ({ ...row, agreementId: '' })),
                   );
-                  setAgreementConfirmed(true);
                 }}
-              >
-                Bağlantıyı kaldır
-              </Button>
+              />
             </div>
-          </div>
-        ) : null}
+          )}
 
-        {values.split ? (
+          <div className="form-grid">
+            <Controller
+              control={control}
+              name="amount"
+              render={({ field }) => (
+                <Field
+                  label="Tutar"
+                  required
+                  error={errors.amount?.message}
+                  hint={
+                    selectedAgreement && !values.split
+                      ? `Anlaşmanın kalanı: ${formatMoney(selectedAgreement.remaining)}`
+                      : undefined
+                  }
+                >
+                  {(props) => (
+                    <div className="stack stack--sm">
+                      <MoneyInput
+                        {...props}
+                        ref={field.ref}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                      {selectedAgreement && !values.split && selectedAgreement.remaining > 0 ? (
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() =>
+                            setValue('amount', kurusToInput(selectedAgreement.remaining), {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          Kalanın tamamı ({formatMoney(selectedAgreement.remaining)})
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
+                </Field>
+              )}
+            />
+            <Field label="İşlem tarihi" required error={errors.date?.message}>
+              {(props) => <DateInput {...props} {...register('date')} />}
+            </Field>
+          </div>
+
           <Controller
             control={control}
-            name="allocations"
+            name="party"
             render={({ field }) => (
-              <AllocationEditor
-                kind={values.kind}
-                amount={values.amount}
-                rows={field.value}
-                onChange={field.onChange}
-                partyId={values.party?.id}
-                errors={rowErrors(errors.allocations)}
-                sumError={errors.allocations?.root?.message ?? errors.allocations?.message}
+              <PartyPicker
+                value={field.value}
+                onChange={(party) => {
+                  field.onChange(party);
+                  setValue('agreementId', '');
+                  setValue(
+                    'allocations',
+                    values.allocations.map((row) => ({ ...row, agreementId: '' })),
+                  );
+                }}
+                required={Boolean(values.agreementId)}
+                error={errors.party?.message}
+                locked={agreementLocked}
+                lockedReason="Anlaşmanın kişisi; anlaşma seçiliyken değişmez."
               />
             )}
           />
-        ) : null}
 
-        {!lockedAgreement ? (
-          <div>
-            {values.split ? (
-              <Button variant="ghost" size="small" onClick={stopSplit}>
-                Paylaştırmayı kaldır
-              </Button>
-            ) : (
-              <Button variant="ghost" size="small" onClick={startSplit}>
-                Paylaştır (birden fazla şantiye/anlaşmaya böl)
-              </Button>
-            )}
-          </div>
-        ) : null}
-      </section>
-
-      <section className="card stack">
-        {isExpense ? (
-          <Field label="Gider kategorisi" hint="Seçilmezse “Kategorisiz” olur.">
-            {(props) => (
-              <SelectInput {...props} {...register('categoryId')}>
-                <option value="">Kategorisiz</option>
-                {(categories.data ?? []).map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </SelectInput>
-            )}
-          </Field>
-        ) : null}
-        <Field
-          label="Açıklama"
-          error={errors.description?.message}
-          hint={isExpense ? 'Örn. demir, beton, usta ödemesi' : undefined}
-        >
-          {(props) => (
+          {!values.split ? (
             <>
-              <input
-                {...props}
-                {...register('description')}
-                className="input"
-                list="aciklama-onerileri"
-                autoComplete="off"
+              <ScopePicker
+                value={{ scope: values.scope, projectId: values.projectId }}
+                onChange={(next) => {
+                  setValue('scope', next.scope, { shouldDirty: true });
+                  setValue('projectId', next.projectId, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  setValue('agreementId', '');
+                }}
+                error={errors.projectId?.message}
+                locked={agreementLocked}
+                lockedReason="Anlaşmanın kapsamı; anlaşma seçiliyken değişmez."
               />
-              <datalist id="aciklama-onerileri">
-                {(suggestions.data ?? []).map((item) => (
-                  <option key={item} value={item} />
-                ))}
-              </datalist>
+              {selectedProject && selectedProject.status !== 'active' ? (
+                <p className="meta">
+                  Bu şantiye {selectedProject.status === 'completed' ? 'tamamlandı' : 'arşivlendi'}.
+                  Anlaşmaya bağlı ödeme/tahsilat serbesttir; anlaşmaya bağlı olmayan gider gerekçe
+                  ister.
+                </p>
+              ) : null}
+              {lockedAgreement ? (
+                <Field label="Anlaşma" hint={`Kalan: ${formatMoney(lockedAgreement.remaining)}`}>
+                  {(props) => (
+                    <input {...props} className="input" readOnly value={lockedAgreement.label} />
+                  )}
+                </Field>
+              ) : (
+                <Field
+                  label="Anlaşma (isteğe bağlı)"
+                  hint={
+                    values.party
+                      ? 'Anlaşma otomatik bağlanmaz; ödeme yalnız seçerseniz anlaşmanın kalanından düşer.'
+                      : 'Anlaşmaya bağlamak için önce kişi/firma seçin.'
+                  }
+                >
+                  {(props) => (
+                    <SelectInput
+                      {...props}
+                      disabled={!values.party}
+                      value={values.agreementId}
+                      onChange={(event) => {
+                        if (event.target.value) selectAgreement(event.target.value);
+                        else setValue('agreementId', '', { shouldDirty: true });
+                      }}
+                    >
+                      <option value="">Anlaşmaya bağlı değil</option>
+                      {simpleOptions.map((agreement) => (
+                        <option key={agreement.id} value={agreement.id}>
+                          {agreementOptionLabel(agreement)}
+                        </option>
+                      ))}
+                    </SelectInput>
+                  )}
+                </Field>
+              )}
+              {values.party && !values.agreementId && openAgreementsOfParty.length > 0 ? (
+                <div className="alert alert--info" role="status">
+                  Bu kayıt anlaşmaya bağlı değil; anlaşmanın kalanı değişmez.
+                </div>
+              ) : null}
             </>
-          )}
-        </Field>
-        {needsReason ? (
+          ) : null}
+
+          {agreementConfirmationRequired && !agreementConfirmed ? (
+            <div className="alert alert--danger" role="alert">
+              <p className="alert__title">Anlaşma bağlantısı onay gerekli</p>
+              <p>
+                Kopyalanan kayıt bir anlaşmaya bağlıydı. Bu yeni kayıt da aynı anlaşmanın kalanından
+                düşecekse bağlantıyı onaylayın; değilse kaldırın.
+              </p>
+              <div className="form-actions">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => setAgreementConfirmed(true)}
+                >
+                  Bağlantıyı onayla
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={() => {
+                    setValue('agreementId', '', { shouldDirty: true });
+                    setValue(
+                      'allocations',
+                      values.allocations.map((row) => ({ ...row, agreementId: '' })),
+                    );
+                    setAgreementConfirmed(true);
+                  }}
+                >
+                  Bağlantıyı kaldır
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {values.split ? (
+            <Controller
+              control={control}
+              name="allocations"
+              render={({ field }) => (
+                <AllocationEditor
+                  kind={values.kind}
+                  amount={values.amount}
+                  rows={field.value}
+                  onChange={field.onChange}
+                  partyId={values.party?.id}
+                  errors={rowErrors(errors.allocations)}
+                  sumError={errors.allocations?.root?.message ?? errors.allocations?.message}
+                />
+              )}
+            />
+          ) : null}
+
+          {!lockedAgreement ? (
+            <div>
+              {values.split ? (
+                <Button variant="ghost" size="small" onClick={stopSplit}>
+                  <Icon icon={X} />
+                  Paylaştırmayı kaldır
+                </Button>
+              ) : (
+                <Button variant="ghost" size="small" onClick={startSplit}>
+                  <Icon icon={Split} />
+                  Paylaştır (birden fazla şantiye/anlaşmaya böl)
+                </Button>
+              )}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="card stack" aria-label="Ek bilgiler">
+          {isExpense ? (
+            <Field label="Gider kategorisi" hint="Seçilmezse “Kategorisiz” olur.">
+              {(props) => (
+                <SelectInput {...props} {...register('categoryId')}>
+                  <option value="">Kategorisiz</option>
+                  {(categories.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            </Field>
+          ) : null}
           <Field
-            label="Gerekçe"
-            required
-            error={errors.reason?.message}
-            hint="Tamamlanan veya arşivlenen şantiyeye anlaşmaya bağlı olmayan gider gerekçe ister."
+            label="Açıklama"
+            error={errors.description?.message}
+            hint={isExpense ? 'Örn. demir, beton, usta ödemesi' : undefined}
           >
-            {(props) => <TextArea {...props} {...register('reason')} rows={2} />}
+            {(props) => (
+              <>
+                <input
+                  {...props}
+                  {...register('description')}
+                  className="input"
+                  list="aciklama-onerileri"
+                  autoComplete="off"
+                />
+                <datalist id="aciklama-onerileri">
+                  {(suggestions.data ?? []).map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
+              </>
+            )}
           </Field>
-        ) : null}
-        <DocumentPlaceholder />
-      </section>
+          {needsReason ? (
+            <Field
+              label="Gerekçe"
+              required
+              error={errors.reason?.message}
+              hint="Tamamlanan veya arşivlenen şantiyeye anlaşmaya bağlı olmayan gider gerekçe ister."
+            >
+              {(props) => <TextArea {...props} {...register('reason')} rows={2} />}
+            </Field>
+          ) : null}
+          <DocumentPlaceholder />
+        </section>
+      </div>
 
       {showExcess ? (
         <section className="alert alert--danger" aria-labelledby="excess-title">

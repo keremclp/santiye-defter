@@ -74,7 +74,7 @@ export function TransactionEditPage() {
     );
   }
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title={query.data ? `#${query.data.recordNo} düzenle` : 'Kaydı düzenle'}
         back={{ to: `/uygulama/islemler/${id}`, label: 'Kayıt' }}
@@ -377,239 +377,244 @@ function EditForm({
         />
       ) : null}
 
-      <Card title={`${KIND_LABEL[t.kind]} · #${t.recordNo}`}>
-        <div className="stack">
-          {isRefund ? (
-            <>
-              <p className="meta">
-                İade kaydında yalnız tutar, tarih, açıklama ve iade payları değiştirilebilir.
-              </p>
-              {(t.refundOf?.parts ?? []).map((part) => {
-                const allocation = source?.allocations.find((a) => a.id === part.allocationId);
-                return (
-                  <Field
-                    key={part.allocationId}
-                    label={`İade tutarı${
-                      allocation
-                        ? ` — ${allocation.scope === 'company' ? 'Firma geneli' : (allocation.project?.name ?? 'Şantiye')}${allocation.agreement ? `, ${allocation.agreement.name}` : ''}`
-                        : ''
-                    }`}
-                    required
-                    error={errors.amount}
-                  >
-                    {(props) => (
-                      <MoneyInput
-                        {...props}
-                        value={parts[part.allocationId] ?? ''}
-                        onChange={(value) =>
-                          setParts((current) => ({ ...current, [part.allocationId]: value }))
-                        }
-                      />
-                    )}
-                  </Field>
-                );
-              })}
-            </>
-          ) : (
-            <Field label="Tutar" required error={errors.amount}>
+      <div className="form-columns">
+        <Card title={`${KIND_LABEL[t.kind]} · #${t.recordNo}`}>
+          <div className="stack">
+            {isRefund ? (
+              <>
+                <p className="meta">
+                  İade kaydında yalnız tutar, tarih, açıklama ve iade payları değiştirilebilir.
+                </p>
+                {(t.refundOf?.parts ?? []).map((part) => {
+                  const allocation = source?.allocations.find((a) => a.id === part.allocationId);
+                  return (
+                    <Field
+                      key={part.allocationId}
+                      label={`İade tutarı${
+                        allocation
+                          ? ` — ${allocation.scope === 'company' ? 'Firma geneli' : (allocation.project?.name ?? 'Şantiye')}${allocation.agreement ? `, ${allocation.agreement.name}` : ''}`
+                          : ''
+                      }`}
+                      required
+                      error={errors.amount}
+                    >
+                      {(props) => (
+                        <MoneyInput
+                          {...props}
+                          value={parts[part.allocationId] ?? ''}
+                          onChange={(value) =>
+                            setParts((current) => ({ ...current, [part.allocationId]: value }))
+                          }
+                        />
+                      )}
+                    </Field>
+                  );
+                })}
+              </>
+            ) : (
+              <Field label="Tutar" required error={errors.amount}>
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    value={values.amount}
+                    onChange={(amount) => set({ amount })}
+                  />
+                )}
+              </Field>
+            )}
+            <Field label="İşlem tarihi" required error={errors.date}>
               {(props) => (
-                <MoneyInput
+                <DateInput
                   {...props}
-                  value={values.amount}
-                  onChange={(amount) => set({ amount })}
+                  value={values.date}
+                  onChange={(e) => set({ date: e.target.value })}
                 />
               )}
             </Field>
-          )}
-          <Field label="İşlem tarihi" required error={errors.date}>
-            {(props) => (
-              <DateInput
-                {...props}
-                value={values.date}
-                onChange={(e) => set({ date: e.target.value })}
-              />
-            )}
-          </Field>
 
-          {!isRefund ? (
-            <>
-              <PartyPicker
-                value={values.party}
-                onChange={(party) =>
-                  set({
-                    party,
-                    agreementId: '',
-                    allocations: values.allocations.map((row) =>
-                      row.id && lockedRowIds.has(row.id) ? row : { ...row, agreementId: '' },
-                    ),
-                  })
-                }
-                locked={hasRefunds}
-                lockedReason="Bağlı iadesi olan kaydın kişisi değiştirilemez."
-              />
-              {values.split ? (
-                <AllocationEditor
-                  kind={values.kind}
-                  amount={values.amount}
-                  rows={values.allocations}
-                  onChange={(allocations) => set({ allocations })}
-                  partyId={values.party?.id}
-                  errors={{}}
-                  sumError={errors.allocations}
-                  lockedRowIds={lockedRowIds}
+            {!isRefund ? (
+              <>
+                <PartyPicker
+                  value={values.party}
+                  onChange={(party) =>
+                    set({
+                      party,
+                      agreementId: '',
+                      allocations: values.allocations.map((row) =>
+                        row.id && lockedRowIds.has(row.id) ? row : { ...row, agreementId: '' },
+                      ),
+                    })
+                  }
+                  locked={hasRefunds}
+                  lockedReason="Bağlı iadesi olan kaydın kişisi değiştirilemez."
                 />
-              ) : (
-                <>
-                  <ScopePicker
-                    value={{ scope: values.scope, projectId: values.projectId }}
-                    onChange={(next) => set({ ...next, agreementId: '' })}
-                    error={errors.projectId}
-                    locked={hasRefunds}
-                    lockedReason="Bağlı iadesi olan payın şantiyesi değiştirilemez. Hedef değişecekse önce iadeyi silin."
+                {values.split ? (
+                  <AllocationEditor
+                    kind={values.kind}
+                    amount={values.amount}
+                    rows={values.allocations}
+                    onChange={(allocations) => set({ allocations })}
+                    partyId={values.party?.id}
+                    errors={{}}
+                    sumError={errors.allocations}
+                    lockedRowIds={lockedRowIds}
                   />
-                  <Field label="Anlaşma">
+                ) : (
+                  <>
+                    <ScopePicker
+                      value={{ scope: values.scope, projectId: values.projectId }}
+                      onChange={(next) => set({ ...next, agreementId: '' })}
+                      error={errors.projectId}
+                      locked={hasRefunds}
+                      lockedReason="Bağlı iadesi olan payın şantiyesi değiştirilemez. Hedef değişecekse önce iadeyi silin."
+                    />
+                    <Field label="Anlaşma">
+                      {(props) => (
+                        <SelectInput
+                          {...props}
+                          disabled={!values.party || hasRefunds}
+                          value={values.agreementId}
+                          onChange={(event) => set({ agreementId: event.target.value })}
+                        >
+                          <option value="">Anlaşmaya bağlı değil</option>
+                          {simpleOptions.map((agreement) => (
+                            <option key={agreement.id} value={agreement.id}>
+                              {agreementOptionLabel(agreement)}
+                            </option>
+                          ))}
+                        </SelectInput>
+                      )}
+                    </Field>
+                    {!hasRefunds ? (
+                      <div>
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() =>
+                            set({
+                              split: true,
+                              allocations: [
+                                {
+                                  key: newRowKey(),
+                                  id: t.allocations[0]?.id,
+                                  scope: values.scope,
+                                  projectId: values.projectId,
+                                  agreementId: values.agreementId,
+                                  amount: values.amount,
+                                },
+                                {
+                                  key: newRowKey(),
+                                  scope: values.scope,
+                                  projectId: '',
+                                  agreementId: '',
+                                  amount: '',
+                                },
+                              ],
+                            })
+                          }
+                        >
+                          Paylaştır
+                        </Button>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                {values.kind === 'expense' ? (
+                  <Field label="Gider kategorisi">
                     {(props) => (
                       <SelectInput
                         {...props}
-                        disabled={!values.party || hasRefunds}
-                        value={values.agreementId}
-                        onChange={(event) => set({ agreementId: event.target.value })}
+                        value={values.categoryId}
+                        onChange={(e) => set({ categoryId: e.target.value })}
                       >
-                        <option value="">Anlaşmaya bağlı değil</option>
-                        {simpleOptions.map((agreement) => (
-                          <option key={agreement.id} value={agreement.id}>
-                            {agreementOptionLabel(agreement)}
+                        <option value="">Kategorisiz</option>
+                        {t.category &&
+                        !(categories.data ?? []).some((c) => c.id === t.categoryId) ? (
+                          <option value={t.categoryId ?? ''}>{t.category.name} (pasif)</option>
+                        ) : null}
+                        {(categories.data ?? []).map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
                           </option>
                         ))}
                       </SelectInput>
                     )}
                   </Field>
-                  {!hasRefunds ? (
-                    <div>
-                      <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={() =>
-                          set({
-                            split: true,
-                            allocations: [
-                              {
-                                key: newRowKey(),
-                                id: t.allocations[0]?.id,
-                                scope: values.scope,
-                                projectId: values.projectId,
-                                agreementId: values.agreementId,
-                                amount: values.amount,
-                              },
-                              {
-                                key: newRowKey(),
-                                scope: values.scope,
-                                projectId: '',
-                                agreementId: '',
-                                amount: '',
-                              },
-                            ],
-                          })
-                        }
-                      >
-                        Paylaştır
-                      </Button>
-                    </div>
-                  ) : null}
-                </>
-              )}
-              {values.kind === 'expense' ? (
-                <Field label="Gider kategorisi">
-                  {(props) => (
-                    <SelectInput
-                      {...props}
-                      value={values.categoryId}
-                      onChange={(e) => set({ categoryId: e.target.value })}
-                    >
-                      <option value="">Kategorisiz</option>
-                      {t.category && !(categories.data ?? []).some((c) => c.id === t.categoryId) ? (
-                        <option value={t.categoryId ?? ''}>{t.category.name} (pasif)</option>
-                      ) : null}
-                      {(categories.data ?? []).map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </SelectInput>
-                  )}
-                </Field>
-              ) : null}
-            </>
-          ) : null}
-
-          <Field label="Açıklama">
-            {(props) => (
-              <TextInput
-                {...props}
-                value={values.description}
-                onChange={(e) => set({ description: e.target.value })}
-              />
-            )}
-          </Field>
-          {hasRefunds ? (
-            <p className="meta">
-              Bu kaydın bağlı iadesi var: iadeli pay kaldırılamaz, şantiyesi veya anlaşması
-              değiştirilemez, tutarı iade toplamının altına indirilemez. Hedef değişecekse önce
-              iadeyi silin.
-            </p>
-          ) : null}
-        </div>
-      </Card>
-
-      {financialChanged ? (
-        <Card title="Değişiklik önizlemesi">
-          <div className="stack">
-            <table className="compare-table">
-              <thead>
-                <tr>
-                  <th scope="col">Alan</th>
-                  <th scope="col">Eski</th>
-                  <th scope="col">Yeni</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">Tutar</th>
-                  <td>{formatMoney(t.amount)}</td>
-                  <td>{newAmount !== null ? formatMoney(newAmount) : '—'}</td>
-                </tr>
-                <tr>
-                  <th scope="row">Tarih</th>
-                  <td>{formatDate(t.date)}</td>
-                  <td>{formatDate(values.date)}</td>
-                </tr>
-                {!isRefund ? (
-                  <tr>
-                    <th scope="row">Kişi/firma</th>
-                    <td>{t.party?.name ?? '—'}</td>
-                    <td>{values.party?.name ?? '—'}</td>
-                  </tr>
                 ) : null}
-              </tbody>
-            </table>
-            <ImpactBlock impact={impact} note="Tutar değişmiyorsa firma toplamı değişmez." />
-            <Field label="Gerekçe" required error={errors.reason}>
+              </>
+            ) : null}
+
+            <Field label="Açıklama">
               {(props) => (
-                <TextArea
+                <TextInput
                   {...props}
-                  rows={2}
-                  value={values.reason}
-                  onChange={(e) => set({ reason: e.target.value })}
+                  value={values.description}
+                  onChange={(e) => set({ description: e.target.value })}
                 />
               )}
             </Field>
+            {hasRefunds ? (
+              <p className="meta">
+                Bu kaydın bağlı iadesi var: iadeli pay kaldırılamaz, şantiyesi veya anlaşması
+                değiştirilemez, tutarı iade toplamının altına indirilemez. Hedef değişecekse önce
+                iadeyi silin.
+              </p>
+            ) : null}
           </div>
         </Card>
-      ) : (
-        <p className="meta">
-          Yalnız açıklama veya kategori değişiyorsa gerekçe gerekmez; geçmişe yine yazılır.
-        </p>
-      )}
+
+        <Card title="Değişiklik önizlemesi">
+          {financialChanged ? (
+            <div className="stack">
+              <table className="compare-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Alan</th>
+                    <th scope="col">Eski</th>
+                    <th scope="col">Yeni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Tutar</th>
+                    <td>{formatMoney(t.amount)}</td>
+                    <td>{newAmount !== null ? formatMoney(newAmount) : '—'}</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Tarih</th>
+                    <td>{formatDate(t.date)}</td>
+                    <td>{formatDate(values.date)}</td>
+                  </tr>
+                  {!isRefund ? (
+                    <tr>
+                      <th scope="row">Kişi/firma</th>
+                      <td>{t.party?.name ?? '—'}</td>
+                      <td>{values.party?.name ?? '—'}</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+              <ImpactBlock impact={impact} note="Tutar değişmiyorsa firma toplamı değişmez." />
+              <Field label="Gerekçe" required error={errors.reason}>
+                {(props) => (
+                  <TextArea
+                    {...props}
+                    rows={2}
+                    value={values.reason}
+                    onChange={(e) => set({ reason: e.target.value })}
+                  />
+                )}
+              </Field>
+            </div>
+          ) : (
+            <p className="meta">
+              Tutar, tarih, kişi, kapsam veya anlaşma değişince eski/yeni değerler ve bakiye etkisi
+              burada görünür; gerekçe istenir. Yalnız açıklama veya kategori değişiyorsa gerekçe
+              gerekmez; geçmişe yine yazılır.
+            </p>
+          )}
+        </Card>
+      </div>
 
       {shownExcess !== null ? (
         <section className="alert alert--danger">

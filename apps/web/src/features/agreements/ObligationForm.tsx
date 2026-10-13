@@ -94,122 +94,130 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
           ? 'Bu tutar yeni gider/gelir sayılmaz. Aynı borcu ayrıca geçmiş anlaşma olarak girmeyin.'
           : 'Anlaşma oluşturmak gelir veya gider yazmaz. İlk ödeme veya tahsilatı kayıttan sonra ayrı eylemle girin.'}
       </div>
-      <section className="card stack">
-        {!opening ? (
-          <Field
-            label="Anlaşma adı"
-            required
-            error={errors.title?.message}
-            hint="Örn. Elektrik işi"
-          >
-            {(props) => <TextInput {...props} {...register('title')} />}
-          </Field>
-        ) : null}
-        <div className="stack stack--sm">
-          <span className="field__label">
-            Yön
-            <span className="field__required" aria-hidden="true">
-              *
-            </span>
-          </span>
-          <ChipGroup
-            label="Yön"
-            options={
-              opening
-                ? [
-                    { value: 'payable', label: 'Başlangıç borcu' },
-                    { value: 'receivable', label: 'Başlangıç alacağı' },
-                  ]
-                : [
-                    { value: 'payable', label: 'Ödenecek (taşeron, tedarikçi)' },
-                    { value: 'receivable', label: 'Tahsil edilecek (müşteri)' },
-                  ]
-            }
-            value={values.direction}
-            onChange={(direction) => setValue('direction', direction, { shouldDirty: true })}
-          />
-        </div>
-        <Controller
-          control={control}
-          name="party"
-          render={({ field }) => (
-            <PartyPicker
-              value={field.value}
-              onChange={field.onChange}
+      <div className="form-columns">
+        <section className="card stack" aria-label="Ana bilgiler">
+          {!opening ? (
+            <Field
+              label="Anlaşma adı"
               required
-              error={errors.party?.message}
+              error={errors.title?.message}
+              hint="Örn. Elektrik işi"
+            >
+              {(props) => <TextInput {...props} {...register('title')} />}
+            </Field>
+          ) : null}
+          <div className="stack stack--sm">
+            <span className="field__label">
+              Yön
+              <span className="field__required" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <ChipGroup
+              label="Yön"
+              options={
+                opening
+                  ? [
+                      { value: 'payable', label: 'Başlangıç borcu' },
+                      { value: 'receivable', label: 'Başlangıç alacağı' },
+                    ]
+                  : [
+                      { value: 'payable', label: 'Ödenecek (taşeron, tedarikçi)' },
+                      { value: 'receivable', label: 'Tahsil edilecek (müşteri)' },
+                    ]
+              }
+              value={values.direction}
+              onChange={(direction) => setValue('direction', direction, { shouldDirty: true })}
             />
-          )}
-        />
-        <ScopePicker
-          value={{ scope: values.scope, projectId: values.projectId }}
-          onChange={(next) => {
-            setValue('scope', next.scope, { shouldDirty: true });
-            setValue('projectId', next.projectId, { shouldDirty: true, shouldValidate: true });
-          }}
-          error={errors.projectId?.message}
-          activeOnly={!opening}
-        />
-        {!opening ? (
-          <p className="meta">
-            Tamamlanan veya arşivlenen şantiyeye yeni anlaşma için önce şantiyeyi gerekçeyle yeniden
-            aktifleştirin.
-          </p>
-        ) : null}
-        <div className="form-grid">
+          </div>
           <Controller
             control={control}
-            name="amount"
+            name="party"
             render={({ field }) => (
-              <Field
-                label={opening ? 'Devreden kalan tutar' : 'Toplam bedel'}
+              <PartyPicker
+                value={field.value}
+                onChange={field.onChange}
                 required
-                error={errors.amount?.message}
-                hint={
-                  opening
-                    ? 'O tarihte gerçekten açık kalan tutar; ilk anlaşma bedeli değil.'
-                    : undefined
-                }
-              >
-                {(props) => (
-                  <MoneyInput
-                    {...props}
-                    ref={field.ref}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                  />
-                )}
-              </Field>
+                error={errors.party?.message}
+              />
             )}
           />
-          {opening ? (
+          <ScopePicker
+            value={{ scope: values.scope, projectId: values.projectId }}
+            onChange={(next) => {
+              setValue('scope', next.scope, { shouldDirty: true });
+              setValue('projectId', next.projectId, { shouldDirty: true, shouldValidate: true });
+            }}
+            error={errors.projectId?.message}
+            activeOnly={!opening}
+          />
+          {!opening ? (
+            <p className="meta">
+              Tamamlanan veya arşivlenen şantiyeye yeni anlaşma için önce şantiyeyi gerekçeyle
+              yeniden aktifleştirin.
+            </p>
+          ) : null}
+          <div className="form-grid">
+            <Controller
+              control={control}
+              name="amount"
+              render={({ field }) => (
+                <Field
+                  label={opening ? 'Devreden kalan tutar' : 'Toplam bedel'}
+                  required
+                  error={errors.amount?.message}
+                  hint={
+                    opening
+                      ? 'O tarihte gerçekten açık kalan tutar; ilk anlaşma bedeli değil.'
+                      : undefined
+                  }
+                >
+                  {(props) => (
+                    <MoneyInput
+                      {...props}
+                      ref={field.ref}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                </Field>
+              )}
+            />
+            {opening ? (
+              <Field
+                label="Takip başlangıç tarihi"
+                required
+                error={errors.trackingStartDate?.message}
+                hint="Uygulamaya geçiş tarihi"
+              >
+                {(props) => <DateInput {...props} {...register('trackingStartDate')} />}
+              </Field>
+            ) : (
+              <Field
+                label="Anlaşma tarihi"
+                error={errors.agreementDate?.message}
+                hint="Geçmiş tarihli girilebilir."
+              >
+                {(props) => <DateInput {...props} {...register('agreementDate')} />}
+              </Field>
+            )}
             <Field
-              label="Takip başlangıç tarihi"
-              required
-              error={errors.trackingStartDate?.message}
-              hint="Uygulamaya geçiş tarihi"
+              label="Vade tarihi"
+              error={errors.dueDate?.message}
+              hint="İsteğe bağlı; tek vade."
             >
-              {(props) => <DateInput {...props} {...register('trackingStartDate')} />}
+              {(props) => <DateInput {...props} {...register('dueDate')} />}
             </Field>
-          ) : (
-            <Field
-              label="Anlaşma tarihi"
-              error={errors.agreementDate?.message}
-              hint="Geçmiş tarihli girilebilir."
-            >
-              {(props) => <DateInput {...props} {...register('agreementDate')} />}
-            </Field>
-          )}
-          <Field label="Vade tarihi" error={errors.dueDate?.message} hint="İsteğe bağlı; tek vade.">
-            {(props) => <DateInput {...props} {...register('dueDate')} />}
+          </div>
+        </section>
+        <section className="card stack" aria-label="Ek bilgiler">
+          <Field label="Açıklama" error={errors.description?.message}>
+            {(props) => <TextArea {...props} {...register('description')} rows={5} />}
           </Field>
-        </div>
-        <Field label="Açıklama" error={errors.description?.message}>
-          {(props) => <TextArea {...props} {...register('description')} rows={3} />}
-        </Field>
-        <DocumentPlaceholder />
-      </section>
+          <DocumentPlaceholder />
+        </section>
+      </div>
       {formError ? (
         <div className="alert alert--danger" role="alert">
           {formError}

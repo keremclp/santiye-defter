@@ -47,7 +47,7 @@ export function PartyFormPage() {
   const [party, setParty] = useSnapshot(query.data);
   usePageMeta(id ? 'Kişi düzenle' : 'Yeni kişi/firma');
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title={id ? 'Kişi/firma düzenle' : 'Yeni kişi/firma'}
         back={
@@ -222,79 +222,83 @@ function PartyForm({ party, reload }: { party: Party | null; reload?: () => unkn
           }}
         />
       ) : null}
-      <section className="card stack">
-        <Field label="Ad / unvan" required error={errors.name?.message}>
-          {(props) => <TextInput {...props} {...register('name')} />}
-        </Field>
-        {similarItems.length > 0 ? (
-          <div className="alert alert--info" role="status">
-            <p>Benzer adlı kayıt var. Aynı kişiyse yeniden açmak yerine onu kullanın:</p>
-            <p>
-              {similarItems.map((item, index) => (
-                <span key={item.id}>
-                  {index > 0 ? ', ' : ''}
-                  <Link to={`/uygulama/kisiler/${item.id}`}>{item.name}</Link>
-                </span>
-              ))}
-            </p>
+      <div className="form-columns">
+        <section className="card stack" aria-label="Ana bilgiler">
+          <Field label="Ad / unvan" required error={errors.name?.message}>
+            {(props) => <TextInput {...props} {...register('name')} />}
+          </Field>
+          {similarItems.length > 0 ? (
+            <div className="alert alert--info" role="status">
+              <p>Benzer adlı kayıt var. Aynı kişiyse yeniden açmak yerine onu kullanın:</p>
+              <p>
+                {similarItems.map((item, index) => (
+                  <span key={item.id}>
+                    {index > 0 ? ', ' : ''}
+                    <Link to={`/uygulama/kisiler/${item.id}`}>{item.name}</Link>
+                  </span>
+                ))}
+              </p>
+            </div>
+          ) : null}
+          <Controller
+            control={control}
+            name="kind"
+            render={({ field }) => (
+              <div className="stack stack--sm">
+                <span className="field__label">Kişi / firma</span>
+                <ChipGroup<PartyKind>
+                  label="Kişi / firma"
+                  options={[
+                    { value: 'company', label: 'Firma' },
+                    { value: 'person', label: 'Kişi' },
+                  ]}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="tags"
+            render={({ field }) => (
+              <div className="stack stack--sm">
+                <span className="field__label">Etiketler (isteğe bağlı)</span>
+                <MultiChipGroup<PartyTag>
+                  label="Etiketler"
+                  options={[
+                    { value: 'supplier', label: 'Tedarikçi' },
+                    { value: 'subcontractor', label: 'Taşeron' },
+                    { value: 'customer', label: 'Müşteri' },
+                  ]}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </div>
+            )}
+          />
+        </section>
+        <section className="card stack" aria-label="İletişim ve not">
+          <div className="form-grid">
+            <Field label="Telefon" error={errors.phone?.message}>
+              {(props) => (
+                <TextInput {...props} {...register('phone')} type="tel" autoComplete="tel" />
+              )}
+            </Field>
+            <Field label="E-posta" error={errors.email?.message}>
+              {(props) => (
+                <TextInput {...props} {...register('email')} type="email" autoComplete="email" />
+              )}
+            </Field>
           </div>
-        ) : null}
-        <Controller
-          control={control}
-          name="kind"
-          render={({ field }) => (
-            <div className="stack stack--sm">
-              <span className="field__label">Kişi / firma</span>
-              <ChipGroup<PartyKind>
-                label="Kişi / firma"
-                options={[
-                  { value: 'company', label: 'Firma' },
-                  { value: 'person', label: 'Kişi' },
-                ]}
-                value={field.value}
-                onChange={field.onChange}
-              />
-            </div>
-          )}
-        />
-        <Controller
-          control={control}
-          name="tags"
-          render={({ field }) => (
-            <div className="stack stack--sm">
-              <span className="field__label">Etiketler (isteğe bağlı)</span>
-              <MultiChipGroup<PartyTag>
-                label="Etiketler"
-                options={[
-                  { value: 'supplier', label: 'Tedarikçi' },
-                  { value: 'subcontractor', label: 'Taşeron' },
-                  { value: 'customer', label: 'Müşteri' },
-                ]}
-                value={field.value}
-                onChange={field.onChange}
-              />
-            </div>
-          )}
-        />
-        <div className="form-grid">
-          <Field label="Telefon" error={errors.phone?.message}>
-            {(props) => (
-              <TextInput {...props} {...register('phone')} type="tel" autoComplete="tel" />
-            )}
+          <Field label="Adres" error={errors.address?.message}>
+            {(props) => <TextInput {...props} {...register('address')} />}
           </Field>
-          <Field label="E-posta" error={errors.email?.message}>
-            {(props) => (
-              <TextInput {...props} {...register('email')} type="email" autoComplete="email" />
-            )}
+          <Field label="Not" error={errors.note?.message}>
+            {(props) => <TextArea {...props} {...register('note')} rows={3} />}
           </Field>
-        </div>
-        <Field label="Adres" error={errors.address?.message}>
-          {(props) => <TextInput {...props} {...register('address')} />}
-        </Field>
-        <Field label="Not" error={errors.note?.message}>
-          {(props) => <TextArea {...props} {...register('note')} rows={3} />}
-        </Field>
-      </section>
+        </section>
+      </div>
       {!canWrite ? <div className="alert alert--danger">{closedReason}</div> : null}
       <SaveStatus state={state} onVerify={() => void submission.verify()} />
       <div className="form-actions sticky-actions">

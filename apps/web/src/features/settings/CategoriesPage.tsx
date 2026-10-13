@@ -5,9 +5,11 @@ import { invalidateRecords, useCategories } from '../../api/queries';
 import { newIdempotencyKey } from '../../api/submission';
 import type { Category } from '../../api/types';
 import { Badge } from '../../components/ui/Amount';
+import { Pencil, Plus, Tag, Tags } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { Card, PageHeader } from '../../components/ui/Card';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { Field, TextInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { QueryView } from '../../components/ui/States';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useWriteAccess } from '../../hooks/useWriteAccess';
@@ -40,10 +42,10 @@ function CategoryRow({ category, canWrite }: { category: Category; canWrite: boo
   }
 
   return (
-    <li className="card stack stack--sm">
+    <li>
       {editing ? (
         <form
-          className="toolbar"
+          className="toolbar panel-toolbar"
           onSubmit={(event) => {
             event.preventDefault();
             void patch({ name: name.trim() }, 'Kategori yeniden adlandırıldı.');
@@ -62,15 +64,27 @@ function CategoryRow({ category, canWrite }: { category: Category; canWrite: boo
           </Button>
         </form>
       ) : (
-        <div className="row row--between">
-          <span className="row">
-            <strong>{category.name}</strong>
-            {!category.isActive ? <Badge>Pasif</Badge> : null}
+        <div className="list-row list-row--static">
+          <span className="icon-box icon-box--lg icon-box--neutral">
+            <Icon icon={Tag} />
+          </span>
+          <span className="list-row__main">
+            <span className="list-row__title">
+              <span className="list-row__title-text">{category.name}</span>
+              {!category.isActive ? <Badge>Pasif</Badge> : null}
+            </span>
+            {error ? <span className="field__error block">{error}</span> : null}
           </span>
           {canWrite ? (
-            <span className="row">
-              <Button variant="ghost" size="small" onClick={() => setEditing(true)}>
-                Yeniden adlandır
+            <span className="row row--nowrap">
+              <Button
+                variant="ghost"
+                size="small"
+                aria-label={`Yeniden adlandır: ${category.name}`}
+                onClick={() => setEditing(true)}
+              >
+                <Icon icon={Pencil} />
+                <span className="hide-mobile">Yeniden adlandır</span>
               </Button>
               <Button
                 variant="secondary"
@@ -89,7 +103,6 @@ function CategoryRow({ category, canWrite }: { category: Category; canWrite: boo
           ) : null}
         </div>
       )}
-      {error && !editing ? <p className="field__error">{error}</p> : null}
     </li>
   );
 }
@@ -127,40 +140,60 @@ export function CategoriesPage() {
   }
 
   return (
-    <main className="page page--narrow">
-      <PageHeader title="Gider kategorileri" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
-      {canWrite ? (
-        <Card>
-          <form
-            className="toolbar"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void add();
-            }}
-          >
-            <Field label="Yeni kategori" error={error ?? undefined}>
-              {(props) => (
-                <TextInput {...props} value={name} onChange={(e) => setName(e.target.value)} />
-              )}
-            </Field>
-            <Button type="submit" loading={busy}>
-              Ekle
-            </Button>
-          </form>
-        </Card>
-      ) : (
-        <p className="meta">{reason}</p>
-      )}
-      <QueryView query={categories}>
-        {(items) => (
-          <ul className="item-list">
-            {items.map((category) => (
-              <CategoryRow key={category.id} category={category} canWrite={canWrite} />
-            ))}
+    <main className="page">
+      <PageHeader
+        title="Gider kategorileri"
+        subtitle="Gider kayıtlarında seçilen kategoriler"
+        back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }}
+      />
+      <div className="form-columns form-columns--side-first">
+        <Panel title="Yeni kategori" icon={Plus}>
+          {canWrite ? (
+            <form
+              className="toolbar panel__body"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void add();
+              }}
+            >
+              <Field label="Kategori adı" error={error ?? undefined}>
+                {(props) => (
+                  <TextInput {...props} value={name} onChange={(e) => setName(e.target.value)} />
+                )}
+              </Field>
+              <Button type="submit" loading={busy}>
+                <Icon icon={Plus} />
+                Ekle
+              </Button>
+            </form>
+          ) : (
+            <p className="panel__note">{reason}</p>
+          )}
+          <ul className="panel__list">
+            <li>Seçilmeyen giderler “Kategorisiz” görünür.</li>
+            <li>Kullanılmış kategori silinmez, pasifleşir.</li>
+            <li>Pasif kategori yeni kayıtta seçilemez; eski kayıtlarda görünmeye devam eder.</li>
           </ul>
-        )}
-      </QueryView>
-      <p className="meta">Seçilmeyen giderler “Kategorisiz” görünür.</p>
+        </Panel>
+        <Panel
+          title={`Kategoriler${categories.data ? ` (${categories.data.length})` : ''}`}
+          icon={Tags}
+        >
+          <QueryView query={categories}>
+            {(items) =>
+              items.length === 0 ? (
+                <p className="list-empty">Henüz kategori yok.</p>
+              ) : (
+                <ul className="list-rows">
+                  {items.map((category) => (
+                    <CategoryRow key={category.id} category={category} canWrite={canWrite} />
+                  ))}
+                </ul>
+              )
+            }
+          </QueryView>
+        </Panel>
+      </div>
     </main>
   );
 }

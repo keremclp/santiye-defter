@@ -143,19 +143,23 @@ describe('ImpactPreview', () => {
 
 describe('SaveStatus', () => {
   it.each([
-    [{ status: 'saving' } as const, 'Kaydediliyor', '⏳'],
-    [{ status: 'saved' } as const, 'Kaydedildi', '✓'],
-    [{ status: 'failed', message: 'Şantiye seçilmeli.' } as const, 'Kaydedilemedi', '✕'],
+    [{ status: 'saving' } as const, 'Kaydediliyor', 'lucide-loader-circle'],
+    [{ status: 'saved' } as const, 'Kaydedildi', 'lucide-circle-check'],
+    [
+      { status: 'failed', message: 'Şantiye seçilmeli.' } as const,
+      'Kaydedilemedi',
+      'lucide-circle-x',
+    ],
     [
       { status: 'verifying' } as const,
       'Kaydın durumu doğrulanıyor. Lütfen yeni kayıt açmayın.',
-      '↻',
+      'lucide-refresh-cw',
     ],
   ])('%o ayrı metin ve ikonla gösterilir', (state, text, icon) => {
     render(<SaveStatus state={state} onVerify={() => undefined} />);
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent(text);
-    expect(status).toHaveTextContent(icon);
+    expect(status.querySelector('.save-status__icon svg')).toHaveClass(icon);
   });
 
   it('doğrulanıyor durumunda elle yeniden sorma düğmesi var', async () => {

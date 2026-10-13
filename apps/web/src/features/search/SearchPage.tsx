@@ -1,21 +1,33 @@
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowLeftRight,
+  Building2,
+  CalendarRange,
+  Handshake,
+  HardHat,
+  History,
+  Search,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { apiDelete, errorMessage } from '../../api/client';
 import { keys, useSearch, useSearchHistory } from '../../api/queries';
 import type { SearchResult } from '../../api/types';
 import { Badge } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
-import { Card, PageHeader } from '../../components/ui/Card';
-import { ChipGroup } from '../../components/ui/Chips';
-import { DateInput, Field, TextInput } from '../../components/ui/Field';
+import { PageHeader, Panel } from '../../components/ui/Card';
+import { Segment } from '../../components/ui/Chips';
+import { DateInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
+import { ListRow, ListRows } from '../../components/ui/ListRow';
 import { EmptyState, ErrorState, Loading } from '../../components/ui/States';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { formatMoney } from '../../lib/format';
-import { DIRECTION_LABEL, PARTY_KIND_LABEL, PROJECT_STATUS_LABEL } from '../../lib/labels';
+import { PARTY_KIND_LABEL, PROJECT_STATUS_LABEL } from '../../lib/labels';
 import { toast } from '../../stores/ui';
-import { TransactionTable } from '../common/RecordTables';
+import { DirectionIcon, TransactionRow } from '../common/RecordTables';
 
 const DEFAULTS = { q: '', tur: '', baslangic: '', bitis: '' };
 
@@ -24,84 +36,95 @@ function Results({ data }: { data: SearchResult }) {
     data.projects.length + data.parties.length + data.agreements.length + data.transactions.length;
   if (count === 0)
     return (
-      <EmptyState
-        title="Sonuç bulunamadı"
-        description="Başka bir kelime, kayıt numarası veya tutar deneyin."
-      />
+      <Panel>
+        <EmptyState
+          title="Sonuç bulunamadı"
+          description="Başka bir kelime, kayıt numarası veya tutar deneyin."
+        />
+      </Panel>
     );
   const total = (key: keyof NonNullable<SearchResult['totals']>, shown: number) =>
-    data.totals && data.totals[key] > shown ? ` — ilk ${shown} / ${data.totals[key]}` : '';
+    data.totals && data.totals[key] > shown ? ` · ilk ${shown} / ${data.totals[key]}` : '';
   return (
     <>
       {data.projects.length > 0 ? (
-        <Card title={`Şantiyeler${total('projects', data.projects.length)}`}>
-          <ul className="item-list">
+        <Panel title={`Şantiyeler${total('projects', data.projects.length)}`} icon={HardHat}>
+          <ListRows label="Şantiyeler">
             {data.projects.map((p) => (
-              <li key={p.id}>
-                <Link className="item-card" to={`/uygulama/projeler/${p.id}`}>
-                  <span className="item-card__title">{p.name}</span>
-                  <Badge>{PROJECT_STATUS_LABEL[p.status]}</Badge>
-                </Link>
-              </li>
+              <ListRow
+                key={p.id}
+                to={`/uygulama/projeler/${p.id}`}
+                icon={
+                  <span className="icon-box icon-box--lg icon-box--neutral">
+                    <Icon icon={HardHat} />
+                  </span>
+                }
+                title={p.name}
+                side={
+                  <Badge tone={p.status === 'active' ? 'income' : 'neutral'}>
+                    {PROJECT_STATUS_LABEL[p.status]}
+                  </Badge>
+                }
+              />
             ))}
-          </ul>
-        </Card>
+          </ListRows>
+        </Panel>
       ) : null}
       {data.parties.length > 0 ? (
-        <Card title={`Kişiler / firmalar${total('parties', data.parties.length)}`}>
-          <ul className="item-list">
+        <Panel title={`Kişiler / firmalar${total('parties', data.parties.length)}`} icon={Users}>
+          <ListRows label="Kişiler / firmalar">
             {data.parties.map((p) => (
-              <li key={p.id}>
-                <Link className="item-card" to={`/uygulama/kisiler/${p.id}`}>
-                  <div className="item-card__main">
-                    <span className="item-card__title">{p.name}</span>
-                    <span className="meta">
-                      {PARTY_KIND_LABEL[p.kind]}
-                      {p.phone ? ` · ${p.phone}` : ''}
-                    </span>
-                  </div>
-                  {!p.isActive ? <Badge tone="danger">Pasif</Badge> : null}
-                </Link>
-              </li>
+              <ListRow
+                key={p.id}
+                to={`/uygulama/kisiler/${p.id}`}
+                icon={
+                  <span className="icon-box icon-box--lg icon-box--neutral">
+                    <Icon icon={p.kind === 'company' ? Building2 : UserRound} />
+                  </span>
+                }
+                title={p.name}
+                meta={`${PARTY_KIND_LABEL[p.kind]}${p.phone ? ` · ${p.phone}` : ''}`}
+                side={!p.isActive ? <Badge tone="danger">Pasif</Badge> : null}
+              />
             ))}
-          </ul>
-        </Card>
+          </ListRows>
+        </Panel>
       ) : null}
       {data.agreements.length > 0 ? (
-        <Card title={`Anlaşmalar${total('agreements', data.agreements.length)}`}>
-          <ul className="item-list">
+        <Panel title={`Anlaşmalar${total('agreements', data.agreements.length)}`} icon={Handshake}>
+          <ListRows label="Anlaşmalar">
             {data.agreements.map((a) => (
-              <li key={a.id}>
-                <Link className="item-card" to={`/uygulama/anlasmalar/${a.id}`}>
-                  <div className="item-card__main">
-                    <span className="item-card__title">{a.label}</span>
-                    <span className="meta">
-                      {a.party?.name} · {a.project?.name ?? 'Firma geneli'} ·{' '}
-                      {DIRECTION_LABEL[a.direction]}
+              <ListRow
+                key={a.id}
+                to={`/uygulama/anlasmalar/${a.id}`}
+                icon={<DirectionIcon agreement={a} opening={a.kind === 'opening'} />}
+                title={a.label}
+                titleExtra={a.kind === 'opening' ? <Badge>Başlangıç</Badge> : null}
+                meta={`${a.party?.name ?? ''} · ${a.project?.name ?? 'Firma geneli'} · Bedel ${formatMoney(a.currentAmount)}`}
+                side={
+                  <>
+                    <span className="amount amount--neutral">{formatMoney(a.remaining)}</span>
+                    <span className="list-row__note">
+                      {a.direction === 'payable' ? 'Kalan borç' : 'Kalan alacak'}
                     </span>
-                  </div>
-                  <div className="item-card__side">
-                    <span className="meta">Bedel {formatMoney(a.currentAmount)}</span>
-                    <span
-                      className={
-                        a.direction === 'payable'
-                          ? 'amount amount--expense'
-                          : 'amount amount--income'
-                      }
-                    >
-                      Kalan {formatMoney(a.remaining)}
-                    </span>
-                  </div>
-                </Link>
-              </li>
+                  </>
+                }
+              />
             ))}
-          </ul>
-        </Card>
+          </ListRows>
+        </Panel>
       ) : null}
       {data.transactions.length > 0 ? (
-        <Card title={`İşlemler${total('transactions', data.transactions.length)}`}>
-          <TransactionTable items={data.transactions} compact />
-        </Card>
+        <Panel
+          title={`İşlemler${total('transactions', data.transactions.length)}`}
+          icon={ArrowLeftRight}
+        >
+          <ListRows label="İşlemler">
+            {data.transactions.map((t) => (
+              <TransactionRow key={t.id} transaction={t} />
+            ))}
+          </ListRows>
+        </Panel>
       ) : null}
     </>
   );
@@ -148,100 +171,113 @@ export function SearchPage() {
     <main className="page">
       <PageHeader
         title="Ara"
-        subtitle="Firmanın bütün kayıtlarında arar; silinen kayıtlar ve belge içerikleri hariç."
+        subtitle="Firmanın bütün kayıtlarında arar; silinen kayıtlar ve belge içerikleri hariç"
       />
-      <form
-        className="card stack"
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          update({ q: text.trim() });
-        }}
-      >
-        <div className="toolbar">
-          <Field label="Arama">
-            {(props) => (
-              <TextInput
-                {...props}
-                type="search"
-                placeholder="Şantiye, kişi, anlaşma, tutar, açıklama, kayıt no"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button type="submit">Ara</Button>
+      <Panel label="Arama">
+        <form
+          className="panel-toolbar"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            update({ q: text.trim() });
+          }}
+        >
+          <label className="search-box">
+            <Icon icon={Search} />
+            <input
+              type="search"
+              aria-label="Arama"
+              placeholder="Şantiye, kişi, anlaşma, tutar, açıklama, kayıt no"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+            />
+          </label>
+          <Button type="submit" size="small">
+            Ara
+          </Button>
+        </form>
+        <div className="panel-toolbar">
+          <Segment
+            label="Tür"
+            options={[
+              { value: '', label: 'Tümü' },
+              { value: 'project', label: 'Şantiyeler' },
+              { value: 'party', label: 'Kişiler' },
+              { value: 'agreement', label: 'Anlaşmalar' },
+              { value: 'transaction', label: 'İşlemler' },
+            ]}
+            value={f.tur}
+            onChange={(tur) => update({ tur })}
+          />
+          <div className="date-range" role="group" aria-label="Tarih aralığı">
+            <span className="date-range__label">
+              <Icon icon={CalendarRange} />
+              Tarih
+            </span>
+            <DateInput
+              aria-label="Başlangıç tarihi"
+              value={f.baslangic}
+              onChange={(e) => update({ baslangic: e.target.value })}
+            />
+            <span aria-hidden="true">–</span>
+            <DateInput
+              aria-label="Bitiş tarihi"
+              value={f.bitis}
+              onChange={(e) => update({ bitis: e.target.value })}
+            />
+            {f.baslangic || f.bitis ? (
+              <button
+                type="button"
+                className="filter-clear"
+                onClick={() => update({ baslangic: '', bitis: '' })}
+              >
+                Tarihi temizle
+              </button>
+            ) : null}
+          </div>
         </div>
-        <ChipGroup
-          label="Tür"
-          options={[
-            { value: '', label: 'Tümü' },
-            { value: 'project', label: 'Şantiyeler' },
-            { value: 'party', label: 'Kişiler' },
-            { value: 'agreement', label: 'Anlaşmalar' },
-            { value: 'transaction', label: 'İşlemler' },
-          ]}
-          value={f.tur}
-          onChange={(tur) => update({ tur })}
-        />
-        <div className="form-grid">
-          <Field label="Başlangıç tarihi">
-            {(props) => (
-              <DateInput
-                {...props}
-                value={f.baslangic}
-                onChange={(e) => update({ baslangic: e.target.value })}
-              />
-            )}
-          </Field>
-          <Field label="Bitiş tarihi">
-            {(props) => (
-              <DateInput
-                {...props}
-                value={f.bitis}
-                onChange={(e) => update({ bitis: e.target.value })}
-              />
-            )}
-          </Field>
-        </div>
-      </form>
+      </Panel>
 
       {f.q.trim() === '' ? (
-        <Card
+        <Panel
           title="Son aramalar"
+          icon={History}
           actions={
             history.data && history.data.length > 0 ? (
-              <Button variant="ghost" size="small" onClick={() => void clearHistory()}>
+              <button type="button" className="filter-clear" onClick={() => void clearHistory()}>
                 Temizle
-              </Button>
+              </button>
             ) : null
           }
         >
           {history.isPending ? (
             <Loading />
           ) : history.error ? (
-            <ErrorState error={history.error} onRetry={() => void history.refetch()} />
+            <div className="panel__body">
+              <ErrorState error={history.error} onRetry={() => void history.refetch()} />
+            </div>
           ) : (history.data ?? []).length === 0 ? (
-            <p className="muted">Son arama yok.</p>
+            <p className="list-empty">Son arama yok.</p>
           ) : (
-            <ul className="row plain-list">
+            <ul className="list-rows">
               {history.data.map((item) => (
                 <li key={item.createdAt}>
-                  <Button
-                    variant="secondary"
-                    size="small"
+                  <button
+                    type="button"
+                    className="dropdown__item"
                     onClick={() => {
                       setText(item.query);
                       update({ q: item.query });
                     }}
                   >
+                    <Icon icon={History} />
                     {item.query}
-                  </Button>
+                  </button>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </Panel>
       ) : results.isPending ? (
         <Loading label="Aranıyor…" />
       ) : results.error || !results.data ? (

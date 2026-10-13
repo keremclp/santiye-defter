@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { useParty } from '../../api/queries';
 import { PageHeader } from '../../components/ui/Card';
 import { Loading } from '../../components/ui/States';
@@ -8,6 +8,8 @@ import { ObligationForm } from './ObligationForm';
 
 function useObligationContext(mode: 'agreement' | 'opening') {
   const [params] = useSearchParams();
+  // Aynı rotada yalnız sorgu değişince form yeni bağlamla sıfırdan kurulur.
+  const { key } = useLocation();
   const partyId = params.get('kisi');
   const party = useParty(partyId);
   const yon = params.get('yon');
@@ -18,17 +20,17 @@ function useObligationContext(mode: 'agreement' | 'opening') {
     general: params.get('genel') === '1',
     party: party.data ? { id: party.data.id, name: party.data.name } : null,
   });
-  return { loading, initial };
+  return { loading, initial, key };
 }
 
 /** Anlaşma formu: `?yon=odenecek|tahsil&proje=&kisi=&genel=1` (şartname 5.2, 7.6). */
 export function AgreementFormPage() {
   usePageMeta('Yeni anlaşma');
-  const { loading, initial } = useObligationContext('agreement');
+  const { loading, initial, key } = useObligationContext('agreement');
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader title="Yeni anlaşma" back={{ to: '/uygulama/anlasmalar', label: 'Anlaşmalar' }} />
-      {loading ? <Loading /> : <ObligationForm initial={initial} />}
+      {loading ? <Loading /> : <ObligationForm key={key} initial={initial} />}
     </main>
   );
 }
@@ -36,15 +38,15 @@ export function AgreementFormPage() {
 /** Başlangıç borç/alacak formu (şartname 7.6). */
 export function OpeningFormPage() {
   usePageMeta('Başlangıç borç/alacağı');
-  const { loading, initial } = useObligationContext('opening');
+  const { loading, initial, key } = useObligationContext('opening');
   return (
-    <main className="page page--narrow">
+    <main className="page">
       <PageHeader
         title="Başlangıç borç/alacağı"
         subtitle="Uygulamaya geçtiğiniz tarihte açık kalan borç veya alacak"
         back={{ to: '/uygulama/anlasmalar', label: 'Anlaşmalar' }}
       />
-      {loading ? <Loading /> : <ObligationForm initial={initial} />}
+      {loading ? <Loading /> : <ObligationForm key={key} initial={initial} />}
     </main>
   );
 }

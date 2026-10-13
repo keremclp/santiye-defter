@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema } from '@santiye/shared';
+import { KeyRound, LogIn, PlayCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router';
@@ -8,6 +9,7 @@ import { apiPost, errorMessage } from '../../api/client';
 import type { LoginResult } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { Field, TextInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useSession } from '../../stores/session';
 import { useUi } from '../../stores/ui';
@@ -52,9 +54,19 @@ export function LoginPage() {
   return (
     <main className="auth-layout">
       <div className="auth-card">
-        <p className="auth-card__brand">Şantiye Hesap</p>
-        <p className="muted">Şantiye parasını net ve hızlı yönetin.</p>
-        <h1>Giriş</h1>
+        <div className="nav-brand">
+          <span className="nav-brand__mark" aria-hidden="true">
+            ŞH
+          </span>
+          <span className="nav-brand__text">
+            <span className="nav-brand__name">Şantiye Hesap</span>
+            <span className="nav-brand__company">Şantiye parasını net ve hızlı yönetin.</span>
+          </span>
+        </div>
+        <div className="auth-card__head">
+          <h1>Giriş</h1>
+          <p>Kullanıcı adınız ve şifrenizle giriş yapın.</p>
+        </div>
         {notice ? (
           <div className="alert alert--info" role="status">
             {notice}
@@ -88,12 +100,19 @@ export function LoginPage() {
             </div>
           ) : null}
           <Button type="submit" block loading={isSubmitting} loadingText="Giriş yapılıyor…">
+            <Icon icon={LogIn} />
             Giriş Yap
           </Button>
         </form>
         <div className="auth-links">
-          <Link to="/demo">Demoyu Dene</Link>
-          <Link to="/sifremi-unuttum">Şifremi unuttum</Link>
+          <Link to="/demo">
+            <Icon icon={PlayCircle} />
+            Demoyu Dene
+          </Link>
+          <Link to="/sifremi-unuttum">
+            <Icon icon={KeyRound} />
+            Şifremi unuttum
+          </Link>
         </div>
       </div>
     </main>
