@@ -48,7 +48,7 @@ const optionalDate = z
 
 export const duesQuerySchema = paginationSchema.extend({
   direction: z.enum(DIRECTIONS).default('payable'),
-  group: z.enum(['overdue', 'upcoming', 'none']).default('overdue'),
+  group: z.enum(['overdue', 'upcoming', 'later', 'none']).default('overdue'),
   from: optionalDate,
   to: optionalDate,
 });
@@ -174,7 +174,10 @@ export class OverviewService {
     };
   }
 
-  /** Gecikmiş, yaklaşan ve vadesiz açık tutarlar; tamamlanan/arşivlenen şantiyeler dahil. */
+  /**
+   * Gecikmiş, yaklaşan, daha sonra ve vadesiz açık tutarlar; tamamlanan/arşivlenen şantiyeler dahil.
+   * "Daha sonra" yaklaşan penceresinin (`to`) ötesindeki vadelerdir.
+   */
   async dues(context: CustomerContext, query: z.infer<typeof duesQuerySchema>) {
     const today = this.today();
     const from = query.from ?? today;
@@ -190,12 +193,9 @@ export class OverviewService {
       const state = dueStateOf(agreement, today);
       if (query.group === 'overdue') return state === 'overdue';
       if (query.group === 'none') return state === 'none';
-      return (
-        state !== 'overdue' &&
-        state !== 'none' &&
-        agreement.dueDate! >= from &&
-        agreement.dueDate! <= to
-      );
+      if (state === 'overdue' || state === 'none') return false;
+      if (query.group === 'later') return agreement.dueDate! > to;
+      return agreement.dueDate! >= from && agreement.dueDate! <= to;
     });
     const page = matching.slice((query.page - 1) * query.limit, query.page * query.limit);
     const maps = await loadNameMaps(context.companyId, {
@@ -211,7 +211,7 @@ export class OverviewService {
       page: query.page,
       limit: query.limit,
       total: matching.length,
-      range: query.group === 'upcoming' ? { from, to } : null,
+      range: query.group === 'upcoming' || query.group === 'later' ? { from, to } : null,
     };
   }
 

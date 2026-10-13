@@ -1,6 +1,6 @@
 # İnşaat Gelir–Gider Uygulaması — Kapsam ve Planlama Kararları
 
-Son güncelleme: 12 Ekim 2026
+Son güncelleme: 13 Ekim 2026
 
 Bu belge, proje görüşmelerinde kabul edilen kararları, henüz kesinleşmeyen ayrıntıları ve aşamaların durumunu kaydeder. Mevcut özellik raporunun yerine geçmez; raporun ticari ürün ve web kullanımına uyarlanması için karar kaynağıdır.
 
@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Adım 4 (uygulama ekranları) tamamlandı; 13 Ekim 2026 (bölüm 10.9). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -875,6 +875,24 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 - **Firma bilgisi:** Görünen ad ve iletişim değişiklikleri firma kaydında geçmişle tutulur; işletim notu müşteriye dönmez.
 - **Performans notu:** Anlaşma listesi toplamları ve vade filtresi eşleşen anlaşmaları bellekte paylaşılan fonksiyonla hesaplar; firma başına binlerce anlaşmaya çıkılırsa gözden geçirilmelidir.
 
+### 10.9. Adım 4'te kabul edilen uygulama ekranları kararları (13 Ekim 2026)
+
+Adım 4 (uygulama ekranları) tamamlandı: tasarım token dosyası ve temel bileşenler, telefon/tablet/masaüstü yerleşimi, güvenli tekrar ve "Kaydın durumu doğrulanıyor" akışlı HTTP istemcisi, giriş ekranları ve bütün uygulama ekranları. Giriş → ilk şifre → şantiye → gider → anlaşma → kısmi ödeme → paylaştırılmış ödeme → iade → sil/geri al akışı 375 px'te ve masaüstünde tarayıcıda denendi; ekrandaki tutarlar API özetiyle aynı. Şartnamenin açık bıraktığı şu noktalar kullanıcı tarafından kararlaştırıldı:
+
+- **Firma kullanıcı listesi:** İşlem listesindeki "Kaydı oluşturan kullanıcı" filtresi için `GET /company/users` ucu eklendi. Yalnız aynı firmanın kullanıcılarını kimlik, görünen ad ve aktiflik bilgisiyle döner (kullanıcı adı ve iletişim dönmez); pasif kullanıcılar da listelenir ki geçmiş kayıtları süzülebilsin. Uç firma yalıtım testindedir.
+- **İletişim metninin web'e ulaşması:** `SUPPORT_CONTACT_TEXT` web derlemesine gömülür (Vite `envPrefix`). Yeni API ucu yoktur; metin değişirse web yeniden derlenir. Boşsa genel bir yönlendirme metni gösterilir.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **"Daha sonra" vade grubu:** Şartname 10.9'daki `later` grubu API'de eksikti; `/dues` ucuna eklendi. Yaklaşan penceresinin (varsayılan 30 gün) ötesindeki vadeleri listeler.
+- **Etki önizlemesi formülleri:** Silme, geri yükleme, iade ve düzeltme önizlemeleri `packages/shared` içindeki `previewAgreementBalance` ve `previewCashTotals` fonksiyonlarıyla hesaplanır; web formül yazmaz. Bedel değişikliği ve iptalde API önizlemesi (`?preview=1`) kullanılır.
+- **İade tutarının rengi:** İade satırları kaynak hareketin yönünün rengini kullanır (ödeme iadesi kırmızı, tahsilat iadesi yeşil); tutar "−" önekiyle gösterilir ve "Ödeme iadesi" / "Tahsilat iadesi" yazısı her zaman görünür.
+- **Görüntüleme dönemi bandı:** Tarih ekinin (`'e/'ya`) yanlış çekimlenmemesi için metin "Kayıtlarınızı {tarih} tarihine kadar görüntüleyip dışa aktarabilirsiniz" biçimindedir.
+- **Açık formun korunması:** Düzenleme formları arka planda yenilenen veriyle sessizce sıfırlanmaz; kayıt başka yerde değiştiyse 409 karşılaştırma ekranında kullanıcı güncel kaydı yükler veya kendi değişikliğiyle devam eder.
+- **Geçici yönlendirmeler:** Tanıtım sitesi (Adım 9) gelene kadar `/` giriş ekranına, demo (Adım 8) gelene kadar "Demoyu dene" bir yer tutucu sayfaya gider. Rapor sayfaları ve belge alanları Adım 5 ve 6'ya kadar yer tutucudur.
+- **Silinen işlemi geri alma:** Silinenler listesinde işlemler için "İncele ve geri al" kaydın detayına götürür; geri alma ve etki önizlemesi orada yapılır.
+- **Bekleyen elle kontrol:** İngilizce dilli bir telefonda sayısal klavyede ondalık virgül girişi (şartname 11) henüz denenmedi.
+
 ## 11. Açık ürün ve teknik kararlar
 
 - Barındırma sağlayıcısı, veritabanı paketi, yedekleme yöntemi ve aylık maliyet (zamanlama 10.4). İptal edilen teknik plandaki kademeli düşük maliyet yaklaşımı ve pilotta en fazla 24 saatlik veri kaybı kabulü artık bağlayıcı değil; yeniden kararlaştırılacak.
@@ -927,3 +945,4 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 | 12 Ekim 2026 | Adım 2 (API temeli) tamamlandı ve kabul edildi (bölüm 10.7). Şartnamedeki boşluklar için dört karar alındı: kullanıcı oluşturma tekrarında geçici şifre yeniden gösterilmez; şifre değişimi/sıfırlama, pasifleştirme ve 2FA sıfırlamasında oturumlar `tokensValidAfter` ile hemen düşer; yönetimde pasifleştirme, aktifleştirme ve şifre sıfırlama gerekçe ister; hizmet sonu günleri D dahil, bitiş günleri dahil sayılır. İlk şifre akışı, firma ayrımı koruması, deneme sınırı değerleri, kullanıcı adı biçimi ve kütüphane seçimleri sonraki adımlar için kaydedildi. |
 | 12 Ekim 2026 | Adım 3 (finans API'si) tamamlandı ve kabul edildi (bölüm 10.8). Şartnamedeki boşluklar için sekiz karar alındı: kopyala kayıt açmaz, taslak döner; tamamlanan şantiyede anlaşmasız gider gerekçe ister, anlaşmasız gelir serbest, yeni anlaşma için yeniden aktifleştirme gerekir; arşivlenen şantiye tamamlanan gibi davranır; arşivden çıkış önceki duruma döner; geri yüklemede kalan aşılırsa fazla onayı istenir; mükerrer uyarısı kayıt sonrası cevapta verilir; özetlerde başlangıç kayıtları toplamlara dahil ve ayrıca alt toplam olarak gösterilir; silinmiş kaydı olan kişi de silinmez, pasifleştirilir. Formüllerin `packages/shared` içinde kalması, güvenli tekrar ve sürüm kontrolü kapsamı, iade ve iptal davranışları sonraki adımlar için kaydedildi. |
 | 12 Ekim 2026 | Adım 1–3 sırasında alınan ve 10.5–10.8 bölümlerinde kayıtlı kararlar şartnameye (`santiye-hesap-web-prompt.md`) işlendi; şartname tek kaynak olarak yeniden bu belgeyle uyumlu. İşlenenler: çalışma ortamı ve kütüphaneler, `/health` cevabı, firma ayrımı koruması, katı para girişi ve gösterim biçimi, `expectedUpdatedAt` ve `Idempotency-Key` kapsamı, tamamlanan/arşivlenen şantiye kuralları, iptal edilen anlaşma kuralları, iadeli payın korunması, iade payları, ödeme durumu sırası, vade grupları, başlangıç kayıtlarının özetlerde etiketlenmesi, kopyalamanın taslak dönmesi, mükerrer uyarısı, kişi silme, kategori kuralları, ilk şifre sonrası oturum, oturumların hemen düşmesi, deneme sınırı, kullanıcı adı biçimi, yönetim gerekçeleri, hizmet sonu gün sınırları ve tutar aralığı araması. Ek notlar: İngilizce dilli telefonda ondalık girişinin denenmesi; ekranlarda hizmet sonu süreleri gün sayısı yerine kesin tarihle gösterilir. |
+| 13 Ekim 2026 | Adım 4 (uygulama ekranları) tamamlandı ve kabul edildi (bölüm 10.9). Şartnamedeki boşluklar için iki karar alındı: "Kaydı oluşturan kullanıcı" filtresi için firma kullanıcılarını yalnız kimlik, ad ve aktiflikle döndüren `GET /company/users` ucu eklendi; `SUPPORT_CONTACT_TEXT` web derlemesine gömülür. Şartnamede olup API'de eksik kalan `later` vade grubu eklendi; etki önizlemeleri için `packages/shared` içine önizleme fonksiyonları eklendi. İade tutar rengi, görüntüleme bandı metni, açık formun korunması ve demo/tanıtım/rapor yer tutucuları sonraki adımlar için kaydedildi. |

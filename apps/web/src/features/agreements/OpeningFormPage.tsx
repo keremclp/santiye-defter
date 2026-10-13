@@ -1,0 +1,1 @@
+export { OpeningFormPage } from './AgreementFormPage';

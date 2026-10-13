@@ -4,6 +4,7 @@ export * from './date.js';
 export * from './domain.js';
 export * from './finance/agreement.js';
 export * from './finance/allocation.js';
+export * from './finance/preview.js';
 export * from './finance/refund.js';
 export * from './finance/totals.js';
 export * from './money.js';

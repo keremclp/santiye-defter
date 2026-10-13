@@ -1,0 +1,361 @@
+/*
+ * Yerleşim (şartname 4.5):
+ * ≥ 1100 px sol sabit menü 240 px, içerik en fazla 1120 px;
+ * 760–1099 px üst çubuk + drawer menü;
+ * < 760 px tek kolon, alt menü ve "+ Kayıt" eylemi.
+ */
+
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.page {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md) var(--space-xxl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.page__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page__back {
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* ── Sol menü ────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  display: none;
+}
+
+.nav-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+}
+
+.nav-brand__name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-navy);
+  letter-spacing: var(--letter-spacing-heading);
+  text-decoration: none;
+}
+
+.nav-brand__company {
+  font-size: var(--font-size-meta);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0 var(--space-sm);
+  list-style: none;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-navy);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: var(--tint-primary-8);
+}
+
+.nav-link[aria-current='page'] {
+  background: var(--tint-primary-12);
+  color: var(--color-primary);
+}
+
+.nav-user {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── Üst çubuk ───────────────────────────────────────────────────────────── */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 56px;
+  padding: 0 var(--space-sm);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar__brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--color-navy);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.topbar__company {
+  font-size: var(--font-size-meta);
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.topbar__menu {
+  display: none;
+}
+
+/* ── Drawer ──────────────────────────────────────────────────────────────── */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--color-backdrop);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 41;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--color-white);
+  box-shadow: var(--shadow-modal);
+}
+
+/* ── Alt menü ────────────────────────────────────────────────────────────── */
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: end;
+  padding: 0 2px env(safe-area-inset-bottom);
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
+}
+
+.bottom-nav__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 60px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.bottom-nav__link[aria-current='page'],
+.bottom-nav__link[aria-expanded='true'] {
+  color: var(--color-primary);
+}
+
+.bottom-nav__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bottom-nav__add {
+  margin: 0 auto 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: var(--shadow-modal);
+  cursor: pointer;
+}
+
+.bottom-nav__add-plus {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Telefonda formun birincil eylemleri alta yapışık. */
+.sticky-actions {
+  position: sticky;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  z-index: 10;
+  padding: var(--space-sm) 0;
+  background: var(--color-surface);
+}
+
+@media (max-width: 759px) {
+  .app-main {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .page {
+    padding-top: var(--space-md);
+    gap: var(--space-md);
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 760px) {
+  .bottom-nav,
+  .show-mobile {
+    display: none !important;
+  }
+
+  .topbar__menu {
+    display: inline-flex;
+  }
+
+  .sticky-actions {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+@media (min-width: 1100px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: var(--color-white);
+    border-right: 1px solid var(--color-border);
+  }
+
+  .topbar {
+    display: none;
+  }
+
+  .page {
+    padding: var(--space-xl) var(--space-xl) var(--space-xxl);
+  }
+}
+
+/* ── Giriş ekranları ─────────────────────────────────────────────────────── */
+
+.auth-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg) var(--space-md);
+  background: var(--gradient-brand);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+}
+
+.auth-card__brand {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-navy);
+  letter-spacing: var(--letter-spacing-heading);
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}

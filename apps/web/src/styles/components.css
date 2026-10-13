@@ -1,0 +1,900 @@
+/* Temel bileşenler (şartname 4.4). Renkler yalnız tokens.css değişkenlerinden. */
+
+/* ── Düğmeler ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: var(--control-min-height);
+  padding: 0 var(--space-md);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 80ms ease;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.btn--secondary {
+  background: var(--color-white);
+  border-color: var(--color-border);
+  color: var(--color-navy);
+}
+
+.btn--cyan {
+  background: var(--color-cyan);
+  color: var(--color-navy);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.btn--income {
+  background: var(--color-income);
+  color: var(--color-white);
+}
+
+.btn--expense {
+  background: var(--color-expense);
+  color: var(--color-white);
+}
+
+.btn--small {
+  min-height: 40px;
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-meta);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-min-height);
+  height: var(--control-min-height);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-navy);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--tint-primary-8);
+}
+
+/* ── Form alanları ───────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  color: var(--color-navy);
+}
+
+.field__required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.field__hint {
+  font-size: var(--font-size-meta);
+  color: var(--color-muted);
+}
+
+.field__error {
+  font-size: var(--font-size-meta);
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  min-height: var(--control-min-height);
+  padding: 14px var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-tint);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+}
+
+.input::placeholder {
+  color: var(--color-muted);
+}
+
+.input--invalid {
+  border-color: var(--color-danger);
+}
+
+.input:disabled,
+.input[readonly] {
+  opacity: 0.75;
+}
+
+textarea.input {
+  min-height: 96px;
+  resize: vertical;
+}
+
+select.input {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: var(--font-size-label);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--color-primary);
+  flex: none;
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+/* ── Chip ────────────────────────────────────────────────────────────────── */
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-white);
+  color: var(--color-navy);
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip--selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── Kart ────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card--link:hover {
+  border-color: var(--color-primary);
+}
+
+.card--dashed {
+  border-style: dashed;
+  box-shadow: none;
+  background: var(--tint-primary-8);
+}
+
+/* ── Boş, yükleniyor, hata ───────────────────────────────────────────────── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-md);
+}
+
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  color: var(--color-muted);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--tint-primary-12);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skeleton-value {
+  display: inline-block;
+  width: 7ch;
+  height: 1em;
+  border-radius: var(--radius-sm);
+  background: var(--tint-primary-8);
+}
+
+/* ── Uyarı kutuları ve bantlar ───────────────────────────────────────────── */
+
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+}
+
+.alert--danger {
+  border: 2px solid var(--color-danger);
+}
+
+.alert--danger .alert__title {
+  color: var(--color-danger);
+}
+
+.alert--info {
+  border-color: transparent;
+  background: var(--tint-cyan-18);
+  color: var(--color-navy);
+}
+
+.alert--success {
+  border: 2px solid var(--color-success);
+}
+
+.alert--success .alert__title {
+  color: var(--color-success);
+}
+
+.alert__title {
+  font-weight: 700;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--tint-cyan-18);
+  color: var(--color-navy);
+  font-weight: 500;
+}
+
+.banner--offline {
+  background: var(--tint-expense-12);
+}
+
+/* ── Rozet ve tutar ──────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-xl);
+  background: var(--tint-navy-12);
+  color: var(--color-navy);
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge--overdue,
+.badge--expense,
+.badge--danger {
+  background: var(--tint-expense-12);
+  color: var(--color-expense);
+}
+
+.badge--upcoming,
+.badge--primary {
+  background: var(--tint-primary-12);
+  color: var(--color-primary);
+}
+
+.badge--income,
+.badge--success {
+  background: var(--tint-income-12);
+  color: var(--color-income);
+}
+
+.badge--cyan {
+  background: var(--tint-cyan-18);
+  color: var(--color-navy);
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.amount--income {
+  color: var(--color-income);
+}
+
+.amount--expense {
+  color: var(--color-expense);
+}
+
+.amount--neutral {
+  color: var(--color-navy);
+}
+
+.amount__label {
+  display: block;
+  font-size: var(--font-size-meta);
+  font-weight: 500;
+}
+
+/* ── Özet kutuları ───────────────────────────────────────────────────────── */
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  min-width: 0;
+}
+
+.stat__label {
+  font-size: var(--font-size-meta);
+  font-weight: 600;
+  color: var(--color-navy);
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.stat__hint {
+  font-size: var(--font-size-meta);
+  color: var(--color-muted);
+}
+
+.stat--income {
+  background: var(--tint-income-12);
+  border-color: transparent;
+}
+
+.stat--income .stat__value {
+  color: var(--color-income);
+}
+
+.stat--expense {
+  background: var(--tint-expense-12);
+  border-color: transparent;
+}
+
+.stat--expense .stat__value {
+  color: var(--color-expense);
+}
+
+.summary-hero {
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+}
+
+.summary-hero__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.summary-hero__label {
+  font-size: var(--font-size-meta);
+  color: var(--color-on-navy-muted);
+}
+
+.summary-hero__value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-on-navy);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Lacivert zeminde gelir/gider rengi yerine beyaz metin + yazılı etiket kullanılır. */
+.summary-hero__section {
+  grid-column: 1 / -1;
+  font-size: var(--font-size-meta);
+  font-weight: 700;
+  color: var(--color-on-navy);
+  border-top: 1px solid var(--color-on-navy-muted);
+  padding-top: var(--space-sm);
+}
+
+/* ── Liste ve tablo ──────────────────────────────────────────────────────── */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.data-table th {
+  font-size: var(--font-size-meta);
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.data-table td.num,
+.data-table th.num {
+  text-align: right;
+}
+
+.data-table tbody tr {
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+  background: var(--tint-primary-8);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-card {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.item-card:hover {
+  border-color: var(--color-primary);
+}
+
+.item-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.item-card__title {
+  font-weight: 600;
+  color: var(--color-navy);
+  overflow-wrap: anywhere;
+}
+
+.item-card__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.definition-list {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: var(--space-xs) var(--space-md);
+  margin: 0;
+}
+
+.definition-list dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-meta);
+}
+
+.definition-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+/* ── Araç çubuğu ve filtreler ────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.toolbar > .field {
+  flex: 1 1 180px;
+}
+
+.filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-meta);
+}
+
+.totals-bar {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+}
+
+/* ── Dialog ──────────────────────────────────────────────────────────────── */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--color-backdrop);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-modal);
+}
+
+.dialog--wide {
+  max-width: 880px;
+}
+
+.dialog__header {
+  padding: var(--space-lg) var(--space-lg) var(--space-sm);
+}
+
+.dialog__body {
+  padding: 0 var(--space-lg) var(--space-md);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (min-width: 760px) {
+  .dialog-backdrop {
+    align-items: center;
+  }
+
+  .dialog {
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* ── Etki önizlemesi ─────────────────────────────────────────────────────── */
+
+.impact {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--tint-primary-8);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.impact__title {
+  font-weight: 700;
+  margin-bottom: var(--space-xs);
+}
+
+.impact__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-meta);
+}
+
+.impact__table th,
+.impact__table td {
+  padding: 4px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.impact__table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-left: var(--space-sm);
+}
+
+.impact__table .impact__changed {
+  font-weight: 700;
+}
+
+.impact__group th {
+  padding-top: var(--space-sm);
+  color: var(--color-navy);
+}
+
+/* ── Kaydetme durumu ─────────────────────────────────────────────────────── */
+
+.save-status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border);
+  background: var(--color-white);
+  font-weight: 600;
+}
+
+.save-status__icon {
+  font-size: 18px;
+  line-height: 1.2;
+  flex: none;
+}
+
+.save-status--saving {
+  border-color: var(--color-primary);
+}
+
+.save-status--saved {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.save-status--failed {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.save-status--verifying {
+  border-color: var(--color-navy);
+  background: var(--tint-cyan-18);
+  color: var(--color-navy);
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+
+.toast-region {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: min(92vw, 420px);
+}
+
+.toast {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-navy);
+  color: var(--color-on-navy);
+  box-shadow: var(--shadow-modal);
+  font-weight: 500;
+}
+
+@media (min-width: 760px) {
+  .toast-region {
+    bottom: var(--space-lg);
+  }
+}
+
+/* ── Sekmeler ────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.tab {
+  min-height: var(--control-min-height);
+  padding: 0 var(--space-md);
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab[aria-selected='true'] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── Paylaştırma satırları ───────────────────────────────────────────────── */
+
+.allocation-row {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+}
+
+@media (min-width: 760px) {
+  .allocation-row {
+    grid-template-columns: 1.2fr 1.4fr 1fr auto;
+    align-items: end;
+  }
+}
+
+/* ── Belge yer tutucu ────────────────────────────────────────────────────── */
+
+.document-placeholder {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  color: var(--color-muted);
+  font-size: var(--font-size-meta);
+}
+
+/* ── Karşılaştırma (409) ─────────────────────────────────────────────────── */
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-meta);
+}
+
+.compare-table th,
+.compare-table td {
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.compare-table .compare-table__diff {
+  background: var(--tint-expense-12);
+}

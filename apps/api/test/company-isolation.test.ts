@@ -91,6 +91,16 @@ describe('firma yalıtımı: listeler, arama, pano ve gövdedeki kimlikler', () 
     expect(dashboard.totals).toMatchObject({ netExpense: 0, remainingPayable: 0 });
   });
 
+  it('firma kullanıcı listesi yalnız aynı firmanın kullanıcılarını, yalnız id/ad/aktiflikle döner', async () => {
+    const { owner, intruder } = await twoCompanies();
+    const ownerUserId = owner.user._id.toString();
+    const intruderUsers = await intruder.ok(intruder.get('/company/users'));
+    expect(JSON.stringify(intruderUsers)).not.toContain(ownerUserId);
+
+    const ownUsers = await owner.api.ok(owner.api.get('/company/users'));
+    expect(ownUsers).toEqual([{ id: ownerUserId, name: owner.user.name, isActive: true }]);
+  });
+
   it('güvenli tekrar sorgusu başka firmanın anahtarını bulamaz', async () => {
     const { intruder, key, owner } = await twoCompanies();
     expect(await intruder.ok(intruder.get(`/idempotency/${key}`))).toEqual({ status: 'not_found' });

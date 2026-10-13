@@ -1,0 +1,74 @@
+/*
+ * Şantiye Hesap tasarım token'ları (şartname bölüm 4). Renkler, yazı tipleri, ölçüler ve gölgeler
+ * yalnız buradan gelir; başka dosyada renk değeri yazılmaz (src/styles/tokens.test.ts denetler).
+ */
+
+:root {
+  /* 4.1 Renk */
+  --color-surface: #f8f6f6;
+  --color-surface-tint: #eeecf8;
+  --color-elevated: #ffffff;
+  --color-white: #ffffff;
+  --color-primary: #4d12ee;
+  --color-navy: #2f24c1;
+  --color-navy-deep: #1e1878;
+  --color-cyan: #3fd1cb;
+  --color-ink: #2f24c1;
+  --color-muted: #7a76a8;
+  --color-border: #e4e1f0;
+  --color-income: #166534;
+  --color-success: #166534;
+  --color-expense: #dc2626;
+  --color-danger: #dc2626;
+  --color-on-navy: #ffffff;
+  --color-on-navy-muted: rgba(255, 255, 255, 0.72);
+  --color-overlay: rgba(47, 36, 193, 0.45);
+  --color-backdrop: rgba(15, 23, 42, 0.72);
+
+  /* Tint'ler: dolgu ve seçili chip */
+  --tint-primary-8: rgba(77, 18, 238, 0.08);
+  --tint-primary-12: rgba(77, 18, 238, 0.12);
+  --tint-navy-12: rgba(47, 36, 193, 0.12);
+  --tint-cyan-12: rgba(63, 209, 203, 0.12);
+  --tint-cyan-18: rgba(63, 209, 203, 0.18);
+  --tint-income-12: rgba(22, 101, 52, 0.12);
+  --tint-expense-12: rgba(220, 38, 38, 0.12);
+
+  /* Gradyan: primary → navy → cyan, sol üstten sağ alta */
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-navy),
+    var(--color-cyan)
+  );
+
+  /* 4.2 Tipografi */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-size-page-title: 30px;
+  --font-size-card-title: 20px;
+  --font-size-body: 16px;
+  --font-size-label: 15px;
+  --font-size-meta: 14px;
+  --line-height-body: 1.45;
+  --letter-spacing-heading: -0.5px;
+
+  /* 4.3 Ölçü */
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --shadow-card: 0 3px 10px rgba(77, 18, 238, 0.06);
+  --shadow-modal: 0 -4px 16px rgba(0, 0, 0, 0.18);
+
+  /* 4.5 Yerleşim */
+  --sidebar-width: 240px;
+  --content-max-width: 1120px;
+  --control-min-height: 48px;
+}

@@ -67,6 +67,9 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
   router.get('/company', auth, (req, res) => {
     sendSuccess(res, company.get(requireCustomer(req)));
   });
+  router.get('/company/users', auth, async (req, res) => {
+    sendSuccess(res, await company.users(requireCustomer(req)));
+  });
   router.patch('/company', auth, async (req, res) => {
     sendSuccess(
       res,

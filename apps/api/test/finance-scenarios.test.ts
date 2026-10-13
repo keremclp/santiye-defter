@@ -396,6 +396,23 @@ describe('9.3 vade: 800.000 TL tahsil edilecek anlaşma (senaryo 2)', () => {
     expect((await api2.agreement(agreement.id)).dueDate).toBe(dueDate);
   });
 
+  it('pencerenin ötesindeki vade "daha sonra" grubunda, yaklaşanda değil', async () => {
+    const { testApp, api, project, party } = await setup();
+    const today = businessToday(testApp.clock);
+    await api.createAgreement({
+      title: 'Uzak vade',
+      scope: 'project',
+      projectId: project.id,
+      partyId: party.id,
+      initialAmount: tl(10_000),
+      dueDate: addDays(today, 45),
+    });
+    const group = async (name: string) =>
+      (await api.ok(api.get('/dues', { direction: 'payable', group: name }))).items.length;
+    expect(await group('upcoming')).toBe(0);
+    expect(await group('later')).toBe(1);
+  });
+
   it('vadesiz kayıt gecikmiş sayılmaz, "vadesi belirlenmemiş" grubunda görünür', async () => {
     const { api, project, party } = await setup();
     await payable(api, project, party, tl(10_000));

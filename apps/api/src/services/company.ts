@@ -5,6 +5,7 @@ import type { companyUpdateSchema } from '@santiye/shared';
 import { updateIfUnchanged } from '../db/concurrency.js';
 import type { AppDeps } from '../deps.js';
 import { CompanyModel, type Company } from '../models/company.js';
+import { UserModel } from '../models/user.js';
 import type { CustomerContext } from './customer-auth.js';
 import { diffChanges, historyEntry } from './records.js';
 import { accessClosedError, type ServiceSummary } from './service-state.js';
@@ -25,6 +26,22 @@ export class CompanyService {
 
   get(context: CustomerContext) {
     return presentCompany(context.company, context.service);
+  }
+
+  /**
+   * "Kaydı oluşturan kullanıcı" filtresi için aynı firmanın kullanıcıları. Yalnız kimlik, görünen ad
+   * ve aktiflik döner; pasif kullanıcıların geçmiş kayıtları da süzülebilsin diye onlar da listelenir.
+   */
+  async users(context: CustomerContext) {
+    const users = await UserModel.find(
+      { companyId: context.companyId },
+      { name: 1, isActive: 1 },
+    ).sort({ name: 1 });
+    return users.map((user) => ({
+      id: user._id.toString(),
+      name: user.name,
+      isActive: user.isActive,
+    }));
   }
 
   /** Görünen ad ve iletişim; kimlik, kullanıcılar, kapasite ve hizmet durumu değişmez. */
