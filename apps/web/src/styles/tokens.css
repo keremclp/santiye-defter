@@ -5,36 +5,38 @@
 
 :root {
   /* 4.1 Renk */
-  --color-surface: #f8f6f6;
-  --color-surface-tint: #eeecf8;
-  --color-elevated: #ffffff;
+  --color-surface: #f7f6fa;
+  --color-panel: #ffffff;
   --color-white: #ffffff;
+  --color-ink: #1b1838;
+  --color-ink2: #4a4668;
+  --color-muted: #7a76a8;
+  --color-border: #e7e4f0;
+  --color-border-soft: #f0eef5;
   --color-primary: #4d12ee;
+  --color-primary-hover: #3f0ccb;
   --color-navy: #2f24c1;
   --color-navy-deep: #1e1878;
   --color-cyan: #3fd1cb;
-  --color-ink: #2f24c1;
-  --color-muted: #7a76a8;
-  --color-border: #e4e1f0;
+  --color-cyan-ink: #0e6e6a;
   --color-income: #166534;
   --color-success: #166534;
   --color-expense: #dc2626;
   --color-danger: #dc2626;
-  --color-on-navy: #ffffff;
+  --color-warn: #b45309;
+  --color-on-primary: #ffffff;
   --color-on-navy-muted: rgba(255, 255, 255, 0.72);
-  --color-overlay: rgba(47, 36, 193, 0.45);
   --color-backdrop: rgba(15, 23, 42, 0.72);
 
-  /* Tint'ler: dolgu ve seçili chip */
+  /* Tint'ler (yumuşak zeminler) */
   --tint-primary-8: rgba(77, 18, 238, 0.08);
-  --tint-primary-12: rgba(77, 18, 238, 0.12);
-  --tint-navy-12: rgba(47, 36, 193, 0.12);
-  --tint-cyan-12: rgba(63, 209, 203, 0.12);
+  --tint-primary-14: rgba(77, 18, 238, 0.14);
   --tint-cyan-18: rgba(63, 209, 203, 0.18);
-  --tint-income-12: rgba(22, 101, 52, 0.12);
-  --tint-expense-12: rgba(220, 38, 38, 0.12);
+  --tint-income-10: rgba(22, 101, 52, 0.1);
+  --tint-expense-9: rgba(220, 38, 38, 0.09);
+  --tint-warn-12: rgba(217, 119, 6, 0.12);
 
-  /* Gradyan: primary → navy → cyan, sol üstten sağ alta */
+  /* Gradyan yalnız tanıtım sitesi ve giriş ekranı arkası: primary → navy → cyan */
   --gradient-brand: linear-gradient(
     135deg,
     var(--color-primary),
@@ -45,30 +47,58 @@
   /* 4.2 Tipografi */
   --font-display: 'Outfit', system-ui, sans-serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
-  --font-size-page-title: 30px;
-  --font-size-card-title: 20px;
-  --font-size-body: 16px;
-  --font-size-label: 15px;
-  --font-size-meta: 14px;
+  --font-size-page-title: 28px;
+  --font-size-page-title-phone: 24px;
+  --font-size-panel-title: 17px;
+  --font-size-metric: 28px;
+  --font-size-metric-balance: 24px;
+  --font-size-metric-phone: 22px;
+  --font-size-metric-balance-phone: 19px;
+  --font-size-strip: 21px;
+  --font-size-body: 15px;
+  --font-size-cell: 14px;
+  --font-size-label: 13px;
+  --font-size-meta: 12.5px;
+  --font-size-small: 12px;
+  --font-size-head: 11.5px;
+  --font-size-group: 11px;
   --line-height-body: 1.45;
-  --letter-spacing-heading: -0.5px;
+  --letter-spacing-title: -0.6px;
+  --letter-spacing-panel: -0.2px;
+  --letter-spacing-head: 0.05em;
+  --letter-spacing-group: 0.07em;
 
   /* 4.3 Ölçü */
-  --space-xs: 6px;
-  --space-sm: 10px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-xxl: 48px;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
-  --shadow-card: 0 3px 10px rgba(77, 18, 238, 0.06);
-  --shadow-modal: 0 -4px 16px rgba(0, 0, 0, 0.18);
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-22: 22px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --radius-pill: 999px;
+  --radius-segment-item: 6px;
+  --radius-segment: 7px;
+  --radius-input: 9px;
+  --radius-control: 10px;
+  --radius-icon-sm: 8px;
+  --radius-icon: 10px;
+  --radius-panel: 14px;
+  --shadow-card: 0 1px 2px rgba(27, 24, 56, 0.04), 0 2px 8px rgba(27, 24, 56, 0.04);
+  --shadow-menu: 0 12px 32px rgba(20, 20, 40, 0.14);
+  --icon-stroke: 1.9;
+
+  /* Kontrol yükseklikleri: masaüstü / telefon dokunma alanı */
+  --control-height: 40px;
+  --control-height-small: 34px;
+  --control-height-touch: 48px;
+  --input-height: 40px;
+  --input-height-touch: 44px;
 
   /* 4.5 Yerleşim */
-  --sidebar-width: 240px;
-  --content-max-width: 1120px;
-  --control-min-height: 48px;
+  --sidebar-width: 232px;
+  --readable-max-width: 760px;
 }

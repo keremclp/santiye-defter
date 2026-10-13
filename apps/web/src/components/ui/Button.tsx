@@ -1,8 +1,8 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { Link, type LinkProps } from 'react-router';
 
-export type ButtonVariant =
-  'primary' | 'secondary' | 'cyan' | 'ghost' | 'danger' | 'income' | 'expense';
+/** primary; secondary = kenarlı düğme; ghost = metin düğmesi; danger; gelir/gider yalnız formda. */
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'income' | 'expense';
 
 interface StyleProps {
   variant?: ButtonVariant;

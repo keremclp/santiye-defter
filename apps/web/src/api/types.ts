@@ -151,8 +151,18 @@ export interface Project extends RecordMeta {
   pinned: boolean;
   lastUsedAt: string | null;
   history?: HistoryEntry[];
-  summary?: { difference: number; remainingPayable: number; remainingReceivable: number };
+  summary?: ProjectCardSummary;
   warnings?: Warning[];
+}
+
+/** Liste ve pano kartı için şantiye bazında net tutarlar ve kalanlar. */
+export interface ProjectCardSummary {
+  netIncome: number;
+  netExpense: number;
+  difference: number;
+  remainingPayable: number;
+  remainingReceivable: number;
+  overdueReceivable: number;
 }
 
 export interface ObligationSummary {
@@ -358,6 +368,7 @@ export interface Dashboard {
   totals: {
     netIncome: number;
     netExpense: number;
+    expenseRefund: number;
     difference: number;
     remainingPayable: number;
     remainingReceivable: number;
@@ -367,7 +378,13 @@ export interface Dashboard {
     excessReceivable: number;
   };
   activeProjectCount: number;
-  monthly: { month: string; netIncome: number; netExpense: number; difference: number };
+  monthly: {
+    month: string;
+    netIncome: number;
+    netExpense: number;
+    expenseRefund: number;
+    difference: number;
+  };
   recentTransactions: Transaction[];
   dueSoon: Agreement[];
   openAgreements: Agreement[];

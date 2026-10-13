@@ -26,7 +26,7 @@ export function AgreementFormPage() {
   usePageMeta('Yeni anlaşma');
   const { loading, initial } = useObligationContext('agreement');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Yeni anlaşma" back={{ to: '/uygulama/anlasmalar', label: 'Anlaşmalar' }} />
       {loading ? <Loading /> : <ObligationForm initial={initial} />}
     </main>
@@ -38,7 +38,7 @@ export function OpeningFormPage() {
   usePageMeta('Başlangıç borç/alacağı');
   const { loading, initial } = useObligationContext('opening');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title="Başlangıç borç/alacağı"
         subtitle="Uygulamaya geçtiğiniz tarihte açık kalan borç veya alacak"

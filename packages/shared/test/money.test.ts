@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatTl, isKurus, parseMoney } from '../src/index.js';
+import { formatMoney, formatMoneyWhole, formatTl, isKurus, parseMoney } from '../src/index.js';
 
 const MAX = Number.MAX_SAFE_INTEGER;
 
@@ -89,6 +89,22 @@ describe('formatMoney', () => {
   it('tamsayı olmayan kuruşu reddeder', () => {
     expect(() => formatMoney(12.5)).toThrow(RangeError);
     expect(() => formatMoney(MAX + 1)).toThrow(RangeError);
+  });
+});
+
+describe('formatMoneyWhole', () => {
+  it.each([
+    [15_000_000, '₺150.000'],
+    [1_250_049, '₺12.500'],
+    [1_250_050, '₺12.501'],
+    [0, '₺0'],
+    [-3_450_000, '-₺34.500'],
+  ])('%i → %s', (kurus, expected) => {
+    expect(formatMoneyWhole(kurus)).toBe(expected);
+  });
+
+  it('tamsayı olmayan kuruşu reddeder', () => {
+    expect(() => formatMoneyWhole(0.5)).toThrow(RangeError);
   });
 });
 

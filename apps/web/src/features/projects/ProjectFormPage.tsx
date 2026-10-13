@@ -40,7 +40,7 @@ export function ProjectFormPage() {
   const [project, setProject] = useSnapshot(query.data);
   usePageMeta(id ? 'Şantiye düzenle' : 'Yeni şantiye');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={id ? 'Şantiye düzenle' : 'Yeni şantiye'}
         back={

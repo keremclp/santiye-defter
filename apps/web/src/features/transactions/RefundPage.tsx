@@ -36,7 +36,7 @@ export function RefundPage() {
   const query = useTransaction(id);
   usePageMeta('İade kaydet');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="İade kaydet" back={{ to: `/uygulama/islemler/${id}`, label: 'Kayıt' }} />
       {query.isPending ? (
         <Loading />

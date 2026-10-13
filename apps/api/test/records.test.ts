@@ -111,13 +111,25 @@ describe('şantiyeler', () => {
     await api.ok(api.record({ kind: 'income', amount: tl(10_000), project: a }), 201);
     await api.ok(api.record({ kind: 'expense', amount: tl(4_000), project: a }), 201);
     await agreementFor(api, a, await api.createParty(), tl(50_000));
+    await api.createAgreement({
+      title: 'Daire satışı',
+      direction: 'receivable',
+      scope: 'project',
+      projectId: a.id,
+      partyId: (await api.createParty('Mert Kaya')).id,
+      initialAmount: tl(30_000),
+      dueDate: '2020-01-15',
+    });
 
     const list = await api.ok(api.get('/projects'));
     expect(list.items.map((p: { name: string }) => p.name)).toEqual(['B', 'A']);
     expect(list.items[1].summary).toEqual({
+      netIncome: tl(10_000),
+      netExpense: tl(4_000),
       difference: tl(6_000),
       remainingPayable: tl(50_000),
-      remainingReceivable: 0,
+      remainingReceivable: tl(30_000),
+      overdueReceivable: tl(30_000),
     });
     expect((await api.ok(api.get('/projects', { status: 'all' }))).total).toBe(3);
     expect(

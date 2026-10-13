@@ -59,7 +59,7 @@ export function PasswordPage() {
   });
 
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Şifre" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <form className="card stack" noValidate onSubmit={(event) => void onSubmit(event)}>
         <p className="meta">Şifre değişince bu ve diğer bütün cihazlardaki oturumlar kapanır.</p>

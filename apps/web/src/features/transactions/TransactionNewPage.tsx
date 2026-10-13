@@ -146,7 +146,7 @@ export function TransactionNewPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={title}
         subtitle={
@@ -169,7 +169,7 @@ export function AgreementPaymentPage() {
   usePageMeta(title);
 
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={title}
         subtitle={

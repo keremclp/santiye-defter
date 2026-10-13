@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useSession } from './stores/session';
@@ -81,5 +81,84 @@ describe('giriş formu', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Şifremi Kaydet' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/uygulama'));
     expect(useSession.getState().accessToken).toBe('a2');
+  });
+});
+
+describe('uygulama kabuğu', () => {
+  const service = { state: 'active', serviceEndedAt: null, viewUntil: null, retainUntil: null };
+  const dashboard = {
+    scope: 'Firma geneli — tüm şantiyeler',
+    totals: {
+      netIncome: 0,
+      netExpense: 0,
+      expenseRefund: 0,
+      difference: 0,
+      remainingPayable: 0,
+      remainingReceivable: 0,
+      overduePayable: 0,
+      overdueReceivable: 0,
+      excessPayable: 0,
+      excessReceivable: 0,
+    },
+    activeProjectCount: 0,
+    monthly: { month: '2026-10', netIncome: 0, netExpense: 0, expenseRefund: 0, difference: 0 },
+    recentTransactions: [],
+    dueSoon: [],
+    openAgreements: [],
+    recentProjects: [],
+    generatedAt: '2026-10-13T10:00:00.000Z',
+  };
+
+  function mockShell() {
+    return mockHttp((request) => {
+      if (request.url === '/auth/me') {
+        return ok({ user: TEST_USER, company: { displayName: 'Deneme İnşaat' }, service });
+      }
+      if (request.url === '/dues') {
+        const total = request.params.direction === 'payable' ? 2 : 1;
+        return ok({ items: [], page: 1, limit: 1, total, range: null });
+      }
+      if (request.url === '/dashboard') return ok(dashboard);
+      if (request.url === '/search') {
+        return ok({
+          query: 'elektrik',
+          projects: [],
+          parties: [],
+          agreements: [],
+          transactions: [],
+        });
+      }
+      return ok([]);
+    });
+  }
+
+  it('kenar menüde "Takip" grubu ve gecikmiş vade sayısı; "Yeni kayıt" menüsü üç seçenek', async () => {
+    signIn();
+    mockShell();
+    renderApp('/uygulama');
+    const menu = screen.getByRole('navigation', { name: 'Ana menü' });
+    expect(within(menu).getByRole('list', { name: 'Takip' })).toBeInTheDocument();
+    expect(await within(menu).findByLabelText('3 gecikmiş vade')).toHaveTextContent('3');
+
+    // İlki üst çubuktaki düğme; ikincisi telefonda görünen yüzen + düğmesi.
+    await userEvent.click(screen.getAllByRole('button', { name: /Yeni kayıt/ })[0]!);
+    const items = within(screen.getByRole('menu', { name: 'Yeni kayıt' })).getAllByRole('menuitem');
+    expect(items.map((item) => item.getAttribute('href'))).toEqual([
+      '/uygulama/islemler/yeni?tur=gelir',
+      '/uygulama/islemler/yeni?tur=gider',
+      '/uygulama/anlasmalar/yeni',
+    ]);
+  });
+
+  it('genel arama sonuçları arama sayfasında açar; "/" kısayolu kutuya odaklanır', async () => {
+    signIn();
+    mockShell();
+    const { router } = renderApp('/uygulama');
+    const box = screen.getByRole('searchbox', { name: 'Genel arama' });
+    await userEvent.keyboard('/');
+    expect(box).toHaveFocus();
+    await userEvent.type(box, 'elektrik{Enter}');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/uygulama/ara'));
+    expect(router.state.location.search).toBe('?q=elektrik');
   });
 });

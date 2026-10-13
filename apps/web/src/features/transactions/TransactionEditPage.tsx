@@ -74,7 +74,7 @@ export function TransactionEditPage() {
     );
   }
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={query.data ? `#${query.data.recordNo} düzenle` : 'Kaydı düzenle'}
         back={{ to: `/uygulama/islemler/${id}`, label: 'Kayıt' }}

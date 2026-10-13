@@ -24,7 +24,16 @@ describe('GET /dashboard', () => {
       partyId: party.id,
       initialAmount: tl(80_000),
     });
-    await api.pay(agreement, tl(30_000));
+    const payment = await api.pay(agreement, tl(35_000));
+    await api.ok(
+      api.post(`/transactions/${payment.id}/refunds`, {
+        amount: tl(5_000),
+        date: '2026-03-12',
+        reason: 'İade',
+        parts: [{ allocationId: payment.allocations[0].id, amount: tl(5_000) }],
+      }),
+      201,
+    );
     await api.ok(api.record({ kind: 'income', amount: tl(100_000), project }), 201);
     const current = await api.ok(api.get(`/projects/${project.id}`));
     await api.ok(
@@ -36,14 +45,25 @@ describe('GET /dashboard', () => {
     expect(dashboard.totals).toMatchObject({
       netIncome: tl(100_000),
       netExpense: tl(30_000),
+      expenseRefund: tl(5_000),
       difference: tl(70_000),
       remainingPayable: tl(50_000),
       remainingReceivable: 0,
     });
     expect(dashboard.activeProjectCount).toBe(0);
-    expect(dashboard.recentTransactions).toHaveLength(2);
+    expect(dashboard.recentTransactions).toHaveLength(3);
     expect(dashboard.openAgreements[0]).toMatchObject({ id: agreement.id, remaining: tl(50_000) });
-    expect(dashboard.recentProjects[0]).toMatchObject({ id: project.id });
+    expect(dashboard.recentProjects[0]).toMatchObject({
+      id: project.id,
+      summary: {
+        netIncome: tl(100_000),
+        netExpense: tl(30_000),
+        difference: tl(70_000),
+        remainingPayable: tl(50_000),
+        remainingReceivable: 0,
+        overdueReceivable: 0,
+      },
+    });
     expect(dashboard.generatedAt).toEqual(expect.any(String));
   });
 
@@ -60,7 +80,11 @@ describe('GET /dashboard', () => {
       201,
     );
     const dashboard = await api.ok(api.get('/dashboard'));
-    expect(dashboard.monthly).toMatchObject({ month: today.slice(0, 7), netExpense: tl(1_000) });
+    expect(dashboard.monthly).toMatchObject({
+      month: today.slice(0, 7),
+      netExpense: tl(1_000),
+      expenseRefund: 0,
+    });
     expect(dashboard.totals.netExpense).toBe(tl(10_000));
   });
 });

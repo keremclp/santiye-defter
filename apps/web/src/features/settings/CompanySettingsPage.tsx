@@ -26,7 +26,7 @@ export function CompanySettingsPage() {
   usePageMeta('Firma');
   const company = useCompany();
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Firma" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <QueryView query={company}>
         {(data) => (

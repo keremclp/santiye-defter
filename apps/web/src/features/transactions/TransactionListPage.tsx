@@ -1,26 +1,50 @@
-import { useEffect, useState } from 'react';
+import { Calendar, Download, Search, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { useCategories, useCompanyUsers, useParty, useTransactions } from '../../api/queries';
-import { ButtonLink, Button } from '../../components/ui/Button';
-import { Pagination, PageHeader } from '../../components/ui/Card';
-import { ChipGroup } from '../../components/ui/Chips';
-import { Checkbox, DateInput, Field, SelectInput, TextInput } from '../../components/ui/Field';
+import { Badge } from '../../components/ui/Amount';
+import { Button } from '../../components/ui/Button';
+import { PageHeader, Pagination, Panel } from '../../components/ui/Card';
+import { FilterChips, Segment } from '../../components/ui/Chips';
+import { Checkbox, DateInput, Field, SelectInput } from '../../components/ui/Field';
+import { Icon } from '../../components/ui/Icon';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { EmptyState, ErrorState, Loading, Refreshing } from '../../components/ui/States';
-import { usePhone } from '../../hooks/useMediaQuery';
 import { usePageMeta } from '../../hooks/usePageMeta';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
-import { useWriteAccess } from '../../hooks/useWriteAccess';
-import { formatMoney } from '../../lib/format';
+import { formatDate, formatMoney, formatSigned } from '../../lib/format';
 import { PartyPicker } from '../common/Pickers';
 import { useProjectOptions } from '../common/project-options';
 import { TransactionTable } from '../common/RecordTables';
-import { TRANSACTION_FILTER_DEFAULTS, transactionQuery } from './transaction-filters';
+import {
+  TRANSACTION_FILTER_DEFAULTS,
+  transactionQuery,
+  type TransactionFilters,
+} from './transaction-filters';
 
-/** Gelir, gider ve iade listesi (şartname 7.4). Filtreler URL'de; özet bütün sonuçları kapsar. */
+/** "Filtreler" panelindeki ek filtreler; düğmedeki sayı bunlardan etkin olanlardır. */
+const PANEL_KEYS = [
+  'kapsam',
+  'kisi',
+  'muhatapsiz',
+  'kategori',
+  'bag',
+  'olusturan',
+  'tutarMin',
+  'tutarMax',
+  'silinen',
+] as const satisfies readonly (keyof TransactionFilters)[];
+
+const PERIOD_LABEL: Record<string, string> = { bugun: 'Bugün', buay: 'Bu ay' };
+const KIND_FILTER_LABEL: Record<string, string> = {
+  income: 'Gelir',
+  expense: 'Gider',
+  refund: 'İade',
+};
+
+/** Gelir, gider ve iade listesi (şartname 7.4). Filtreler URL'de; toplamlar bütün sonuçları kapsar. */
 export function TransactionListPage() {
   usePageMeta('İşlemler');
-  const phone = usePhone();
-  const { canWrite } = useWriteAccess();
+  const exportHintId = useId();
   const {
     values: filters,
     update,
@@ -42,71 +66,102 @@ export function TransactionListPage() {
     return () => window.clearTimeout(timer);
   }, [search, filters.q, update]);
 
-  const showPanel = !phone || panelOpen;
   const data = query.data;
+  const panelCount = PANEL_KEYS.filter(
+    (key) => filters[key] !== TRANSACTION_FILTER_DEFAULTS[key],
+  ).length;
+  const scopedToProject = Boolean(filters.kapsam) && filters.kapsam !== 'genel';
+
+  function clearAll() {
+    setSearch('');
+    clear();
+  }
+
+  const chips = filterChips(filters, {
+    projectName: (id) => projects.data?.items.find((p) => p.id === id)?.name,
+    partyName: selectedParty.data?.name,
+    categoryName: (id) => categories.data?.find((c) => c.id === id)?.name,
+    userName: (id) => users.data?.find((u) => u.id === id)?.name,
+  }).map((chip) => ({
+    ...chip,
+    onRemove: () => {
+      if (chip.key === 'q') setSearch('');
+      update(chip.reset);
+    },
+  }));
 
   return (
     <main className="page">
       <PageHeader
         title="İşlemler"
+        subtitle="Gelir, gider ve iadeler · işlem tarihine göre"
         actions={
-          canWrite ? (
-            <>
-              <ButtonLink variant="income" to="/uygulama/islemler/yeni?tur=gelir">
-                Gelir ekle
-              </ButtonLink>
-              <ButtonLink variant="expense" to="/uygulama/islemler/yeni?tur=gider">
-                Gider ekle
-              </ButtonLink>
-            </>
-          ) : null
+          <>
+            <Refreshing active={query.isFetching && !query.isPending} />
+            <Button
+              variant="secondary"
+              className="hide-mobile"
+              disabled
+              aria-describedby={exportHintId}
+            >
+              <Icon icon={Download} />
+              Bu sonuçları indir
+            </Button>
+            <span id={exportHintId} className="visually-hidden">
+              İndirme yakında eklenecek.
+            </span>
+          </>
         }
       />
 
-      <section className="card stack" aria-label="Filtreler">
-        <div className="toolbar">
-          <Field label="Ara">
-            {(props) => (
-              <TextInput
-                {...props}
-                type="search"
-                placeholder="Açıklama, kişi, şantiye, kayıt no, tutar"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="Kapsam">
-            {(props) => (
-              <SelectInput
-                {...props}
-                value={filters.kapsam}
-                onChange={(event) => update({ kapsam: event.target.value })}
-              >
-                <option value="">Tüm şantiyeler ve firma geneli</option>
-                <option value="genel">Firma geneli</option>
-                {(projects.data?.items ?? []).map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </SelectInput>
-            )}
-          </Field>
+      <Panel label="Filtreler">
+        <div className="panel-toolbar">
+          <label className="search-box">
+            <Icon icon={Search} />
+            <input
+              type="search"
+              placeholder="Açıklama, kişi, şantiye, kayıt no veya tutar"
+              aria-label="İşlemlerde ara"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          <Segment
+            label="Tarih"
+            options={[
+              { value: 'bugun', label: 'Bugün' },
+              { value: 'buay', label: 'Bu ay' },
+              { value: 'tumu', label: 'Tümü' },
+              { value: 'aralik', label: <Icon icon={Calendar} />, ariaLabel: 'Tarih aralığı' },
+            ]}
+            value={filters.donem}
+            onChange={(donem) => update({ donem })}
+          />
+          <Segment
+            label="Tür"
+            options={[
+              { value: 'all', label: 'Tümü' },
+              { value: 'income', label: 'Gelir' },
+              { value: 'expense', label: 'Gider' },
+              { value: 'refund', label: 'İade' },
+            ]}
+            value={filters.tur}
+            onChange={(tur) => update({ tur })}
+          />
+          <Button
+            variant="secondary"
+            size="small"
+            aria-expanded={panelOpen}
+            onClick={() => setPanelOpen((open) => !open)}
+          >
+            <Icon icon={SlidersHorizontal} />
+            Filtreler
+            {panelCount > 0 ? <Badge tone="primary">{panelCount}</Badge> : null}
+          </Button>
         </div>
-        <ChipGroup
-          label="Tarih"
-          options={[
-            { value: 'bugun', label: 'Bugün' },
-            { value: 'buay', label: 'Bu ay' },
-            { value: 'tumu', label: 'Tümü' },
-            { value: 'aralik', label: 'Tarih aralığı' },
-          ]}
-          value={filters.donem}
-          onChange={(donem) => update({ donem })}
-        />
+
         {filters.donem === 'aralik' ? (
-          <div className="form-grid">
+          <div className="panel-toolbar__range">
             <Field label="Başlangıç">
               {(props) => (
                 <DateInput
@@ -128,122 +183,121 @@ export function TransactionListPage() {
           </div>
         ) : null}
 
-        {phone ? (
-          <Button
-            variant="ghost"
-            size="small"
-            aria-expanded={panelOpen}
-            onClick={() => setPanelOpen((open) => !open)}
-          >
-            {panelOpen ? 'Diğer filtreleri gizle' : 'Diğer filtreler'}
-          </Button>
+        {chips.length > 0 ? (
+          <div className="panel-toolbar__chips">
+            <FilterChips chips={chips} onClear={activeCount > 0 ? clearAll : undefined} />
+          </div>
         ) : null}
 
-        {showPanel ? (
-          <div className="stack">
-            <ChipGroup
-              label="Tür"
-              options={[
-                { value: 'all', label: 'Tümü' },
-                { value: 'income', label: 'Gelir' },
-                { value: 'expense', label: 'Gider' },
-                { value: 'refund', label: 'İade' },
-              ]}
-              value={filters.tur}
-              onChange={(tur) => update({ tur })}
+        {panelOpen ? (
+          <div className="filter-panel">
+            <Field label="Kapsam">
+              {(props) => (
+                <SelectInput
+                  {...props}
+                  value={filters.kapsam}
+                  onChange={(event) => update({ kapsam: event.target.value })}
+                >
+                  <option value="">Tüm şantiyeler ve firma geneli</option>
+                  <option value="genel">Firma geneli</option>
+                  {(projects.data?.items ?? []).map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            </Field>
+            <PartyPicker
+              label="Kişi / firma"
+              value={
+                filters.kisi && selectedParty.data
+                  ? { id: selectedParty.data.id, name: selectedParty.data.name }
+                  : null
+              }
+              onChange={(party) => update({ kisi: party?.id ?? '', muhatapsiz: '' })}
             />
-            <div className="form-grid">
-              <PartyPicker
-                label="Kişi/firma"
-                value={
-                  filters.kisi && selectedParty.data
-                    ? { id: selectedParty.data.id, name: selectedParty.data.name }
-                    : null
-                }
-                onChange={(party) => update({ kisi: party?.id ?? '', muhatapsiz: '' })}
-              />
-              <Field label="Gider kategorisi">
-                {(props) => (
-                  <SelectInput
-                    {...props}
-                    value={filters.kategori}
-                    onChange={(event) => update({ kategori: event.target.value })}
-                  >
-                    <option value="">Tümü</option>
-                    <option value="yok">Kategorisiz</option>
-                    {(categories.data ?? []).map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                        {category.isActive ? '' : ' (pasif)'}
-                      </option>
-                    ))}
-                  </SelectInput>
-                )}
-              </Field>
-              <Field label="Anlaşma bağlantısı">
-                {(props) => (
-                  <SelectInput
-                    {...props}
-                    value={filters.bag}
-                    onChange={(event) => update({ bag: event.target.value })}
-                  >
-                    <option value="">Tümü</option>
-                    <option value="bagli">Anlaşmaya bağlı</option>
-                    <option value="bagsiz">Anlaşmaya bağlı değil</option>
-                  </SelectInput>
-                )}
-              </Field>
-              <Field label="Kaydı oluşturan">
-                {(props) => (
-                  <SelectInput
-                    {...props}
-                    value={filters.olusturan}
-                    onChange={(event) => update({ olusturan: event.target.value })}
-                  >
-                    <option value="">Herkes</option>
-                    {(users.data ?? []).map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name}
-                        {user.isActive ? '' : ' (pasif)'}
-                      </option>
-                    ))}
-                  </SelectInput>
-                )}
-              </Field>
-              <Field label="En az tutar">
-                {(props) => (
-                  <MoneyInput
-                    {...props}
-                    value={filters.tutarMin}
-                    onChange={(tutarMin) => update({ tutarMin })}
-                  />
-                )}
-              </Field>
-              <Field label="En çok tutar">
-                {(props) => (
-                  <MoneyInput
-                    {...props}
-                    value={filters.tutarMax}
-                    onChange={(tutarMax) => update({ tutarMax })}
-                  />
-                )}
-              </Field>
-              <Field label="Sıralama">
-                {(props) => (
-                  <SelectInput
-                    {...props}
-                    value={filters.sirala}
-                    onChange={(event) => update({ sirala: event.target.value })}
-                  >
-                    <option value="newest">Yeniden eskiye</option>
-                    <option value="oldest">Eskiden yeniye</option>
-                    <option value="amount_desc">Tutar azalan</option>
-                    <option value="amount_asc">Tutar artan</option>
-                  </SelectInput>
-                )}
-              </Field>
-            </div>
-            <div className="row">
+            <Field label="Gider kategorisi">
+              {(props) => (
+                <SelectInput
+                  {...props}
+                  value={filters.kategori}
+                  onChange={(event) => update({ kategori: event.target.value })}
+                >
+                  <option value="">Tümü</option>
+                  <option value="yok">Kategorisiz</option>
+                  {(categories.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                      {category.isActive ? '' : ' (pasif)'}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            </Field>
+            <Field label="Anlaşma bağlantısı">
+              {(props) => (
+                <SelectInput
+                  {...props}
+                  value={filters.bag}
+                  onChange={(event) => update({ bag: event.target.value })}
+                >
+                  <option value="">Tümü</option>
+                  <option value="bagli">Anlaşmaya bağlı</option>
+                  <option value="bagsiz">Anlaşmaya bağlı değil</option>
+                </SelectInput>
+              )}
+            </Field>
+            <Field label="Kaydı oluşturan">
+              {(props) => (
+                <SelectInput
+                  {...props}
+                  value={filters.olusturan}
+                  onChange={(event) => update({ olusturan: event.target.value })}
+                >
+                  <option value="">Herkes</option>
+                  {(users.data ?? []).map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                      {user.isActive ? '' : ' (pasif)'}
+                    </option>
+                  ))}
+                </SelectInput>
+              )}
+            </Field>
+            <Field label="En az tutar">
+              {(props) => (
+                <MoneyInput
+                  {...props}
+                  value={filters.tutarMin}
+                  onChange={(tutarMin) => update({ tutarMin })}
+                />
+              )}
+            </Field>
+            <Field label="En çok tutar">
+              {(props) => (
+                <MoneyInput
+                  {...props}
+                  value={filters.tutarMax}
+                  onChange={(tutarMax) => update({ tutarMax })}
+                />
+              )}
+            </Field>
+            <Field label="Sıralama">
+              {(props) => (
+                <SelectInput
+                  {...props}
+                  value={filters.sirala}
+                  onChange={(event) => update({ sirala: event.target.value })}
+                >
+                  <option value="newest">Yeniden eskiye</option>
+                  <option value="oldest">Eskiden yeniye</option>
+                  <option value="amount_desc">Tutar azalan</option>
+                  <option value="amount_asc">Tutar artan</option>
+                </SelectInput>
+              )}
+            </Field>
+            <div className="filter-panel__checks">
               <Checkbox
                 label="Muhatapsız kayıtlar"
                 checked={filters.muhatapsiz === '1'}
@@ -259,27 +313,7 @@ export function TransactionListPage() {
             </div>
           </div>
         ) : null}
-
-        <div className="filter-summary">
-          <span>
-            {data ? `${data.total} kayıt` : 'Kayıtlar yükleniyor'}
-            {activeCount > 0 ? ` · ${activeCount} filtre seçili` : ''}
-          </span>
-          {activeCount > 0 ? (
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() => {
-                setSearch('');
-                clear();
-              }}
-            >
-              Filtreleri temizle
-            </Button>
-          ) : null}
-          <Refreshing active={query.isFetching && !query.isPending} />
-        </div>
-      </section>
+      </Panel>
 
       {query.isPending ? (
         <Loading />
@@ -287,62 +321,62 @@ export function TransactionListPage() {
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : (
         <>
-          <section className="totals-bar" aria-label="Filtrelenmiş toplamlar">
-            <div className="stat stat--income">
-              <span className="stat__label">Tahsilat (net)</span>
-              <span className="stat__value">{formatMoney(data.totals.netIncome)}</span>
-              {data.totals.incomeRefund > 0 ? (
-                <span className="stat__hint">
-                  Tahsilat iadesi düşüldü: {formatMoney(data.totals.incomeRefund)}
-                </span>
-              ) : null}
+          <section className="panel summary-strip" aria-label="Filtrelenmiş toplamlar">
+            <div className="summary-strip__item">
+              <span className="summary-strip__label">Tahsilat (net)</span>
+              <span className="summary-strip__value amount--income">
+                {formatMoney(data.totals.netIncome)}
+              </span>
+              <span className="summary-strip__sub">
+                {data.totals.incomeRefund > 0
+                  ? `Tahsilat iadesi düşüldü: ${formatMoney(data.totals.incomeRefund)}`
+                  : 'Tahsilat iadesi yok'}
+              </span>
             </div>
-            <div className="stat stat--expense">
-              <span className="stat__label">Ödeme (net)</span>
-              <span className="stat__value">{formatMoney(data.totals.netExpense)}</span>
-              {data.totals.expenseRefund > 0 ? (
-                <span className="stat__hint">
-                  Ödeme iadesi düşüldü: {formatMoney(data.totals.expenseRefund)}
-                </span>
-              ) : null}
+            <div className="summary-strip__item">
+              <span className="summary-strip__label">Ödeme (net)</span>
+              <span className="summary-strip__value amount--expense">
+                {formatMoney(data.totals.netExpense)}
+              </span>
+              <span className="summary-strip__sub">
+                {data.totals.expenseRefund > 0
+                  ? `Ödeme iadesi düşüldü: ${formatMoney(data.totals.expenseRefund)}`
+                  : 'Ödeme iadesi yok'}
+              </span>
             </div>
-            <div className="stat">
-              <span className="stat__label">Gelir − gider farkı</span>
-              <span className="stat__value">{formatMoney(data.totals.difference)}</span>
+            <div className="summary-strip__item">
+              <span className="summary-strip__label">Gelir − gider farkı</span>
+              <span className="summary-strip__value">{formatSigned(data.totals.difference)}</span>
+              <span className="summary-strip__sub">
+                {data.total} kaydın tamamı
+                {scopedToProject ? ' · yalnız bu şantiyeye düşen paylar' : ''}
+              </span>
             </div>
           </section>
-          {filters.kapsam && filters.kapsam !== 'genel' ? (
-            <p className="meta">
-              Paylaştırılmış kayıtlarda toplamlara yalnız seçili şantiyeye düşen pay girer.
-            </p>
-          ) : null}
-          {data.items.length === 0 ? (
-            <EmptyState
-              title="Filtrelere uyan kayıt bulunamadı"
-              actions={
-                <>
-                  {activeCount > 0 ? (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setSearch('');
-                        clear();
-                      }}
-                    >
-                      Filtreleri temizle
-                    </Button>
-                  ) : null}
-                  {filters.donem !== 'tumu' ? (
-                    <Button variant="ghost" onClick={() => update({ donem: 'tumu' })}>
-                      Bütün tarihleri göster
-                    </Button>
-                  ) : null}
-                </>
-              }
-            />
-          ) : (
-            <TransactionTable items={data.items} showScopedAmount={Boolean(filters.kapsam)} />
-          )}
+
+          <Panel label="İşlem listesi">
+            {data.items.length === 0 ? (
+              <EmptyState
+                title="Filtrelere uyan kayıt bulunamadı"
+                actions={
+                  <>
+                    {activeCount > 0 ? (
+                      <Button variant="secondary" onClick={clearAll}>
+                        Filtreleri temizle
+                      </Button>
+                    ) : null}
+                    {filters.donem !== 'tumu' ? (
+                      <Button variant="ghost" onClick={() => update({ donem: 'tumu' })}>
+                        Bütün tarihleri göster
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              />
+            ) : (
+              <TransactionTable items={data.items} showScopedAmount={Boolean(filters.kapsam)} />
+            )}
+          </Panel>
           <Pagination
             page={data.page}
             limit={data.limit}
@@ -353,4 +387,68 @@ export function TransactionListPage() {
       )}
     </main>
   );
+}
+
+/** Etkin filtrelerin etiketleri; kaldırınca ilgili alan varsayılana döner. */
+function filterChips(
+  f: TransactionFilters,
+  names: {
+    projectName: (id: string) => string | undefined;
+    partyName: string | undefined;
+    categoryName: (id: string) => string | undefined;
+    userName: (id: string) => string | undefined;
+  },
+): { key: string; label: string; reset: Partial<TransactionFilters> }[] {
+  const chips: { key: string; label: string; reset: Partial<TransactionFilters> }[] = [];
+  if (f.q) chips.push({ key: 'q', label: `Arama: ${f.q}`, reset: { q: '' } });
+  if (f.donem === 'aralik') {
+    const range = `${f.baslangic ? formatDate(f.baslangic) : '…'} – ${f.bitis ? formatDate(f.bitis) : '…'}`;
+    chips.push({ key: 'donem', label: range, reset: { donem: 'tumu', baslangic: '', bitis: '' } });
+  } else if (PERIOD_LABEL[f.donem]) {
+    chips.push({ key: 'donem', label: PERIOD_LABEL[f.donem]!, reset: { donem: 'tumu' } });
+  }
+  if (KIND_FILTER_LABEL[f.tur]) {
+    chips.push({ key: 'tur', label: `Tür: ${KIND_FILTER_LABEL[f.tur]}`, reset: { tur: 'all' } });
+  }
+  if (f.kapsam) {
+    const label =
+      f.kapsam === 'genel'
+        ? 'Firma geneli'
+        : f.kapsam
+            .split(',')
+            .map((id) => names.projectName(id) ?? 'Şantiye')
+            .join(', ');
+    chips.push({ key: 'kapsam', label: `Kapsam: ${label}`, reset: { kapsam: '' } });
+  }
+  if (f.kisi) {
+    chips.push({ key: 'kisi', label: `Kişi: ${names.partyName ?? '…'}`, reset: { kisi: '' } });
+  }
+  if (f.muhatapsiz === '1') {
+    chips.push({ key: 'muhatapsiz', label: 'Muhatapsız', reset: { muhatapsiz: '' } });
+  }
+  if (f.kategori) {
+    const label = f.kategori === 'yok' ? 'Kategorisiz' : (names.categoryName(f.kategori) ?? '…');
+    chips.push({ key: 'kategori', label: `Kategori: ${label}`, reset: { kategori: '' } });
+  }
+  if (f.bag) {
+    chips.push({
+      key: 'bag',
+      label: f.bag === 'bagli' ? 'Anlaşmaya bağlı' : 'Anlaşmaya bağlı değil',
+      reset: { bag: '' },
+    });
+  }
+  if (f.olusturan) {
+    const label = names.userName(f.olusturan) ?? '…';
+    chips.push({ key: 'olusturan', label: `Oluşturan: ${label}`, reset: { olusturan: '' } });
+  }
+  if (f.tutarMin) {
+    chips.push({ key: 'tutarMin', label: `En az ${f.tutarMin} TL`, reset: { tutarMin: '' } });
+  }
+  if (f.tutarMax) {
+    chips.push({ key: 'tutarMax', label: `En çok ${f.tutarMax} TL`, reset: { tutarMax: '' } });
+  }
+  if (f.silinen === '1') {
+    chips.push({ key: 'silinen', label: 'Silinenler dahil', reset: { silinen: '' } });
+  }
+  return chips;
 }

@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
+// Tembel yüklenen rotalar, bütün paket paralel koşarken 1 sn'lik varsayılan beklemeyi aşabiliyor.
+configure({ asyncUtilTimeout: 3000 });
 
 // jsdom'da yok; varsayılan masaüstü genişliği (telefon sorgusu eşleşmez).
 if (!window.matchMedia) {

@@ -13,57 +13,80 @@ const sources = import.meta.glob<string>(['../**/*.css', '../**/*.ts', '../**/*.
 });
 
 describe('tasarım token dosyası', () => {
-  it('şartname 4.1 renklerini birebir içerir', () => {
+  it('şartname 4.1 renk ve tint değerlerini birebir içerir', () => {
     const expected: Record<string, string> = {
-      '--color-surface': '#F8F6F6',
-      '--color-surface-tint': '#EEECF8',
-      '--color-elevated': '#FFFFFF',
+      '--color-surface': '#F7F6FA',
+      '--color-panel': '#FFFFFF',
       '--color-white': '#FFFFFF',
+      '--color-ink': '#1B1838',
+      '--color-ink2': '#4A4668',
+      '--color-muted': '#7A76A8',
+      '--color-border': '#E7E4F0',
+      '--color-border-soft': '#F0EEF5',
       '--color-primary': '#4D12EE',
+      '--color-primary-hover': '#3F0CCB',
       '--color-navy': '#2F24C1',
       '--color-navy-deep': '#1E1878',
       '--color-cyan': '#3FD1CB',
-      '--color-ink': '#2F24C1',
-      '--color-muted': '#7A76A8',
-      '--color-border': '#E4E1F0',
+      '--color-cyan-ink': '#0E6E6A',
       '--color-income': '#166534',
       '--color-success': '#166534',
       '--color-expense': '#DC2626',
       '--color-danger': '#DC2626',
-      '--color-on-navy': '#FFFFFF',
+      '--color-warn': '#B45309',
+      '--color-on-primary': '#FFFFFF',
       '--color-on-navy-muted': 'rgba(255,255,255,0.72)',
-      '--color-overlay': 'rgba(47,36,193,0.45)',
       '--color-backdrop': 'rgba(15,23,42,0.72)',
       '--tint-primary-8': 'rgba(77,18,238,0.08)',
-      '--tint-primary-12': 'rgba(77,18,238,0.12)',
-      '--tint-navy-12': 'rgba(47,36,193,0.12)',
-      '--tint-cyan-12': 'rgba(63,209,203,0.12)',
+      '--tint-primary-14': 'rgba(77,18,238,0.14)',
       '--tint-cyan-18': 'rgba(63,209,203,0.18)',
-      '--tint-income-12': 'rgba(22,101,52,0.12)',
-      '--tint-expense-12': 'rgba(220,38,38,0.12)',
+      '--tint-income-10': 'rgba(22,101,52,0.1)',
+      '--tint-expense-9': 'rgba(220,38,38,0.09)',
+      '--tint-warn-12': 'rgba(217,119,6,0.12)',
     };
     for (const [name, value] of Object.entries(expected)) {
       expect(tokens, name).toContain(`${name}:${value.toLowerCase()};`);
     }
   });
 
-  it('ölçü ve gölge değerleri şartname 4.3 ile aynı', () => {
+  it('ölçü, gölge ve tipografi değerleri şartname 4.2–4.3 ile aynı', () => {
     for (const [name, value] of Object.entries({
-      '--space-xs': '6px',
-      '--space-sm': '10px',
-      '--space-md': '16px',
-      '--space-lg': '24px',
-      '--space-xl': '32px',
-      '--space-xxl': '48px',
-      '--radius-sm': '10px',
-      '--radius-md': '16px',
-      '--radius-lg': '24px',
-      '--radius-xl': '32px',
-      '--shadow-card': '03px10pxrgba(77,18,238,0.06)',
-      '--shadow-modal': '0-4px16pxrgba(0,0,0,0.18)',
+      '--space-4': '4px',
+      '--space-6': '6px',
+      '--space-8': '8px',
+      '--space-10': '10px',
+      '--space-12': '12px',
+      '--space-14': '14px',
+      '--space-16': '16px',
+      '--space-22': '22px',
+      '--space-28': '28px',
+      '--space-32': '32px',
+      '--radius-pill': '999px',
+      '--radius-input': '9px',
+      '--radius-control': '10px',
+      '--radius-panel': '14px',
+      '--shadow-card': '01px2pxrgba(27,24,56,0.04),02px8pxrgba(27,24,56,0.04)',
+      '--shadow-menu': '012px32pxrgba(20,20,40,0.14)',
+      '--sidebar-width': '232px',
+      '--font-size-page-title': '28px',
+      '--font-size-panel-title': '17px',
+      '--font-size-metric': '28px',
     })) {
       expect(tokens, name).toContain(`${name}:${value.toLowerCase()};`);
     }
+  });
+
+  it('kullanılan her değişken token dosyasında tanımlı', () => {
+    const defined = new Set([...tokensSource.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+    const missing = Object.entries(sources)
+      .filter(([path]) => !/\.test\.tsx?$/.test(path))
+      .flatMap(([path, text]) =>
+        [...text.matchAll(/var\((--[a-z0-9-]+)/g)]
+          .map((m) => m[1])
+          .filter((name) => !defined.has(name))
+          .map((name) => `${path}: ${name}`),
+      );
+    expect(missing).toEqual([]);
   });
 
   it('token dosyası dışında renk değeri yazılmaz', () => {

@@ -116,6 +116,12 @@ export function SearchPage() {
   const queryClient = useQueryClient();
   const { values: f, update } = useUrlFilters(DEFAULTS);
   const [text, setText] = useState(f.q);
+  // Üst çubuktaki genel aramadan yeni sorgu gelince kutu da güncellenir.
+  const [shownQ, setShownQ] = useState(f.q);
+  if (shownQ !== f.q) {
+    setShownQ(f.q);
+    setText(f.q);
+  }
   const history = useSearchHistory();
   const results = useSearch(
     {

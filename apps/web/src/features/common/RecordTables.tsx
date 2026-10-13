@@ -1,11 +1,16 @@
+import { daysBetween, todayInIstanbul } from '@santiye/shared';
+import { Clock, Split, TriangleAlert } from 'lucide-react';
 import { useNavigate, Link } from 'react-router';
 import type { Agreement, Transaction } from '../../api/types';
-import { Amount, Badge, KindBadge } from '../../components/ui/Amount';
+import { Amount, Badge, KindIcon } from '../../components/ui/Amount';
+import { Icon } from '../../components/ui/Icon';
+import { ListRow, ListRows } from '../../components/ui/ListRow';
 import { usePhone } from '../../hooks/useMediaQuery';
-import { formatDate, formatMoney } from '../../lib/format';
+import { formatDate, formatMoney, formatMoneyWhole } from '../../lib/format';
 import {
   DIRECTION_LABEL,
   DUE_STATE_LABEL,
+  KIND_LABEL,
   paymentStatusLabel,
   WORK_STATUS_LABEL,
 } from '../../lib/labels';
@@ -29,9 +34,68 @@ function agreementNames(transaction: Transaction): string {
   return [...new Set(names)].join(', ');
 }
 
+/** Paylaştırma notunda kuruş yalnız gerekiyorsa yazılır: "₺25.000 + ₺15.000". */
+const shareText = (kurus: number) =>
+  kurus % 100 === 0 ? formatMoneyWhole(kurus) : formatMoney(kurus);
+
+function SplitNote({ transaction }: { transaction: Transaction }) {
+  if (!transaction.isSplit) return null;
+  return (
+    <span className="split-note">
+      <Icon icon={Split} />
+      Paylaştırıldı: {transaction.allocations.map((a) => shareText(a.amount)).join(' + ')}
+    </span>
+  );
+}
+
+const titleOf = (t: Transaction) => t.description || (t.party?.name ?? 'Açıklamasız kayıt');
+
+/** "#18 · 13 Eki 2026 · Ödeme iadesi" — tür yazısı her zaman görünür (şartname 4.1). */
+function metaOf(t: Transaction) {
+  return (
+    <>
+      <span className="record-no">#{t.recordNo}</span> · {formatDate(t.date)} · {KIND_LABEL[t.kind]}
+    </>
+  );
+}
+
+function ScopedShare({ transaction, show }: { transaction: Transaction; show: boolean }) {
+  if (!show || transaction.scopedAmount === undefined) return null;
+  if (transaction.scopedAmount === transaction.amount) return null;
+  return (
+    <span className="meta block">Bu kapsama düşen: {formatMoney(transaction.scopedAmount)}</span>
+  );
+}
+
+/** Hareketin liste satırı (özet paneli, detay blokları, arama). */
+export function TransactionRow({ transaction: t }: { transaction: Transaction }) {
+  return (
+    <ListRow
+      to={`/uygulama/islemler/${t.id}`}
+      icon={<KindIcon kind={t.kind} />}
+      title={titleOf(t)}
+      titleExtra={t.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
+      meta={
+        <>
+          <ScopeText transaction={t} />
+          {t.party && t.description ? ` · ${t.party.name}` : ''} · {formatDate(t.date)}
+        </>
+      }
+      side={
+        <>
+          <Amount value={t.amount} kind={t.kind} />
+          {t.kind === 'expense_refund' || t.kind === 'income_refund' ? (
+            <Badge>{KIND_LABEL[t.kind]}</Badge>
+          ) : null}
+        </>
+      }
+    />
+  );
+}
+
 /**
- * İşlem listesi: masaüstünde tablo, 760 px altında kart (şartname 7.4, 11). Paylaştırılmış harekette
- * "Paylaştırıldı" rozeti; tür yazıyla da gösterilir.
+ * İşlem listesi (şartname 7.4, 11): masaüstünde tablo — İşlem, Kişi, Şantiye, Anlaşma, Kategori,
+ * Tutar; 760 px altında her satır kart. `compact` dar panellerde liste satırları gösterir.
  */
 export function TransactionTable({
   items,
@@ -41,39 +105,45 @@ export function TransactionTable({
   items: Transaction[];
   /** Şantiye filtresinde bu kapsama düşen pay ayrıca gösterilir. */
   showScopedAmount?: boolean;
-  /** Dar kartlarda (özet, detay blokları) her genişlikte kart listesi. */
+  /** Dar panellerde (özet, detay blokları) her genişlikte liste satırları. */
   compact?: boolean;
 }) {
   const phone = usePhone();
   const navigate = useNavigate();
   const href = (t: Transaction) => `/uygulama/islemler/${t.id}`;
 
-  if (phone || compact) {
+  if (compact) {
     return (
-      <ul className="item-list">
+      <ListRows>
+        {items.map((t) => (
+          <TransactionRow key={t.id} transaction={t} />
+        ))}
+      </ListRows>
+    );
+  }
+
+  if (phone) {
+    return (
+      <ul className="card-list">
         {items.map((t) => (
           <li key={t.id}>
-            <Link className="item-card" to={href(t)}>
-              <div className="item-card__main">
-                <span className="item-card__title">
-                  {t.description || (t.party?.name ?? 'Açıklamasız kayıt')}
-                </span>
-                <span className="meta">
-                  #{t.recordNo} · {formatDate(t.date)} · <ScopeText transaction={t} />
-                </span>
-                {t.party && t.description ? <span className="meta">{t.party.name}</span> : null}
-                <span className="row">
-                  <KindBadge kind={t.kind} />
-                  {t.isSplit ? <Badge tone="cyan">Paylaştırıldı</Badge> : null}
+            <Link className="card-list__item" to={href(t)}>
+              <span className="list-row__main">
+                <span className="list-row__title">
+                  <span className="list-row__title-text">{titleOf(t)}</span>
                   {t.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
                 </span>
-              </div>
-              <div className="item-card__side">
+                <span className="list-row__meta block">{metaOf(t)}</span>
+                <SplitNote transaction={t} />
+              </span>
+              <span className="list-row__side">
                 <Amount value={t.amount} kind={t.kind} />
-                {showScopedAmount && t.scopedAmount !== undefined && t.scopedAmount !== t.amount ? (
-                  <span className="meta">Bu kapsama düşen: {formatMoney(t.scopedAmount)}</span>
-                ) : null}
-              </div>
+                <ScopedShare transaction={t} show={showScopedAmount} />
+              </span>
+              <span className="card-list__extra">
+                <ScopeText transaction={t} />
+                {t.party ? ` · ${t.party.name}` : ''}
+              </span>
             </Link>
           </li>
         ))}
@@ -82,64 +152,78 @@ export function TransactionTable({
   }
 
   return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th scope="col">No</th>
-          <th scope="col">Tarih</th>
-          <th scope="col">Tür</th>
-          <th scope="col">Açıklama</th>
-          <th scope="col">Şantiye</th>
-          <th scope="col">Kişi</th>
-          <th scope="col">Anlaşma</th>
-          <th scope="col" className="num">
-            Tutar
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((t) => (
-          <tr key={t.id} onClick={() => void navigate(href(t))}>
-            <td>
-              <Link to={href(t)}>#{t.recordNo}</Link>
-            </td>
-            <td className="nowrap">{formatDate(t.date)}</td>
-            <td>
-              <span className="row">
-                <KindBadge kind={t.kind} />
-                {t.isSplit ? <Badge tone="cyan">Paylaştırıldı</Badge> : null}
-                {t.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
-              </span>
-            </td>
-            <td>{t.description || <span className="muted">—</span>}</td>
-            <td>
-              <ScopeText transaction={t} />
-            </td>
-            <td>{t.party?.name ?? <span className="muted">—</span>}</td>
-            <td>{agreementNames(t) || <span className="muted">Anlaşmaya bağlı değil</span>}</td>
-            <td className="num">
-              <Amount value={t.amount} kind={t.kind} />
-              {showScopedAmount && t.scopedAmount !== undefined && t.scopedAmount !== t.amount ? (
-                <span className="meta block">Bu kapsama düşen: {formatMoney(t.scopedAmount)}</span>
-              ) : null}
-            </td>
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th scope="col">İşlem</th>
+            <th scope="col">Kişi</th>
+            <th scope="col">Şantiye</th>
+            <th scope="col">Anlaşma</th>
+            <th scope="col">Kategori</th>
+            <th scope="col" className="num">
+              Tutar
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.map((t) => (
+            <tr key={t.id} onClick={() => void navigate(href(t))}>
+              <td>
+                <div className="type-cell">
+                  <KindIcon kind={t.kind} size="md" />
+                  <div>
+                    <span className="list-row__title">
+                      <Link className="cell-link" to={href(t)}>
+                        {titleOf(t)}
+                      </Link>
+                      {t.deletedAt ? <Badge tone="danger">Silindi</Badge> : null}
+                    </span>
+                    <span className="cell-sub">{metaOf(t)}</span>
+                    <SplitNote transaction={t} />
+                  </div>
+                </div>
+              </td>
+              <td>{t.party?.name ?? <span className="muted">Muhatapsız</span>}</td>
+              <td>
+                <ScopeText transaction={t} />
+              </td>
+              <td>{agreementNames(t) || <span className="muted">Bağlı değil</span>}</td>
+              <td className="muted">
+                {t.category?.name ?? (t.kind === 'income' ? '—' : 'Kategorisiz')}
+              </td>
+              <td className="num">
+                <Amount value={t.amount} kind={t.kind} />
+                <ScopedShare transaction={t} show={showScopedAmount} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
+/** Gecikmiş: kırmızı rozet + uyarı ikonu + "N gün gecikti"; yaklaşan: warn + saat + "N gün kaldı". */
 export function DueBadge({ agreement }: { agreement: Agreement }) {
   if (!agreement.dueState) return null;
   if (agreement.dueState === 'overdue') {
     return (
       <Badge tone="overdue">
-        Gecikmiş{agreement.overdueDays ? ` · ${agreement.overdueDays} gün` : ''}
+        <Icon icon={TriangleAlert} />
+        {agreement.overdueDays ? `${agreement.overdueDays} gün gecikti` : 'Gecikmiş'}
       </Badge>
     );
   }
-  if (agreement.dueState === 'upcoming') return <Badge tone="upcoming">Yaklaşan</Badge>;
+  if (agreement.dueState === 'upcoming' && agreement.dueDate) {
+    const left = daysBetween(todayInIstanbul(), agreement.dueDate);
+    return (
+      <Badge tone="warn">
+        <Icon icon={Clock} />
+        {left === 0 ? 'Bugün' : `${left} gün kaldı`}
+      </Badge>
+    );
+  }
   return <Badge>{DUE_STATE_LABEL[agreement.dueState]}</Badge>;
 }
 
@@ -205,47 +289,49 @@ export function AgreementTable({ items }: { items: Agreement[] }) {
   }
 
   return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th scope="col">Anlaşma</th>
-          <th scope="col">Kişi</th>
-          <th scope="col">Şantiye</th>
-          <th scope="col">Vade</th>
-          <th scope="col" className="num">
-            Bedel
-          </th>
-          <th scope="col" className="num">
-            Ödenen / tahsil edilen
-          </th>
-          <th scope="col" className="num">
-            Kalan
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((a) => (
-          <tr key={a.id} onClick={() => void navigate(href(a))}>
-            <td>
-              <Link to={href(a)}>{a.label}</Link>
-              <div>
-                <AgreementStatusBadges agreement={a} />
-              </div>
-            </td>
-            <td>{a.party?.name}</td>
-            <td>{scope(a)}</td>
-            <td className="nowrap">{formatDate(a.dueDate)}</td>
-            <td className="num">{formatMoney(a.currentAmount)}</td>
-            <td className="num">{formatMoney(a.netSettled)}</td>
-            <td className="num">
-              <Amount value={a.remaining} tone={tone(a)} />
-              {a.excess > 0 ? (
-                <span className="meta block">Fazla: {formatMoney(a.excess)}</span>
-              ) : null}
-            </td>
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Anlaşma</th>
+            <th scope="col">Kişi</th>
+            <th scope="col">Şantiye</th>
+            <th scope="col">Vade</th>
+            <th scope="col" className="num">
+              Bedel
+            </th>
+            <th scope="col" className="num">
+              Ödenen / tahsil edilen
+            </th>
+            <th scope="col" className="num">
+              Kalan
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {items.map((a) => (
+            <tr key={a.id} onClick={() => void navigate(href(a))}>
+              <td>
+                <Link to={href(a)}>{a.label}</Link>
+                <div>
+                  <AgreementStatusBadges agreement={a} />
+                </div>
+              </td>
+              <td>{a.party?.name}</td>
+              <td>{scope(a)}</td>
+              <td className="nowrap">{formatDate(a.dueDate)}</td>
+              <td className="num">{formatMoney(a.currentAmount)}</td>
+              <td className="num">{formatMoney(a.netSettled)}</td>
+              <td className="num">
+                <Amount value={a.remaining} tone={tone(a)} />
+                {a.excess > 0 ? (
+                  <span className="meta block">Fazla: {formatMoney(a.excess)}</span>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

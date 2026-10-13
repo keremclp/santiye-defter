@@ -1,7 +1,9 @@
+import { ChevronLeft, ChevronRight, Info, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { Icon } from './Icon';
 
-/** Kart: beyaz, radius md, kenar border, iç boşluk md (şartname 4.4). */
+/** Kart: beyaz, radius 14, kenar border, hafif gölge (şartname 4.4). */
 export function Card({
   title,
   actions,
@@ -28,6 +30,103 @@ export function Card({
   );
 }
 
+/**
+ * Panel: başlıkta solda ikon + başlık, sağda "Tümü ›" bağlantısı. İçindeki listeler ince çizgiyle
+ * ayrılmış satırlardır; kart içinde kart yok (şartname 4.4).
+ */
+export function Panel({
+  title,
+  icon,
+  more,
+  actions,
+  children,
+  className,
+  label,
+}: {
+  title?: ReactNode;
+  icon?: LucideIcon;
+  more?: { to: string; label?: string };
+  actions?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  /** Başlıksız panelin erişilebilir adı. */
+  label?: string;
+}) {
+  return (
+    <section className={['panel', className].filter(Boolean).join(' ')} aria-label={label}>
+      {title || more || actions ? (
+        <div className="panel__head">
+          {title ? (
+            <h2 className="panel__title">
+              {icon ? <Icon icon={icon} /> : null}
+              {title}
+            </h2>
+          ) : (
+            <span />
+          )}
+          {actions}
+          {more ? (
+            <Link className="panel__more" to={more.to}>
+              {more.label ?? 'Tümü'}
+              <Icon icon={ChevronRight} />
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Özet kutusu: etiket + renkli ikon kutusu, büyük rakam, tek satır alt bilgi (şartname 4.4).
+ * Yüklenirken rakam yerine "0 TL" gösterilmez; çağıran `value` yerine yükleniyor gösterir.
+ */
+export function Metric({
+  label,
+  icon,
+  tone,
+  value,
+  valueClassName,
+  sub,
+  info,
+  balance = false,
+  className,
+}: {
+  label: string;
+  icon: LucideIcon;
+  tone: 'income' | 'expense' | 'primary' | 'neutral';
+  value: ReactNode;
+  valueClassName?: string;
+  sub?: ReactNode;
+  /** Ayrıntı ipucu (ek gri satır yerine bilgi ikonu, şartname 4.2). */
+  info?: string;
+  balance?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={['panel metric', balance ? 'metric--balance' : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="metric__label">
+        <span className={`icon-box icon-box--${tone}`}>
+          <Icon icon={icon} />
+        </span>
+        {label}
+        {info ? (
+          <span className="metric__info" title={info} role="img" aria-label={info}>
+            <Icon icon={Info} />
+          </span>
+        ) : null}
+      </div>
+      <div className={['metric__value', valueClassName].filter(Boolean).join(' ')}>{value}</div>
+      <div className="metric__sub">{sub}</div>
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -44,11 +143,12 @@ export function PageHeader({
       <div className="page__titles">
         {back ? (
           <Link className="page__back" to={back.to}>
-            ← {back.label}
+            <Icon icon={ChevronLeft} />
+            {back.label}
           </Link>
         ) : null}
         <h1>{title}</h1>
-        {subtitle ? <p className="muted">{subtitle}</p> : null}
+        {subtitle ? <p className="page__subtitle">{subtitle}</p> : null}
       </div>
       {actions ? <div className="page__actions">{actions}</div> : null}
     </header>

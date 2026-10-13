@@ -1,29 +1,53 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronDown,
+  Handshake,
+  LogOut,
+  Menu as MenuIcon,
+  Plus,
+  Search,
+} from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { apiPost, isApiError } from '../../api/client';
-import { useMe } from '../../api/queries';
+import { useDues, useMe } from '../../api/queries';
 import { useWriteAccess } from '../../hooks/useWriteAccess';
 import { formatLongDate } from '../../lib/format';
 import { useSession } from '../../stores/session';
 import { useUi } from '../../stores/ui';
-import { Button, ButtonLink } from '../ui/Button';
+import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
+import { Icon } from '../ui/Icon';
+import { Menu } from '../ui/Menu';
 import { Toasts } from '../ui/Toasts';
-import { NAV_ITEMS, PHONE_MORE, PHONE_PRIMARY, quickContextFrom, quickLinks } from './nav';
+import {
+  isFormPath,
+  NAV_BOTTOM,
+  NAV_MAIN,
+  NAV_TRACK,
+  PHONE_MORE,
+  PHONE_PRIMARY,
+  quickContextFrom,
+  quickLinks,
+  type NavItem,
+} from './nav';
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <ul className="nav-list">
-      {NAV_ITEMS.map((item) => (
-        <li key={item.to}>
-          <NavLink className="nav-link" to={item.to} end={item.end} onClick={onNavigate}>
-            {item.label}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  );
+/** Gecikmiş vade sayısı (ödenecek + tahsil edilecek); menüdeki Vadeler rozeti için. */
+function useOverdueCount(): number {
+  const payable = useDues({ direction: 'payable', group: 'overdue', limit: 1 });
+  const receivable = useDues({ direction: 'receivable', group: 'overdue', limit: 1 });
+  return (payable.data?.total ?? 0) + (receivable.data?.total ?? 0);
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toLocaleUpperCase('tr'))
+    .join('');
 }
 
 function useLogout() {
@@ -42,28 +66,92 @@ function useLogout() {
   };
 }
 
+function NavItemLink({
+  item,
+  count,
+  onNavigate,
+}: {
+  item: NavItem;
+  count?: number;
+  onNavigate?: () => void;
+}) {
+  return (
+    <li>
+      <NavLink className="nav-link" to={item.to} end={item.end} onClick={onNavigate}>
+        <Icon icon={item.icon} />
+        <span>{item.label}</span>
+        {count ? (
+          <span className="nav-link__count" aria-label={`${count} gecikmiş vade`}>
+            {count}
+          </span>
+        ) : null}
+      </NavLink>
+    </li>
+  );
+}
+
+/** Kenar menü: marka, ana grup, "Takip" grubu, altta Silinenler, Ayarlar ve kullanıcı kartı. */
 function NavPanel({ onNavigate }: { onNavigate?: () => void }) {
   const user = useSession((state) => state.user);
   const companyName = useSession((state) => state.companyName);
+  const overdue = useOverdueCount();
   const logout = useLogout();
   return (
-    <>
-      <div className="nav-brand">
-        <Link className="nav-brand__name" to="/uygulama" onClick={onNavigate}>
-          Şantiye Hesap
-        </Link>
-        {companyName ? <span className="nav-brand__company">{companyName}</span> : null}
-      </div>
-      <nav aria-label="Ana menü">
-        <NavLinks onNavigate={onNavigate} />
+    <div className="nav-panel">
+      <Link className="nav-brand" to="/uygulama" onClick={onNavigate}>
+        <span className="nav-brand__mark" aria-hidden="true">
+          ŞH
+        </span>
+        <span className="nav-brand__text">
+          <span className="nav-brand__name">Şantiye Hesap</span>
+          {companyName ? <span className="nav-brand__company">{companyName}</span> : null}
+        </span>
+      </Link>
+      <nav aria-label="Ana menü" className="stack stack--lg">
+        <ul className="nav-group">
+          {NAV_MAIN.map((item) => (
+            <NavItemLink key={item.to} item={item} onNavigate={onNavigate} />
+          ))}
+        </ul>
+        <ul className="nav-group" aria-label="Takip">
+          <li className="nav-group__label" aria-hidden="true">
+            Takip
+          </li>
+          {NAV_TRACK.map((item) => (
+            <NavItemLink
+              key={item.to}
+              item={item}
+              count={item.to === '/uygulama/vadeler' ? overdue : undefined}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
       </nav>
+      <div className="nav-spacer" />
+      <ul className="nav-group" aria-label="Diğer">
+        {NAV_BOTTOM.map((item) => (
+          <NavItemLink key={item.to} item={item} onNavigate={onNavigate} />
+        ))}
+      </ul>
       <div className="nav-user">
-        <span>{user?.name}</span>
-        <Button variant="ghost" size="small" onClick={() => void logout()}>
-          Çıkış yap
-        </Button>
+        <span className="nav-user__avatar" aria-hidden="true">
+          {initials(user?.name ?? '')}
+        </span>
+        <span className="nav-user__text">
+          <span className="nav-user__name">{user?.name}</span>
+          {companyName ? <span className="nav-user__company">{companyName}</span> : null}
+        </span>
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Çıkış yap"
+          title="Çıkış yap"
+          onClick={() => void logout()}
+        >
+          <Icon icon={LogOut} />
+        </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -91,81 +179,158 @@ function Banners() {
   );
 }
 
-function QuickAddDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * "Yeni kayıt" açılır menüsü: Gelir ekle, Gider ekle, Anlaşma ekle. Üst çubukta düğme, telefonda
+ * yüzen + düğmesi aynı menüyü açar; açıldığı sayfanın şantiye/anlaşma bağlamı hazır seçilir.
+ */
+function NewRecordMenu({ trigger }: { trigger: 'topbar' | 'fab' }) {
   const location = useLocation();
   const links = quickLinks(quickContextFrom(location.pathname));
   const { canWrite, reason } = useWriteAccess();
+  const items = [
+    {
+      to: links.income,
+      icon: ArrowDownLeft,
+      tone: 'income',
+      label: 'Gelir ekle',
+      hint: 'Tahsilat veya doğrudan gelir',
+    },
+    {
+      to: links.expense,
+      icon: ArrowUpRight,
+      tone: 'expense',
+      label: 'Gider ekle',
+      hint: 'Ödeme veya doğrudan gider',
+    },
+    {
+      to: links.agreement,
+      icon: Handshake,
+      tone: 'primary',
+      label: 'Anlaşma ekle',
+      hint: 'Ödenecek veya tahsil edilecek',
+    },
+  ] as const;
+  const fab = trigger === 'fab';
+
   return (
-    <Dialog open={open} title="Yeni kayıt" onClose={onClose}>
-      {canWrite ? (
-        <div className="sheet-list">
-          <ButtonLink variant="income" block to={links.income} onClick={onClose}>
-            Gelir ekle
-          </ButtonLink>
-          <ButtonLink variant="expense" block to={links.expense} onClick={onClose}>
-            Gider ekle
-          </ButtonLink>
-          <ButtonLink variant="secondary" block to={links.agreement} onClick={onClose}>
-            Anlaşma ekle
-          </ButtonLink>
-        </div>
-      ) : (
-        <p>{reason}</p>
-      )}
-    </Dialog>
+    <Menu
+      label="Yeni kayıt"
+      wrapClassName={fab ? 'fab-wrap' : 'topbar__new'}
+      buttonClassName={fab ? 'fab' : 'btn btn--primary'}
+      buttonLabel={fab ? 'Yeni kayıt' : undefined}
+      placement={fab ? 'up' : 'down'}
+      buttonContent={
+        <>
+          <Icon icon={Plus} />
+          {fab ? null : (
+            <>
+              Yeni kayıt
+              <Icon icon={ChevronDown} />
+            </>
+          )}
+        </>
+      }
+    >
+      {(close) =>
+        canWrite ? (
+          items.map((item) => (
+            <Link
+              key={item.label}
+              className="dropdown__item"
+              role="menuitem"
+              to={item.to}
+              onClick={close}
+            >
+              <span className={`icon-box icon-box--md icon-box--${item.tone}`}>
+                <Icon icon={item.icon} />
+              </span>
+              <span>
+                {item.label}
+                <small>{item.hint}</small>
+              </span>
+            </Link>
+          ))
+        ) : (
+          <p className="dropdown__note" role="menuitem" tabIndex={-1}>
+            {reason}
+          </p>
+        )
+      }
+    </Menu>
+  );
+}
+
+/** Genel arama: sonuçlar `/uygulama/ara` sayfasında; `/` kısayolu kutuya odaklanır. */
+function GlobalSearch() {
+  const navigate = useNavigate();
+  const input = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState('');
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      input.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const q = text.trim();
+    void navigate(q ? `/uygulama/ara?${new URLSearchParams({ q })}` : '/uygulama/ara');
+  }
+
+  return (
+    <form className="topbar__search" role="search" onSubmit={submit}>
+      <label className="search-box">
+        <Icon icon={Search} />
+        <input
+          ref={input}
+          type="search"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder="Şantiye, kişi, tutar veya kayıt no ara"
+          aria-label="Genel arama"
+          enterKeyHint="search"
+        />
+        <kbd aria-hidden="true">/</kbd>
+      </label>
+    </form>
   );
 }
 
 function MoreDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} title="Diğer" onClose={onClose}>
-      <ul className="nav-list">
+      <ul className="sheet-list">
         {PHONE_MORE.map((item) => (
-          <li key={item.to}>
-            <NavLink className="nav-link" to={item.to} onClick={onClose}>
-              {item.label}
-            </NavLink>
-          </li>
+          <NavItemLink key={item.to} item={item} onNavigate={onClose} />
         ))}
       </ul>
     </Dialog>
   );
 }
 
+/** Telefonda alt menü: Özet, Şantiyeler, İşlemler, Kişiler, Diğer. */
 function BottomNav() {
-  const [quickOpen, setQuickOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
   const moreActive = PHONE_MORE.some((item) => location.pathname.startsWith(item.to));
-  const [first, second, third, fourth] = PHONE_PRIMARY;
-  const link = (item: typeof first) =>
-    item ? (
-      <NavLink className="bottom-nav__link" to={item.to} end={item.end}>
-        <span className="bottom-nav__icon" aria-hidden="true">
-          {item.icon}
-        </span>
-        {item.label}
-      </NavLink>
-    ) : null;
 
   return (
     <>
       <nav className="bottom-nav" aria-label="Alt menü">
-        {link(first)}
-        {link(second)}
-        <button
-          type="button"
-          className="bottom-nav__add"
-          aria-haspopup="dialog"
-          onClick={() => setQuickOpen(true)}
-        >
-          <span className="bottom-nav__add-plus" aria-hidden="true">
-            +
-          </span>
-          Kayıt
-        </button>
-        {link(third)}
-        {link(fourth)}
+        {PHONE_PRIMARY.map((item) => (
+          <NavLink key={item.to} className="bottom-nav__link" to={item.to} end={item.end}>
+            <Icon icon={item.icon} />
+            {item.label}
+          </NavLink>
+        ))}
         <button
           type="button"
           className="bottom-nav__link"
@@ -174,13 +339,10 @@ function BottomNav() {
           aria-current={moreActive ? 'page' : undefined}
           onClick={() => setMoreOpen(true)}
         >
-          <span className="bottom-nav__icon" aria-hidden="true">
-            ⋯
-          </span>
+          <Icon icon={MenuIcon} />
           Diğer
         </button>
       </nav>
-      <QuickAddDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
       <MoreDialog open={moreOpen} onClose={() => setMoreOpen(false)} />
     </>
   );
@@ -221,7 +383,7 @@ function useSessionRefresh() {
 
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const companyName = useSession((state) => state.companyName);
+  const location = useLocation();
   const closedError = useSessionRefresh();
   const logout = useLogout();
 
@@ -254,18 +416,18 @@ export function AppShell() {
             aria-label="Menüyü aç"
             onClick={() => setDrawerOpen(true)}
           >
-            ☰
+            <Icon icon={MenuIcon} />
           </button>
-          <Link className="topbar__brand" to="/uygulama">
-            Şantiye Hesap
-          </Link>
-          <span className="topbar__company">{companyName}</span>
+          <GlobalSearch />
+          <div className="topbar__grow" />
+          <NewRecordMenu trigger="topbar" />
         </header>
         <Banners />
         <Outlet />
       </div>
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <BottomNav />
+      {isFormPath(location.pathname) ? null : <NewRecordMenu trigger="fab" />}
       <Toasts />
     </div>
   );

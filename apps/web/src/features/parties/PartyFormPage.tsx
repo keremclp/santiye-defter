@@ -47,7 +47,7 @@ export function PartyFormPage() {
   const [party, setParty] = useSnapshot(query.data);
   usePageMeta(id ? 'Kişi düzenle' : 'Yeni kişi/firma');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={id ? 'Kişi/firma düzenle' : 'Yeni kişi/firma'}
         back={

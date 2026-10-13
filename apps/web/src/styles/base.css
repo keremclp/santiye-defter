@@ -19,37 +19,44 @@ body {
   line-height: var(--line-height-body);
 }
 
+/* Uygulama içinde başlıklar nötr (ink); mor/lacivert yalnız etkileşim ve vurguda (şartname 4.1). */
 h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  color: var(--color-navy);
-  letter-spacing: var(--letter-spacing-heading);
+  color: var(--color-ink);
+  font-weight: 600;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 h1 {
   font-size: var(--font-size-page-title);
-  font-weight: 700;
+  letter-spacing: var(--letter-spacing-title);
+  text-wrap: balance;
 }
 
 h2 {
-  font-size: var(--font-size-card-title);
-  font-weight: 600;
+  font-size: var(--font-size-panel-title);
+  letter-spacing: var(--letter-spacing-panel);
 }
 
 h3 {
-  font-size: var(--font-size-body);
-  font-weight: 600;
+  font-size: var(--font-size-cell);
 }
 
 p {
   margin: 0;
 }
 
+/* Bağlantılar altı çizgisiz; üzerine gelince alt çizgi (şartname 4.4). */
 a {
   color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 button,
@@ -60,6 +67,10 @@ textarea {
   color: inherit;
 }
 
+svg.lucide {
+  flex: none;
+}
+
 progress {
   width: 100%;
   height: 12px;
@@ -67,7 +78,7 @@ progress {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-primary);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -92,6 +103,11 @@ progress {
   color: var(--color-muted);
 }
 
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .nowrap {
   white-space: nowrap;
 }
@@ -99,31 +115,36 @@ progress {
 .stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-16);
 }
 
 .stack--sm {
-  gap: var(--space-sm);
+  gap: var(--space-10);
 }
 
 .stack--lg {
-  gap: var(--space-lg);
+  gap: var(--space-22);
 }
 
 .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-10);
 }
 
 .row--between {
   justify-content: space-between;
 }
 
+.row--nowrap {
+  flex-wrap: nowrap;
+  gap: var(--space-4);
+}
+
 .grid {
   display: grid;
-  gap: var(--space-md);
+  gap: var(--space-16);
   grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
 }
 
@@ -139,4 +160,11 @@ progress {
 
 .grid--2 {
   grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation-duration: 0.01ms !important;
+  }
 }

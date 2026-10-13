@@ -8,7 +8,7 @@ export function ReportsPlaceholderPage() {
   const { id } = useParams();
   usePageMeta('Raporlar');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader
         title={id ? 'Şantiye özeti ve hareket dökümü' : 'Raporlar'}
         back={id ? { to: `/uygulama/projeler/${id}`, label: 'Şantiye' } : undefined}

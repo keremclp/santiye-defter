@@ -127,7 +127,7 @@ export function CategoriesPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Gider kategorileri" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       {canWrite ? (
         <Card>

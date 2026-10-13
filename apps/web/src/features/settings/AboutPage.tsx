@@ -5,7 +5,7 @@ import { usePageMeta } from '../../hooks/usePageMeta';
 export function AboutPage() {
   usePageMeta('Hakkında');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Hakkında" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <Card>
         <h2>Şantiye Hesap</h2>

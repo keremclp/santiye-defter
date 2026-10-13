@@ -6,7 +6,7 @@ export function NotFoundPage() {
   usePageMeta('Sayfa bulunamadı');
   const signedIn = useSession((s) => Boolean(s.accessToken));
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <div className="empty-state">
         <h1>Sayfa bulunamadı</h1>
         <p className="muted">Adres yanlış olabilir veya bu kayda erişilemiyor.</p>

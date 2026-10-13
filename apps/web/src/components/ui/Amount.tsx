@@ -1,14 +1,19 @@
 import { directionOfKind, type TransactionKind } from '@santiye/shared';
+import { ArrowDownLeft, ArrowUpRight, Undo2 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { formatMoney } from '../../lib/format';
+import { formatMoney, formatSigned } from '../../lib/format';
 import { KIND_LABEL } from '../../lib/labels';
+import { Icon } from './Icon';
 
 type Tone = 'income' | 'expense' | 'neutral';
 
+const isRefundKind = (kind: TransactionKind) =>
+  kind === 'expense_refund' || kind === 'income_refund';
+
 /**
- * Tutar gösterimi. Gelir yeşil, gider kırmızı; tutar asla gri değil. İade satırları kendi yönünün
- * (ödeme iadesi → gider tarafı, tahsilat iadesi → gelir tarafı) rengini kullanır, eksi işaretiyle
- * gösterilir ve tür yazısı görünür kalır (şartname 4.1).
+ * Tutar gösterimi (şartname 4.1). Hareketlerde gelir yeşil "+", gider kırmızı "−"; iade kaynak
+ * hareketin rengini taşır (ödeme iadesi kırmızı, tahsilat iadesi yeşil) ve "−" önekiyle gösterilir;
+ * tür yazısı ayrıca görünür. Tür verilmeyen bakiyeler işaretsiz, negatifse "−" önekli.
  */
 export function Amount({
   value,
@@ -20,13 +25,16 @@ export function Amount({
   value: number;
   tone?: Tone;
   kind?: TransactionKind;
-  /** Tür adını tutarın yanında yazılı gösterir (renk tek başına anlam taşımaz). */
+  /** Tür adını tutarın altında yazılı gösterir (renk tek başına anlam taşımaz). */
   showKind?: boolean;
   label?: ReactNode;
 }) {
   const resolved: Tone = kind ? (directionOfKind(kind) === 'payable' ? 'expense' : 'income') : tone;
-  const isRefund = kind === 'expense_refund' || kind === 'income_refund';
-  const text = isRefund ? `−${formatMoney(value)}` : formatMoney(value);
+  const text = kind
+    ? `${kind === 'income' ? '+' : '−'}${formatMoney(value)}`
+    : tone === 'neutral'
+      ? formatSigned(value)
+      : formatMoney(value);
 
   return (
     <span className={`amount amount--${resolved}`}>
@@ -37,7 +45,20 @@ export function Amount({
   );
 }
 
+/** Hareket türü ikon kutusu: gelir yeşil, gider kırmızı, iade nötr (tutar rengi kaynağı gösterir). */
+export function KindIcon({ kind, size = 'lg' }: { kind: TransactionKind; size?: 'lg' | 'md' }) {
+  const refund = isRefundKind(kind);
+  const tone = refund ? 'neutral' : kind === 'income' ? 'income' : 'expense';
+  const glyph = refund ? Undo2 : kind === 'income' ? ArrowDownLeft : ArrowUpRight;
+  return (
+    <span className={`icon-box icon-box--${size} icon-box--${tone}`}>
+      <Icon icon={glyph} />
+    </span>
+  );
+}
+
 export function KindBadge({ kind }: { kind: TransactionKind }) {
+  if (isRefundKind(kind)) return <span className="badge">{KIND_LABEL[kind]}</span>;
   const payable = directionOfKind(kind) === 'payable';
   return (
     <span className={payable ? 'badge badge--expense' : 'badge badge--income'}>
@@ -46,12 +67,17 @@ export function KindBadge({ kind }: { kind: TransactionKind }) {
   );
 }
 
-export function Badge({
-  tone = 'neutral',
-  children,
-}: {
-  tone?: 'neutral' | 'overdue' | 'upcoming' | 'income' | 'expense' | 'cyan' | 'primary' | 'danger';
-  children: ReactNode;
-}) {
+export type BadgeTone =
+  | 'neutral'
+  | 'overdue'
+  | 'upcoming'
+  | 'warn'
+  | 'income'
+  | 'expense'
+  | 'cyan'
+  | 'primary'
+  | 'danger';
+
+export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
   return <span className={tone === 'neutral' ? 'badge' : `badge badge--${tone}`}>{children}</span>;
 }

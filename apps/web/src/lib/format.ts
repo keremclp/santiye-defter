@@ -1,8 +1,17 @@
 // Gösterim biçimleri (şartname 3, 4.4). Para kuruştan `packages/shared` fonksiyonlarıyla biçimlenir.
 
-import { BUSINESS_TIME_ZONE, formatMoney, formatTl } from '@santiye/shared';
+import { BUSINESS_TIME_ZONE, formatMoney, formatMoneyWhole, formatTl } from '@santiye/shared';
 
-export { formatMoney, formatTl };
+export { formatMoney, formatMoneyWhole, formatTl };
+
+/**
+ * Bakiye ve fark gösterimi: negatifse "−" (eksi işareti) önekli, rengi `ink` (şartname 4.1).
+ * `whole` özet kutularında kuruşsuz biçimdir.
+ */
+export function formatSigned(kurus: number, whole = false): string {
+  const text = (whole ? formatMoneyWhole : formatMoney)(Math.abs(kurus));
+  return kurus < 0 ? `−${text}` : text;
+}
 
 const shortDate = new Intl.DateTimeFormat('tr-TR', {
   day: 'numeric',

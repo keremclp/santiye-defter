@@ -31,7 +31,7 @@ import {
 } from './finance-presenters.js';
 import { cashTotals } from './ledger.js';
 import { obligationSummary } from './obligations.js';
-import { foldedContains } from './projects.js';
+import { foldedContains, projectCardSummaries } from './projects.js';
 import { paginationSchema, toObjectId } from './records.js';
 import type { TransactionService } from './transactions.js';
 
@@ -140,6 +140,11 @@ export class OverviewService {
       projects: [...transactionRefs(recent).projects, ...shownAgreements.map((a) => a.projectId)],
       parties: [...transactionRefs(recent).parties, ...shownAgreements.map((a) => a.partyId)],
     });
+    const projectSummaries = await projectCardSummaries(
+      companyId,
+      recentProjects.map((project) => project._id),
+      today,
+    );
     const presentDue = (agreement: Agreement) => ({
       ...presentAgreement(agreement, maps),
       dueState: dueStateOf(agreement, today, DASHBOARD_UPCOMING_DAYS),
@@ -151,6 +156,7 @@ export class OverviewService {
       totals: {
         netIncome: totals.netIncome,
         netExpense: totals.netExpense,
+        expenseRefund: totals.expenseRefund,
         difference: totals.difference,
         remainingPayable: obligations.payable.remaining,
         remainingReceivable: obligations.receivable.remaining,
@@ -164,12 +170,16 @@ export class OverviewService {
         month: today.slice(0, 7),
         netIncome: monthly.netIncome,
         netExpense: monthly.netExpense,
+        expenseRefund: monthly.expenseRefund,
         difference: monthly.difference,
       },
       recentTransactions: recent.map((transaction) => presentTransaction(transaction, maps)),
       dueSoon: dueSoon.map(presentDue),
       openAgreements: openAgreements.slice(0, LIST_LIMIT).map(presentDue),
-      recentProjects: recentProjects.map((project) => presentProject(project, maps)),
+      recentProjects: recentProjects.map((project) => ({
+        ...presentProject(project, maps),
+        summary: projectSummaries.get(project._id.toString()),
+      })),
       generatedAt: this.deps.clock.now().toISOString(),
     };
   }

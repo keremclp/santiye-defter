@@ -1,30 +1,61 @@
-// Sol menü ve telefon alt menüsü (şartname 5.2).
+// Sol menü ve telefon alt menüsü (şartname 4.5, 5.2).
+
+import {
+  ArrowLeftRight,
+  CalendarClock,
+  FileText,
+  Handshake,
+  HardHat,
+  LayoutDashboard,
+  Search,
+  Settings,
+  Trash2,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface NavItem {
   to: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   /** Yalnız tam eşleşmede seçili (Özet). */
   end?: boolean;
 }
 
-export const NAV_ITEMS: NavItem[] = [
-  { to: '/uygulama', label: 'Özet', icon: '◎', end: true },
-  { to: '/uygulama/projeler', label: 'Şantiyeler', icon: '▦' },
-  { to: '/uygulama/islemler', label: 'İşlemler', icon: '⇅' },
-  { to: '/uygulama/kisiler', label: 'Kişiler', icon: '☺' },
-  { to: '/uygulama/anlasmalar', label: 'Anlaşmalar', icon: '✎' },
-  { to: '/uygulama/vadeler', label: 'Vadeler', icon: '◷' },
-  { to: '/uygulama/raporlar', label: 'Raporlar', icon: '▤' },
-  { to: '/uygulama/ara', label: 'Ara', icon: '⌕' },
-  { to: '/uygulama/silinenler', label: 'Silinenler', icon: '⌫' },
-  { to: '/uygulama/ayarlar', label: 'Ayarlar', icon: '⚙' },
+export const NAV_MAIN: NavItem[] = [
+  { to: '/uygulama', label: 'Özet', icon: LayoutDashboard, end: true },
+  { to: '/uygulama/projeler', label: 'Şantiyeler', icon: HardHat },
+  { to: '/uygulama/islemler', label: 'İşlemler', icon: ArrowLeftRight },
+  { to: '/uygulama/kisiler', label: 'Kişiler', icon: Users },
+  { to: '/uygulama/anlasmalar', label: 'Anlaşmalar', icon: Handshake },
+];
+
+/** "Takip" grubu; Vadeler gecikmiş sayısı rozetiyle. */
+export const NAV_TRACK: NavItem[] = [
+  { to: '/uygulama/vadeler', label: 'Vadeler', icon: CalendarClock },
+  { to: '/uygulama/raporlar', label: 'Raporlar', icon: FileText },
+];
+
+export const NAV_BOTTOM: NavItem[] = [
+  { to: '/uygulama/silinenler', label: 'Silinenler', icon: Trash2 },
+  { to: '/uygulama/ayarlar', label: 'Ayarlar', icon: Settings },
 ];
 
 /** Telefonda alt menü: Özet, Şantiyeler, İşlemler, Kişiler, Diğer. */
-export const PHONE_PRIMARY = NAV_ITEMS.slice(0, 4);
-/** "Diğer" sekmesi. */
-export const PHONE_MORE = NAV_ITEMS.slice(4);
+export const PHONE_PRIMARY = NAV_MAIN.slice(0, 4);
+
+/** "Diğer" sekmesi: Anlaşmalar, Vadeler, Raporlar, Ara, Silinenler, Ayarlar. */
+export const PHONE_MORE: NavItem[] = [
+  NAV_MAIN[4]!,
+  ...NAV_TRACK,
+  { to: '/uygulama/ara', label: 'Ara', icon: Search },
+  ...NAV_BOTTOM,
+];
+
+/** Form sayfalarında yüzen + düğmesi formun kaydet düğmelerini örtmesin diye gizlenir. */
+export function isFormPath(pathname: string): boolean {
+  return /\/(yeni|duzenle|iade|odeme)$/.test(pathname);
+}
 
 export interface QuickContext {
   projectId?: string;
@@ -32,7 +63,7 @@ export interface QuickContext {
   partyId?: string;
 }
 
-/** "+ Kayıt" açıldığı sayfanın bağlamını taşır (şartname 4.5). */
+/** "Yeni kayıt" açıldığı sayfanın bağlamını taşır (şartname 4.5). */
 export function quickContextFrom(pathname: string): QuickContext {
   const id = '([a-f\\d]{24})';
   const project = new RegExp(`^/uygulama/projeler/${id}`).exec(pathname);

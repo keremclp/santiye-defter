@@ -14,7 +14,7 @@ const ITEMS = [
 export function SettingsMenuPage() {
   usePageMeta('Ayarlar');
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Ayarlar" />
       <ul className="item-list">
         {ITEMS.map((item) => (

@@ -67,6 +67,90 @@ export function foldedContains(query: string) {
   return { $regex: escapeRegex(foldTurkish(query)) };
 }
 
+/**
+ * Liste ve pano için şantiye bazında net tahsilat/ödeme, fark ve kalan borç/alacak (paylardan).
+ * Hesap `packages/shared` fonksiyonlarıyla; yalnız verilen firmanın kayıtları okunur.
+ */
+export async function projectCardSummaries(
+  companyId: Types.ObjectId,
+  projectIds: Types.ObjectId[],
+  today: string,
+) {
+  if (projectIds.length === 0) return new Map<string, ProjectCardSummary>();
+  const rows = await TransactionModel.aggregate<{
+    _id: { projectId: Types.ObjectId; kind: TransactionKind };
+    total: number;
+  }>([
+    {
+      $match: {
+        companyId,
+        deletedAt: null,
+        'allocations.projectId': { $in: projectIds },
+      },
+    },
+    { $unwind: '$allocations' },
+    { $match: { 'allocations.projectId': { $in: projectIds } } },
+    {
+      $group: {
+        _id: { projectId: '$allocations.projectId', kind: '$kind' },
+        total: { $sum: '$allocations.amount' },
+      },
+    },
+  ]);
+  const agreements = await AgreementModel.find(
+    { companyId, deletedAt: null, projectId: { $in: projectIds } },
+    {
+      kind: 1,
+      direction: 1,
+      currentAmount: 1,
+      netSettled: 1,
+      remaining: 1,
+      excess: 1,
+      dueDate: 1,
+      projectId: 1,
+    },
+  ).lean();
+
+  return new Map(
+    projectIds.map((projectId): [string, ProjectCardSummary] => {
+      const key = projectId.toString();
+      const sum = (kind: TransactionKind) =>
+        rows.find((row) => row._id.projectId.toString() === key && row._id.kind === kind)?.total ??
+        0;
+      const cash = cashTotalsFromSums({
+        income: sum('income'),
+        incomeRefund: sum('income_refund'),
+        expense: sum('expense'),
+        expenseRefund: sum('expense_refund'),
+      });
+      const obligations = summarizeObligations(
+        agreements.filter((agreement) => agreement.projectId?.toString() === key),
+        today,
+      );
+      return [
+        key,
+        {
+          netIncome: cash.netIncome,
+          netExpense: cash.netExpense,
+          difference: cash.difference,
+          remainingPayable: obligations.payable.remaining,
+          remainingReceivable: obligations.receivable.remaining,
+          overdueReceivable: obligations.receivable.overdue,
+        },
+      ];
+    }),
+  );
+}
+
+export interface ProjectCardSummary {
+  netIncome: number;
+  netExpense: number;
+  difference: number;
+  remainingPayable: number;
+  remainingReceivable: number;
+  overdueReceivable: number;
+}
+
 export class ProjectService {
   constructor(private readonly deps: AppDeps) {}
 
@@ -85,71 +169,6 @@ export class ProjectService {
       ...presentProject(project, maps),
       ...(withHistory ? { history: presentHistory(project.history, maps) } : {}),
     }));
-  }
-
-  /** Kartlar için şantiye bazında fark ve kalan borç/alacak (paylardan). */
-  private async cardSummaries(context: CustomerContext, projectIds: Types.ObjectId[]) {
-    const rows = await TransactionModel.aggregate<{
-      _id: { projectId: Types.ObjectId; kind: TransactionKind };
-      total: number;
-    }>([
-      {
-        $match: {
-          companyId: context.companyId,
-          deletedAt: null,
-          'allocations.projectId': { $in: projectIds },
-        },
-      },
-      { $unwind: '$allocations' },
-      { $match: { 'allocations.projectId': { $in: projectIds } } },
-      {
-        $group: {
-          _id: { projectId: '$allocations.projectId', kind: '$kind' },
-          total: { $sum: '$allocations.amount' },
-        },
-      },
-    ]);
-    const agreements = await AgreementModel.find(
-      { companyId: context.companyId, deletedAt: null, projectId: { $in: projectIds } },
-      {
-        kind: 1,
-        direction: 1,
-        currentAmount: 1,
-        netSettled: 1,
-        remaining: 1,
-        excess: 1,
-        dueDate: 1,
-        projectId: 1,
-      },
-    ).lean();
-
-    const today = this.today();
-    return new Map(
-      projectIds.map((projectId) => {
-        const key = projectId.toString();
-        const sum = (kind: TransactionKind) =>
-          rows.find((row) => row._id.projectId.toString() === key && row._id.kind === kind)
-            ?.total ?? 0;
-        const cash = cashTotalsFromSums({
-          income: sum('income'),
-          incomeRefund: sum('income_refund'),
-          expense: sum('expense'),
-          expenseRefund: sum('expense_refund'),
-        });
-        const obligations = summarizeObligations(
-          agreements.filter((agreement) => agreement.projectId?.toString() === key),
-          today,
-        );
-        return [
-          key,
-          {
-            difference: cash.difference,
-            remainingPayable: obligations.payable.remaining,
-            remainingReceivable: obligations.receivable.remaining,
-          },
-        ];
-      }),
-    );
   }
 
   async list(context: CustomerContext, query: z.infer<typeof projectListQuerySchema>) {
@@ -171,9 +190,10 @@ export class ProjectService {
         .limit(query.limit),
       scope.countDocuments(filter, options),
     ]);
-    const summaries = await this.cardSummaries(
-      context,
+    const summaries = await projectCardSummaries(
+      context.companyId,
       projects.map((project) => project._id),
+      this.today(),
     );
     const items = (await this.present(context, projects)).map((item) => ({
       ...item,

@@ -35,7 +35,7 @@ export function ProfilePage() {
   usePageMeta('Profil');
   const me = useMe();
   return (
-    <main className="page">
+    <main className="page page--narrow">
       <PageHeader title="Profil" back={{ to: '/uygulama/ayarlar', label: 'Ayarlar' }} />
       <QueryView query={me}>{(data) => <ProfileForm profile={data.user} />}</QueryView>
     </main>

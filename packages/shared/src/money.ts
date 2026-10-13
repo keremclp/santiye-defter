@@ -64,6 +64,12 @@ function toDecimalString(kurus: number): string {
 }
 
 const currencyFormat = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' });
+const currencyWholeFormat = new Intl.NumberFormat('tr-TR', {
+  style: 'currency',
+  currency: 'TRY',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 const wholeFormat = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const fractionFormat = new Intl.NumberFormat('tr-TR', {
   minimumFractionDigits: 2,
@@ -73,6 +79,11 @@ const fractionFormat = new Intl.NumberFormat('tr-TR', {
 /** Ekran gösterimi (şartname 4.4): 1250050 → "₺12.500,50". */
 export function formatMoney(kurus: number): string {
   return currencyFormat.format(toDecimalString(kurus) as Intl.StringNumericLiteral);
+}
+
+/** Özet kutularındaki kuruşsuz gösterim (şartname 4.4): 1250050 → "₺12.501" (yarım yukarı). */
+export function formatMoneyWhole(kurus: number): string {
+  return currencyWholeFormat.format(toDecimalString(kurus) as Intl.StringNumericLiteral);
 }
 
 /** Mesaj metinlerindeki biçim (şartname 7.4, 7.5): 4000000 → "40.000 TL", 1250050 → "12.500,50 TL". */
