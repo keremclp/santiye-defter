@@ -12,12 +12,13 @@ Karar belgesindeki planlama aşamalarıyla (Aşama 0–5) karışmasın diye gel
    - Değişiklikleri gözden geçirin.
    - Git'e commit atın (örnek mesaj: `Adım 2: API temeli`).
 3. Model şartnamede çelişki veya eksik bildirirse kararı siz verin. Karar şartnameyi değiştiriyorsa önce şartnameyi ve karar belgesini güncelleyin, sonra devam edin.
-4. Bir adım tek oturuma sığmazsa aynı metni yeni oturumda "kaldığın yerden devam et" notuyla tekrar verin.
+4. Bir adım tek oturuma sığmazsa aynı metni yeni oturumda "kaldığın yerden devam et; önce `git status` ve `git diff --stat` ile ne yapıldığına bak" notuyla tekrar verin.
+5. Kullanım limiti için büyük adımlar (4b, 5, 6, 7) ikiye bölünmüştür; her yarı ayrı oturumda yapılıp ayrı commit edilir.
 
 ## Ortak giriş (her oturumun başına)
 
 ```text
-Bu depodaki `santiye-hesap-web-prompt.md` dosyası ürünün şartnamesidir. Tamamını oku; ayrıca AGENTS.md / CLAUDE.md kurallarına uy.
+Bu depodaki `santiye-hesap-web-prompt.md` dosyası ürünün şartnamesidir. Adım metninde "Okunacaklar" satırı varsa yalnız orada yazan bölümleri oku; yoksa tamamını oku. Ayrıca AGENTS.md / CLAUDE.md kurallarına uy.
 Bu oturumda yalnız aşağıda belirtilen adımı yap. Önceki adımların kodunu yalnız bu adım için gerekiyorsa ve gerekçesini belirterek değiştir; sonraki adımların işine başlama.
 Şartnamede çelişki, eksik veya uygulanamaz bir nokta bulursan kendin karar verme: dur, durumu ve seçenekleri yaz, benden karar iste.
 Bitince şunları raporla: yapılanlar, eklenen/değişen dosyalar, çalıştırdığın testler ve sonuçları, bilerek bıraktığın açık noktalar.
@@ -193,11 +194,15 @@ Bitti sayılması için:
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz. Uyarlanan ekranlardan birkaçının masaüstü ve telefon görüntüsünü rapora ekle.
 ```
 
-## Adım 5 — Belgeler
+## Adım 5 — Belgeler (iki oturum: 5a ve 5b)
+
+### Adım 5a — Belge API'si ve depolama
 
 ```text
-ADIM 5 — Belgeler ve kapasite
-İlgili şartname bölümleri: 7.4 ve 7.6 (belge alanları), 7.11 (depolama kullanımı), 8.8, 9.6, 10.8.
+ADIM 5a — Belgeler: API ve depolama
+Okunacaklar: şartnamede bölüm 2 (yalnız teknoloji tablosundaki belge/önizleme satırları ve STORAGE_* ortam değişkenleri), 3 (kurallar), 8.8, 9.6, 10.8. Geri kalanı okuma; gerekirse ilgili başlığı Grep ile bul.
+
+Önce (kısa iş): `apps/web` içindeki `TransactionForm.test.tsx` testi tam test paketi çalışırken ara sıra zamanlama nedeniyle düşüyor (karar belgesi 10.12, "Açık nokta"). Nedenini bul ve gerçek nedeni düzelt (ör. eksik `await`/`findBy`, sızan zamanlayıcı, paylaşılan durum). Testi atlama, beklemeyi sadece uzatma veya beklenen değeri gevşetme. Tam paketi en az 5 kez art arda çalıştırıp her seferinde geçtiğini raporla.
 
 Yap:
 - S3 uyumlu depolama istemcisi (yerelde MinIO, ortam değişkenleriyle).
@@ -205,58 +210,130 @@ Yap:
 - complete: koşullu durum geçişi, gerçek boyut ve dosya imzası doğrulaması, değiştirilemeyen nihai anahtara kopyalama, geçici kopyayı silme, kapasite düzeltmesi, sharp/heic-convert ile önizleme.
 - Süresi geçen pending yüklemelerin temizliği; tamamlanan yüklemeyle çakışmaması.
 - İndirme ve önizleme için 5 dk imzalı adres; belge silme/geri yükleme.
-- Web: işlem ve anlaşma formu/detaylarında belge alanı, telefonda kamera/galeri, dosya başına durum ve yeniden dene, "İşlem kaydedildi; 1 belge yüklenemedi" akışı, firma ayarlarında kullanım dökümü, kapasite dolu mesajı.
+- Firma bilgisi cevabında kullanım dökümü (orijinal, önizleme, geri alınabilir silinmiş belgeler).
+- Bütün yeni uçlar firma yalıtım testine eklenir.
 
-Yapma: rapor, dışa aktarma, demo örnek belgeleri.
+Yapma: web ekranları (5b), rapor, dışa aktarma, demo örnek belgeleri.
 
 Bitti sayılması için:
+- TransactionForm testi 5 art arda tam çalıştırmada da geçiyor.
 - Boyut, sayı ve kapasite sınırları eşzamanlı yüklemelerde bile aşılmaz (test).
 - Tamamlama ile temizlik çakışması başarılı belgeyi silmez (test).
-- Belge hatası finansal kaydı tekrar oluşturmaz; kapasite doluyken finansal kayıt devam eder.
+- Kapasite doluyken finansal kayıt oluşturma devam eder (test).
 - Başka firmanın belgesi indirilemez (yalıtım testi).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
 ```
 
-## Adım 6 — Raporlar ve dışa aktarma
+### Adım 5b — Belge ekranları
 
 ```text
-ADIM 6 — Raporlar ve veri çıkışı
-İlgili şartname bölümleri: 7.10, 8.10 (ExportJob), 10.9 (rapor ve export uçları).
+ADIM 5b — Belgeler: ekranlar
+Okunacaklar: şartnamede bölüm 4.4 (belge satırı, kaydetme durumu), 4.5 (form ve ayar sayfaları tablosu), 7.4 ve 7.6'daki belge alanları, 7.11 (Firma: depolama kullanımı), 9.6, 9.7 (Belge satırı), 10.8, 12 (belge ve kapasite metinleri). Adım 5a'nın API'sini kodundan incele.
 
 Yap:
-- Dört standart rapor verisi ve ekranı: dönem dökümü, şantiye özeti, kişi/firma hesap dökümü, açık borç/alacak ve vade listesi.
-- Excel (exceljs), CSV (UTF-8 BOM'lu, `;`), PDF (PDFKit, gömülü Türkçe yazı tipi). Başlık bilgileri: firma, kapsam, tarih aralığı, üretim zamanı, takip başlangıcı uyarısı.
-- Filtreli dışa aktarma: bütün filtrelenmiş sonuçlar; paylaştırılmış kayıtta ana işlem no, toplam tutar, pay tutarı ayrı; toplamlar aynı satırlardan.
-- Tam firma veri çıkışı: arka plan işi, ilerleme, ilişkili Excel sayfaları/CSV dosyaları, belge zip paketi ve eşleme tablosu, silinmiş kayıt etiketleri, 7 gün sonra silme. Firma verisi tek tutarlı okumadan alınmalı.
-- Rapor ekranları telefonda da görüntülenip indirilebilir.
+- İşlem ve anlaşma formlarında (sağ sütun) ve detay sayfalarında belge alanı; telefonda kamera/galeri (`accept="image/*,application/pdf"`, `capture`).
+- Dosya başına durum (bekliyor / yükleniyor / yüklendi / başarısız) ve yeniden dene; "İşlem kaydedildi; 1 belge yüklenemedi" akışı; finansal kayıt tekrar oluşturulmaz.
+- Önizleme ve indirme; önizleme yoksa orijinali indirme; belge silme/geri yükleme (gerekçeli).
+- Firma ayarlarında kullanım dökümü; kapasite dolu, dosya çok büyük, belge sayısı dolu mesajları.
 
-Yapma: yönetim ekranları, demo, tanıtım sitesi.
+Yapma: API değişikliği (gerekirse dur ve sor), rapor, dışa aktarma, demo.
+
+Bitti sayılması için:
+- Masaüstü ve 375 px'te: gidere belge ekle, belge yükleme hatasında yalnız belgeyi yeniden dene, önizle, indir, sil/geri al akışları çalışıyor.
+- Kapasite doluyken kayıt girilebiliyor, yükleme düğmesi nedenini gösteriyor.
+- Web bileşen testleri; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
+```
+
+## Adım 6 — Raporlar ve dışa aktarma (iki oturum: 6a ve 6b)
+
+### Adım 6a — Standart raporlar ve filtreli dışa aktarma
+
+```text
+ADIM 6a — Raporlar: standart raporlar ve filtreli dışa aktarma
+Okunacaklar: şartnamede bölüm 2 (PDF/Excel/CSV satırları), 7.10 (tam firma veri çıkışı paragrafı hariç), 9.1, 10.9 (rapor uçları), 4.4–4.5 (ekran düzeni için). Geri kalanı okuma.
+
+Yap:
+- Dört standart rapor verisi ve ekranı: dönem dökümü, şantiye özeti ve hareket dökümü, kişi/firma hesap dökümü, açık borç/alacak ve vade listesi. Raporlar telefonda da görüntülenip indirilebilir.
+- Excel (exceljs), CSV (UTF-8 BOM'lu, `;`), PDF (PDFKit, gömülü Türkçe yazı tipi). Başlık bilgileri: firma, kapsam, tarih aralığı, üretim zamanı, güncel kalanın hesaplandığı zaman, takip başlangıcı uyarısı.
+- İşlemler sayfasındaki "Bu sonuçları indir" düğmesini etkinleştir: bütün filtrelenmiş sonuçlar; paylaştırılmış kayıtta ana işlem no, toplam tutar ve pay tutarı ayrı; toplamlar aynı satırlardan.
+- Başlangıç kayıtlarının raporlarda etiketlenmesi (bölüm 9.1).
+
+Yapma: tam firma veri çıkışı (6b), yönetim ekranları, demo, tanıtım sitesi.
 
 Bitti sayılması için:
 - Dosyalardaki toplamlar ekran ve API toplamlarıyla aynı (test).
 - Paylaştırılmış hareket şantiye raporunda yalnız payıyla, firma raporunda bir kez sayılır (test).
-- Tam veri çıkışı başka firma verisi, şifre veya token içermez (test).
-- Görüntüleme dönemindeki firma rapor ve dışa aktarma alabilir.
+- PDF'de Türkçe karakterler doğru (ş, ğ, ı, İ, ö, ü, ç).
+- Görüntüleme dönemindeki firma rapor alabilir (test).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
 ```
 
-## Adım 7 — Ürün sahibi yönetimi
+### Adım 6b — Tam firma veri çıkışı
 
 ```text
-ADIM 7 — Ürün sahibi yönetim alanı
-İlgili şartname bölümleri: 5.3, 7.13, 8.1, 9.10, 10.10 (tamamı).
+ADIM 6b — Raporlar: tam firma veri çıkışı
+Okunacaklar: şartnamede bölüm 7.10 (son paragraf: tam firma veri çıkışı), 8.10 (ExportJob), 9.6 (kapasite hesabı), 10.9 (/exports uçları). Adım 6a'nın dosya üretim kodunu örnek olarak incele.
 
 Yap:
-- Yönetim ekranları: giriş (şifre + TOTP/kurtarma kodu), zorunlu güvenlik kurulumu ve kurtarma kodlarının bir kez gösterimi/indirilmesi, güvenlik ayarları, işletim özeti ve firma listesi (filtreler, uyarılar), firma oluştur, firma detay (kullanıcılar, depolama, hizmet, işletim geçmişi).
-- Kullanıcı ekle (geçici şifre bir kez), şifre sıfırla, pasifleştir/aktifleştir, kullanıcı adı değiştir.
-- Kapasite artır/azalt (kullanımın altına inmez), gerekçe ve kayıt.
-- Hizmet yaşam döngüsü: geçici durdur, hizmeti sonlandır (tarih önizlemesi, geçmişe çekilemez), yeniden aç, arşiv uzat.
-- Kalıcı silme: yalnız saklama süresi dolmuşsa; firma adı yazarak onay; durum takibi; firma verisi ve belgeler silinir; asgari PlatformLog kaydı kalır.
+- `POST /exports/full` ve `GET /exports/:id`: arka plan işi, ilerleme, hazır olunca süreli indirme adresi.
+- İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi; ilişkileri açıklanmış Excel sayfaları veya CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde (archiver). Silinen ama geri alınabilir kayıtlar durum etiketiyle.
+- Firma verisi tek tutarlı okumadan alınır; dosyadaki toplamlar aynı satırlardan.
+- Hazır paket 7 gün sonra silinir; bekleyen paket kapasite kullanımında görünür. Hazırlama hatası finansal kayıtları etkilemez.
+- Raporlar sayfasında ayrı "Tüm firma verisini dışa aktar" düğmesi, ilerleme ve indirme.
 
-Yapma: müşteri finansal kayıtlarını görüntüleme/düzenleme, otomatik mesaj veya faturalama.
+Yapma: yönetim ekranları, demo, tanıtım sitesi.
+
+Bitti sayılması için:
+- Tam veri çıkışı başka firma verisi, şifre veya token içermez (test).
+- Paket içeriği firma kayıt sayılarıyla tutarlı; belge eşleme tablosu dosyalarla eşleşiyor (test).
+- Görüntüleme dönemindeki firma tam veri çıkışı alabilir (test).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
+```
+
+## Adım 7 — Ürün sahibi yönetimi (iki oturum: 7a ve 7b)
+
+Not: Ürün sahibi girişi, TOTP, kurtarma kodları, firma oluşturma ve kullanıcı oluşturma/sıfırlama/pasifleştirme API'si Adım 2'de yapıldı. 7a kalan API'yi, 7b ekranları tamamlar.
+
+### Adım 7a — Yönetim API'sinin tamamlanması
+
+```text
+ADIM 7a — Ürün sahibi yönetimi: kalan API
+Okunacaklar: şartnamede bölüm 7.13, 8.1, 8.10 (PlatformLog), 9.10, 10.10. Adım 2'de yazılan yönetim kodunu incele; yeniden yazma.
+
+Yap:
+- Firma listesi: arama, durum filtresi (aktif, geçici durdurulmuş, görüntüleme dönemi, arşiv saklama, silme onayı bekleyen), satır bilgileri ve işletim özeti (kapasitesi dolan/yaklaşan, görüntüleme süresi biten, saklama süresi dolan).
+- Kullanıcı adı değiştirme.
+- Kapasite artır/azalt (kullanımın altına inmez), gerekçe ve kayıt.
+- Hizmet yaşam döngüsü: geçici durdur, hizmeti sonlandır (`?preview=1` ile tarih önizlemesi, geçmişe çekilemez), yeniden aç, arşiv uzat.
+- Kalıcı silme: yalnız saklama süresi dolmuşsa; firma adı ile onay; durum takibi (bekliyor / sürüyor / tamamlandı / başarısız); firma verisi, belgeleri ve dışa aktarma paketleri silinir; açık dışa aktarma işleri iptal edilir; asgari PlatformLog kaydı kalır.
+
+Yapma: yönetim ekranları (7b), müşteri finansal kayıtlarını görüntüleme/düzenleme, otomatik mesaj veya faturalama.
 
 Bitti sayılması için:
 - Firma açılışından hizmet sonuna kadar akış: görüntüleme dönemi → arşiv → silme onayı → kalıcı silme testli.
-- Kalıcı silinen firmanın hiçbir verisi ve belgesi kalmaz; yeniden açılamaz.
-- Bütün işlemler gerekçe/kim/ne zaman ile PlatformLog'da; şifre hiçbir logda yok.
+- Kalıcı silinen firmanın hiçbir verisi ve belgesi kalmaz; yeniden açılamaz (test).
+- Bütün işlemler gerekçe/kim/ne zaman ile PlatformLog'da; şifre hiçbir logda yok (test).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
+```
+
+### Adım 7b — Yönetim ekranları
+
+```text
+ADIM 7b — Ürün sahibi yönetimi: ekranlar
+Okunacaklar: şartnamede bölüm 4 (yalnız 4.4 ve 4.5), 5.3, 7.13, 12. API'yi Adım 2 ve 7a kodundan incele.
+
+Yap:
+- Yönetim girişi (şifre, ardından TOTP veya kurtarma kodu), zorunlu güvenlik kurulumu (QR) ve kurtarma kodlarının bir kez gösterilip indirilmesi, güvenlik ayarları (TOTP'yi yeniden kur, kodları yenile).
+- İşletim özeti ve firma listesi (arama, filtreler, uyarılar), firma oluştur, firma detay (kullanıcılar, depolama, hizmet durumu ve tarihleri, işletim geçmişi).
+- Kullanıcı ekle (geçici şifre bir kez gösterilir), şifre sıfırla, pasifleştir/aktifleştir, kullanıcı adı değiştir; kapasite; hizmet yaşam döngüsü dialogları (tarih önizlemeli); kalıcı silme ekranı (firma adı yazarak onay).
+- Müşteri uygulamasıyla aynı tasarım sistemi; yönetim alanı olduğu açıkça belli olsun.
+
+Yapma: API değişikliği (gerekirse dur ve sor), müşteri finansal kayıtlarını gösterme.
+
+Bitti sayılması için:
+- Masaüstünde ilk kurulumdan kalıcı silmeye kadar akış ekrandan çalışıyor; telefonda temel ekranlar bozulmuyor.
+- Geçici şifre ve kurtarma kodları yalnız bir kez gösteriliyor.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
 ```
 
 ## Adım 8 — Demo

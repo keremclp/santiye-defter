@@ -252,13 +252,14 @@ Google Fonts'tan Outfit ve DM Sans yükle. Gövde satır yüksekliği 1.45. Büt
 - **Rozet (pill):** 12 px, 600, tam yuvarlak; yeşil, kırmızı, uyarı, nötr ve primary türleri.
 - **Kart / panel:** beyaz, radius 14 px, `border` kenar, hafif gölge. Kart içinde kart yok; panel içindeki listeler ince çizgiyle ayrılmış satırlardır.
 - **Panel başlığı:** solda ikon + başlık, sağda "Tümü ›" bağlantısı.
+- **Gecikme rozeti:** "N gün gecikti"; gün sayısı API'de yoksa `packages/shared` içindeki `overdueDaysOf` ile hesaplanır.
 - **Özet kutusu (metrik):** etiket + renkli ikon kutusu, büyük rakam, tek satır alt bilgi. Gecikmiş tutar bakiye kutusunun içinde kırmızı rozet olarak gösterilir, ayrı kutu açılmaz.
 - **Liste satırı:** solda 36 px ikon kutusu (tür rengi), ortada başlık (600) ve tek satır meta ("Şantiye · Kişi · Tarih"), sağda tutar ve gerekirse rozet. Uzun metin üç nokta ile kısalır.
 - **Tablo:** başlık satırı küçük büyük harf `muted`; satır ayırıcı `borderSoft`; üzerine gelince satır `surface` zemin; tutar sütunları sağa yaslı. İlk sütun bağlantılı ana bilgi + altında meta satırı.
 - **Sekmeler:** alt çizgili; seçili sekme `primary` metin ve 2 px alt çizgi; her sekmede sayı rozeti.
 - **Bağlantılar:** altı çizili değil; `ink` (600) veya `primary` renkte, üzerine gelince `primary` / alt çizgi.
 - **Boş durum:** kısa açıklama + varsa eylem. Boş grup tam kart değil, tek satırdır.
-- **Para:** `Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })`. Özet kutularında kuruşsuz, liste/tablo/detayda kuruşlu.
+- **Para:** `Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' })`. Özet sayfasındaki kutularda kuruşsuz (`formatMoneyWhole`, yarım yukarı yuvarlar); liste, tablo, detay sayfası ve detay sayfasının üstündeki özet kutularında kuruşlu (API ile birebir aynı tutar). Paylaştırma notunda kuruş yalnız gerekiyorsa yazılır ("₺25.000 + ₺15.000").
 - **Tarih:** `tr-TR` `d MMM yyyy` (13 Eki 2026). Takvim alanı metin inputu değil, tarih seçici.
 - **Toast / dialog:** tarayıcı `alert` kullanma. Markalı dialog: başlık, mesaj, Vazgeç ve onay. Kritik veya belirsiz durumlar (kayıt doğrulanıyor, belge yüklenemedi) yalnız kısa toast'ta kalmaz, sayfada kalıcı görünür.
 - **Etki önizlemesi:** Bedel değişikliği, iptal, iade, silme, geri yükleme ve düzeltme dialoglarında önce "önce → sonra" kutusu: etkilenen kalan borç/alacak, fazla tutar ve toplamlar. Altında zorunlu gerekçe alanı. Silme, geri yükleme, iade ve düzeltme önizlemeleri `packages/shared` içindeki `previewAgreementBalance` ve `previewCashTotals` ile hesaplanır; bedel değişikliği ve iptalde API önizlemesi (`?preview=1`) kullanılır.
@@ -269,14 +270,33 @@ Google Fonts'tan Outfit ve DM Sans yükle. Gövde satır yüksekliği 1.45. Büt
 
 | Genişlik | Davranış |
 | --- | --- |
-| ≥ 1100 px | Sol sabit menü 232 px + üst çubuk + içerik. **İçerik genişlik sınırı yok**; menünün yanından başlar, iki yanda 32 px boşlukla ekranı doldurur. Yalnız formlar ve düz metin sayfaları okunabilirlik için en fazla ~760 px |
+| ≥ 1100 px | Sol sabit menü 232 px + üst çubuk + içerik. **İçerik genişlik sınırı yok**; menünün yanından başlar, iki yanda 32 px boşlukla ekranı doldurur. Formlar ve ayar sayfaları da tam genişliktir ve iki sütunlu düzen kullanır (aşağıda) |
 | 760–1099 px | Üst çubuk + içerik, menü drawer; içerik iki yanda 24 px |
 | < 760 px | Tek kolon, iki yanda 16 px; kenar menü yok, **alt menü** (Özet, Şantiyeler, İşlemler, Kişiler, Diğer) ve sağ altta yüzen **+** düğmesi; tablolar kart listesine döner; özet kutuları iki sütun |
 
 - **Kenar menü:** üstte logo kutusu + "Şantiye Hesap" + firma adı; ana grup (Özet, Şantiyeler, İşlemler, Kişiler, Anlaşmalar); "Takip" grubu (Vadeler — gecikmiş sayısı rozetiyle, Raporlar); altta Silinenler, Ayarlar ve kullanıcı kartı (baş harfler, ad, çıkış ikonu). Her öğe ikonlu.
 - **Üst çubuk:** genel arama kutusu (yer tutucu "Şantiye, kişi, tutar veya kayıt no ara"; `/` kısayolu; sonuçlar `/uygulama/ara` sayfasında) ve sağda **Yeni kayıt** düğmesi (açılır menü: Gelir ekle, Gider ekle, Anlaşma ekle; her biri ikon ve kısa açıklamalı).
 - **Sayfa başlığı:** solda başlık ve tek satır açıklama, sağda sayfanın ana eylemleri.
-- **+ Kayıt:** Telefonda yüzen + düğmesi aynı menüyü açar. Açıldığı bağlamdaki şantiye/anlaşma hazır seçilir.
+- **+ Kayıt:** Telefonda yüzen + düğmesi aynı menüyü açar. Açıldığı bağlamdaki şantiye/anlaşma hazır seçilir. Form sayfalarında (`/yeni`, `/duzenle`, `/iade`, `/odeme`) kaydet düğmelerini örtmemesi için gizlenir.
+- **Telefonda sayfa eylemleri:** Sayfa başlığındaki eylemlerden yüzen + menüsünde bulunanlar (Gelir/Gider ekle) telefonda gizlenir; menüde olmayanlar (ör. "Yeni şantiye") görünür kalır.
+- **Form ve ayar sayfaları (iki sütunlu, tam genişlik):** 900 px ve üstünde solda ana bilgiler, sağda ikincil bilgiler; daha dar ekranda tek sütun ve aynı sıra. Tek bir alanın aşırı uzamaması için input/select'lere makul bir üst genişlik verilebilir; sayfanın kendisi daraltılmaz.
+
+  | Sayfa | Sol sütun | Sağ sütun |
+  | --- | --- | --- |
+  | Gelir/gider, anlaşmaya ödeme | Tutar, tarih, kişi, kapsam, anlaşma, paylar | Kategori, açıklama, belgeler |
+  | Anlaşma / başlangıç kaydı | Ad, yön, kişi, kapsam, bedel, tarihler | Açıklama, belgeler |
+  | Şantiye formu | Ad, adres, başlangıç tarihi | Açıklama |
+  | Kişi formu | Ad, tür, etiketler | İletişim, not |
+  | İade | Kaynak hareket | İade formu ve etki önizlemesi |
+  | Finansal düzeltme | Alanlar | Değişiklik önizlemesi (finansal alan değişmediyse kısa açıklama) |
+  | Profil | Görünen ad, telefon, e-posta | Kullanıcı adı ve şifre sayfasına bağlantı |
+  | Şifre | Form | Şifre kuralları |
+  | Firma | Firma bilgileri | Belge alanı, hizmet durumu |
+  | Kategoriler | Yeni kategori ve kurallar | Kategori listesi |
+  | Hakkında | Ürün, sürüm, dil | Veriler notu |
+
+  Ayarlar menüsü yan yana panellerdir. Yeni bir form veya ayar sayfası aynı ilkeyle düzenlenir.
+- **Detay sayfaları (şantiye, kişi, anlaşma, işlem):** Sık eylemler sayfa başlığında ikonlu düğmeler; seyrek eylemler (düzenle, sabitle, tamamla, arşivle, iptal, sil vb.) "Diğer" menüsünde. Başlığın altında özet kutuları, onun altında iki sütunlu paneller; değişiklik geçmişi en altta. Değişiklik geçmişi, paylar ve belge alanı panel içinde çizgiyle ayrılmış satırlardır; etki önizlemesi kenarsız, `surface` zeminli gömülü kutudur.
 
 Klavye ve odak: her input görünür kalsın. Formlar sayfa içinde kayar. Modal uzunsa kendi içinde kayar, arka plan kilitlenir. `Esc` modalı ve açılır menüyü kapatır. Odak tuzağı ve görünür odak halkası (`primary`, 2 px) olsun.
 
@@ -430,7 +450,7 @@ Düzen onaylanan taslaktaki gibidir (`tasarim/taslak_v1.html`, Şantiyeler).
 
 Sayfa başlığının sağında birincil **Yeni şantiye** düğmesi (listede ayrı "yeni şantiye" kartı yok). Durum sekmeleri sayı rozetli: Aktif (varsayılan) / Tamamlandı / Arşivlendi / Tümü. Altında arama ("Şantiye adı veya adres ara") ve sıralama (son kullanılan, yeniden eskiye, eskiden yeniye, ada göre). Sabitlenenler önce gelir.
 
-Masaüstünde tablo: sabitleme ikonu, şantiye adı (altında adres · son kullanım), tahsilat, ödeme, fark, kalan borç, kalan alacak (gecikmiş varsa altında kırmızı), satır sonunda "Diğer işlemler" menüsü. Durum sütunu yalnız "Tümü" sekmesinde görünür. Telefonda her şantiye bir kart: ad, adres, sabitleme, fark, son kullanım, kalan borç, kalan alacak.
+Masaüstünde tablo: sabitleme ikonu, şantiye adı (altında adres · son kullanım), tahsilat, ödeme, fark, kalan borç, kalan alacak (gecikmiş varsa altında kırmızı), satır sonunda "Diğer işlemler" menüsü (yalnız sayfa bağlantıları: detay, düzenle, bu şantiyeye gelir/gider ekle; tamamla, arşivle gibi durum eylemleri detay sayfasındadır). Durum sütunu yalnız "Tümü" sekmesinde görünür. Telefonda her şantiye bir kart: ad, adres, sabitleme, fark, son kullanım, kalan borç, kalan alacak.
 
 Form alanları:
 
@@ -1019,7 +1039,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 
 | Metot | Yol | Not |
 | --- | --- | --- |
-| GET | `/projects` | `status, q, sort, pinnedFirst, includeDeleted, page, limit` |
+| GET | `/projects` | `status, q, sort, pinnedFirst, includeDeleted, page, limit`. Her şantiye özetinde `netIncome`, `netExpense`, fark, kalan borç/alacak ve `overdueReceivable` döner |
 | POST | `/projects` | oluştur |
 | GET | `/projects/:id` | detay |
 | GET | `/projects/:id/summary` | finans özeti |
@@ -1094,7 +1114,7 @@ Anlaşmaya ödeme/tahsilat ayrı uç değil; `POST /transactions` ile `allocatio
 
 | Metot | Yol | Not |
 | --- | --- | --- |
-| GET | `/dashboard` | bölüm 7.1 verisi + `monthly` + `generatedAt` |
+| GET | `/dashboard` | bölüm 7.1 verisi + `monthly` + `generatedAt`. `totals` ve `monthly` düşülen ödeme iadesini `expenseRefund` olarak; `recentProjects` kayıtları şantiye özetini (`/projects` ile aynı alanlar) içerir |
 | GET | `/dues` | `direction, group (overdue \| upcoming \| later \| none), from, to` |
 | GET | `/search` | `q, saveHistory, projectId, type, dateFrom, dateTo` |
 | GET | `/search/history` | son aramalar |
@@ -1144,11 +1164,12 @@ Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 
 - İlk açılışta token varsa `/auth/me` dene. Başarılıysa uygulamaya al. Ağ hatasında kayıtlı kullanıcıyla içeri al, sonraki istek yenilensin; bağlantı durumu görünür olsun.
 - Tanıtım ve uygulama aynı renk ve yazı tipi sistemini kullansın. Tanıtım gradyanlı ve daha geniş aralıklı; uygulama `surface` zeminli, beyaz panelli ve derli toplu (bölüm 4).
 - Tabloda masaüstünde satır, 760 px altında kart. Sütunlar ekranın tarifindeki gibidir (ör. bölüm 7.4).
+- Aynı adreste yalnız sorgu değişse de (ör. `?tur=gelir` → `?tur=gider`) form her yeni gezintide sıfırdan kurulur; kaydedilmemiş bilgi varsa önce uyarı sorulur.
 - Form kaydı çift tıklamada iki kayıt açmasın. Düğme gönderim sürerken kilitli; `Idempotency-Key` bölüm 9.7'ye göre. API'de anahtarın isteğe bağlı olduğu şantiye, kişi ve kategori oluşturma dahil, web bütün oluşturma isteklerinde anahtar gönderir.
 - Kaydedilmemiş formdan çıkışta sor: "Kaydedilmemiş değişiklikler. Çıkmak istediğinize emin misiniz?" Bu uyarı sonucu belirsiz bir gönderimi iptal ettiğini iddia etmesin.
 - Boş liste, hata ve yükleniyor durumları her listede olsun. Sonsuz iskelet koyma. Yükleme veya erişim hatasını `0 TL` gibi gösterme. Filtre sonucu boşsa "Filtrelere uyan kayıt bulunamadı" + filtreleri temizle.
 - Yenileme sırasında eski veri gösteriliyorsa "Güncelleniyor" bilgisi. Kısmi hata varsa başarısız bölümün toplamı kesin gibi gösterilmesin.
-- 409 `CONFLICT` geldiğinde güncel kayıt ile kullanıcının değişikliği yan yana gösterilsin; kullanıcı yeniden değerlendirsin. Onay gerektiren eylemler eski önizlemeyle tamamlanmasın.
+- 409 `CONFLICT` geldiğinde güncel kayıt ile kullanıcının değişikliği yan yana gösterilsin, farklı alanlar "Farklı" rozeti taşısın; kullanıcı güncel kaydı yükler veya kendi değişikliğiyle devam eder. Düzenleme formları arka planda yenilenen veriyle sessizce sıfırlanmaz. Onay gerektiren eylemler eski önizlemeyle tamamlanmasın.
 - Hata ilgili alanın yanında açık dille gösterilsin; telefonda ilk hatalı alana kaydırılsın.
 - Para inputu sayısal klavye ve `inputMode="decimal"`. Kullanıcı `12500`, `12.500` veya `12.500,50` yazabilir; kuruşa çevrilir. `12.5` gibi girdide alanın altında "Ondalık için virgül kullanın" görünür (bölüm 3 "Para"). Gösterim `tr-TR`. Telefon dili İngilizce olan cihazlarda sayısal klavyede virgül çıkmayabilir; bu durum İngilizce dilli bir telefonda denenmeli. Ondalık girilemiyorsa giriş kuralını değiştirmeden önce kullanıcıya sorulmalı.
 - Tarih inputu `type="date"` veya özel takvim. Etiket Türkçe. Seçilen takvim günü korunur.
