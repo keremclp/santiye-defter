@@ -38,6 +38,7 @@ import {
   type TransactionDocument,
 } from '../models/transaction.js';
 import type { CustomerContext } from './customer-auth.js';
+import { documentsOf } from './documents.js';
 import {
   emptyNameMaps,
   historyActors,
@@ -537,7 +538,7 @@ export class TransactionService {
             (sum, a) => sum + Math.max(a.amount - a.refundedAmount, 0),
             0,
           ),
-      documents: [],
+      documents: await documentsOf(context.companyId, 'transaction', transaction._id),
     };
   }
 

@@ -48,6 +48,8 @@ export interface Agreement extends CompanyScopedFields {
   remaining: number;
   excess: number;
   paymentStatus: PaymentStatus;
+  /** Atomik sayaç, en fazla 10 (şartname 9.6) */
+  documentCount: number;
 }
 
 const valueChange = (type: typeof Number | typeof String) =>
@@ -85,6 +87,7 @@ const agreementSchema = new Schema<Agreement>({
   remaining: { type: Number, default: 0 },
   excess: { type: Number, default: 0 },
   paymentStatus: { type: String, enum: PAYMENT_STATUSES, default: 'open' },
+  documentCount: { type: Number, default: 0 },
 });
 agreementSchema.plugin(companyScopedPlugin);
 

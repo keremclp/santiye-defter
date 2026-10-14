@@ -1,6 +1,7 @@
 export * from './account-schemas.js';
 export * from './api.js';
 export * from './date.js';
+export * from './documents.js';
 export * from './domain.js';
 export * from './finance/agreement.js';
 export * from './finance/allocation.js';

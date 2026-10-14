@@ -2,6 +2,7 @@
 // ve cevapta kaydın verisi görünmemeli. Yeni bir firma ucu eklendiğinde buraya da eklenir.
 
 import type { CustomerFixture, IsolationCase, IsolationRequest } from './helpers/isolation.js';
+import { addDocument, intentBody, pdfFile, startUpload } from './helpers/documents.js';
 import { Api, tl } from './helpers/finance.js';
 import type { TestApp } from './helpers/app.js';
 
@@ -40,6 +41,8 @@ function caseFor(
 }
 
 const v = (record: { updatedAt: string }) => ({ expectedUpdatedAt: record.updatedAt });
+
+const secretPdf = { fileName: `Belge ${SECRET}.pdf`, mimeType: 'application/pdf' };
 
 /** Kaydı siler ve silinmiş halinin sürümünü döner (geri yükleme isteği için). */
 async function deletedVersion(
@@ -252,6 +255,68 @@ export const companyIsolationCases: IsolationCase[] = [
       method: 'post',
       path: `/agreements/${empty.id}/restore`,
       body: { reason: 'r', expectedUpdatedAt },
+    };
+  }),
+
+  // Belgeler
+  caseFor('POST /documents/upload-intent', ({ payment }) => ({
+    method: 'post',
+    path: '/documents/upload-intent',
+    body: intentBody({ ownerType: 'transaction', ownerId: payment.id }, pdfFile(), secretPdf),
+  })),
+  caseFor('POST /documents/upload-intent (anlaşma)', ({ agreement }) => ({
+    method: 'post',
+    path: '/documents/upload-intent',
+    body: intentBody({ ownerType: 'agreement', ownerId: agreement.id }, pdfFile(), secretPdf),
+  })),
+  caseFor('POST /documents/:id/complete', async ({ api, payment }) => {
+    const intent = await startUpload(
+      api,
+      { ownerType: 'transaction', ownerId: payment.id },
+      pdfFile(),
+      secretPdf,
+    );
+    return { method: 'post', path: `/documents/${intent.document.id}/complete` };
+  }),
+  caseFor('GET /documents/:id/download', async ({ api, payment }) => {
+    const doc = await addDocument(
+      api,
+      { ownerType: 'transaction', ownerId: payment.id },
+      pdfFile(),
+      secretPdf,
+    );
+    return { method: 'get', path: `/documents/${doc.id}/download` };
+  }),
+  caseFor('GET /documents/:id/preview', async ({ api, agreement }) => {
+    const doc = await addDocument(
+      api,
+      { ownerType: 'agreement', ownerId: agreement.id },
+      pdfFile(),
+      secretPdf,
+    );
+    return { method: 'get', path: `/documents/${doc.id}/preview` };
+  }),
+  caseFor('DELETE /documents/:id', async ({ api, payment }) => {
+    const doc = await addDocument(
+      api,
+      { ownerType: 'transaction', ownerId: payment.id },
+      pdfFile(),
+      secretPdf,
+    );
+    return { method: 'delete', path: `/documents/${doc.id}`, body: { reason: 'r', ...v(doc) } };
+  }),
+  caseFor('POST /documents/:id/restore', async ({ api, payment }) => {
+    const doc = await addDocument(
+      api,
+      { ownerType: 'transaction', ownerId: payment.id },
+      pdfFile(),
+      secretPdf,
+    );
+    const deleted = await api.ok(api.delete(`/documents/${doc.id}`, { reason: 'Sil', ...v(doc) }));
+    return {
+      method: 'post',
+      path: `/documents/${doc.id}/restore`,
+      body: { reason: 'r', ...v(deleted) },
     };
   }),
 ];

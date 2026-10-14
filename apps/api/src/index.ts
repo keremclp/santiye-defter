@@ -5,6 +5,7 @@ import { createDeps } from './deps.js';
 import { createLogger } from './lib/logger.js';
 import { loadLocalEnvFile } from './load-env.js';
 import { initModels } from './models/index.js';
+import { startDocumentCleanup } from './services/documents.js';
 import { ensureBootstrapAdmin } from './services/platform-auth.js';
 
 loadLocalEnvFile();
@@ -18,6 +19,11 @@ try {
     logger.info('İlk ürün sahibi hesabı oluşturuldu; ilk girişte TOTP kurulumu zorunlu.');
   }
 
+  if (!deps.config.storage) {
+    logger.error('Belge deposu ayarlanmadı (STORAGE_*); belge işlemleri çalışmayacak.');
+  }
+  const stopDocumentCleanup = startDocumentCleanup(deps);
+
   const app = createApp(deps);
   const server = app.listen(deps.config.port, () => {
     logger.info('API çalışıyor', { port: deps.config.port });
@@ -29,6 +35,7 @@ try {
 
   const shutdown = (signal: string) => {
     logger.info('API kapatılıyor', { signal });
+    stopDocumentCleanup();
     server.close(() => {
       void disconnectDatabase().finally(() => process.exit(0));
     });

@@ -7,6 +7,13 @@ const secrets = {
   PLATFORM_TOTP_ENCRYPTION_KEY: 'c'.repeat(32),
 };
 
+const storage = {
+  STORAGE_ENDPOINT: 'https://depo.example',
+  STORAGE_BUCKET: 'belgeler',
+  STORAGE_ACCESS_KEY: 'erisim-anahtari',
+  STORAGE_SECRET_KEY: 'gizli-depo-anahtari',
+};
+
 describe('loadConfig', () => {
   it('geliştirmede boş değerler için yerel varsayılanları kullanır', () => {
     const config = loadConfig({
@@ -34,6 +41,7 @@ describe('loadConfig', () => {
       PORT: '8080',
       MONGODB_URI: 'mongodb://db.example:27017/app?replicaSet=rs0',
       WEB_ORIGIN: 'https://app.example',
+      ...storage,
       PLATFORM_BOOTSTRAP_USERNAME: 'patron',
       PLATFORM_BOOTSTRAP_PASSWORD: 'Patron-Sifre-1',
     });
@@ -46,8 +54,35 @@ describe('loadConfig', () => {
       jwtAccessSecret: secrets.JWT_ACCESS_SECRET,
       platformBootstrap: { username: 'patron', password: 'Patron-Sifre-1' },
       bcryptCost: 12,
+      storage: {
+        endpoint: 'https://depo.example',
+        bucket: 'belgeler',
+        accessKey: 'erisim-anahtari',
+        secretKey: 'gizli-depo-anahtari',
+      },
     });
     expect(BCRYPT_COST).toBe(12);
+  });
+
+  it('belge deposu üretimde zorunlu; geliştirmede boşsa ayarsız açılır, yarım ayar reddedilir', () => {
+    const production = {
+      ...secrets,
+      NODE_ENV: 'production',
+      MONGODB_URI: 'mongodb://db.example:27017/app?replicaSet=rs0',
+      WEB_ORIGIN: 'https://app.example',
+    };
+    expect(() => loadConfig(production)).toThrow(/STORAGE_ENDPOINT/);
+    expect(loadConfig({ ...secrets, STORAGE_ENDPOINT: '', STORAGE_BUCKET: '' }).storage).toBeNull();
+    expect(() => loadConfig({ ...secrets, STORAGE_BUCKET: 'belgeler' })).toThrow(
+      /STORAGE_SECRET_KEY/,
+    );
+    let message = '';
+    try {
+      loadConfig({ ...secrets, STORAGE_SECRET_KEY: storage.STORAGE_SECRET_KEY });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).not.toContain(storage.STORAGE_SECRET_KEY);
   });
 
   it('üretimde zorunlu değerler eksikse başlatmaz', () => {

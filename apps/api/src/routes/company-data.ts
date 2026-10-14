@@ -1,4 +1,4 @@
-// Firma verisi uçları (şartname 10.3–10.7, 10.9). Hepsi firma bağlamından geçer; companyId
+// Firma verisi uçları (şartname 10.3–10.9). Hepsi firma bağlamından geçer; companyId
 // istemciden değil oturumdaki kullanıcıdan gelir.
 
 import {
@@ -11,6 +11,7 @@ import {
   categoryCreateSchema,
   categoryUpdateSchema,
   companyUpdateSchema,
+  documentUploadIntentSchema,
   partyCreateSchema,
   partyUpdateSchema,
   pinSchema,
@@ -35,6 +36,7 @@ import { AgreementService, agreementListQuerySchema } from '../services/agreemen
 import { CategoryService } from '../services/categories.js';
 import { CompanyService } from '../services/company.js';
 import type { CustomerAuthService } from '../services/customer-auth.js';
+import { DocumentService } from '../services/documents.js';
 import type { IdempotentOutcome } from '../services/idempotency.js';
 import {
   deletedQuerySchema,
@@ -61,11 +63,12 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
   const agreements = new AgreementService(deps);
   const transactions = new TransactionService(deps);
   const overview = new OverviewService(deps, transactions);
+  const documents = new DocumentService(deps);
   const id = (req: Parameters<typeof routeParam>[0]) => routeParam(req, 'id');
 
   // ── Firma ve kategoriler (10.3) ──────────────────────────────────────────────
-  router.get('/company', auth, (req, res) => {
-    sendSuccess(res, company.get(requireCustomer(req)));
+  router.get('/company', auth, async (req, res) => {
+    sendSuccess(res, await company.get(requireCustomer(req)));
   });
   router.get('/company/users', auth, async (req, res) => {
     sendSuccess(res, await company.users(requireCustomer(req)));
@@ -387,6 +390,43 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
     sendSuccess(
       res,
       await agreements.restore(requireCustomer(req), id(req), recordChangeSchema.parse(req.body)),
+    );
+  });
+
+  // ── Belgeler (10.8) ──────────────────────────────────────────────────────────
+  router.post('/documents/upload-intent', auth, async (req, res) => {
+    const context = requireCustomer(req);
+    const input = documentUploadIntentSchema.parse(req.body);
+    respond(
+      res,
+      await runOptionallyIdempotent(
+        deps,
+        req,
+        context,
+        (session) => documents.uploadIntent(context, input, session),
+        (ref, status) => documents.replay(context, ref, status),
+      ),
+    );
+  });
+  router.post('/documents/:id/complete', auth, async (req, res) => {
+    sendSuccess(res, await documents.complete(requireCustomer(req), id(req)));
+  });
+  router.get('/documents/:id/download', auth, async (req, res) => {
+    sendSuccess(res, await documents.download(requireCustomer(req), id(req), 'download'));
+  });
+  router.get('/documents/:id/preview', auth, async (req, res) => {
+    sendSuccess(res, await documents.download(requireCustomer(req), id(req), 'preview'));
+  });
+  router.delete('/documents/:id', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await documents.remove(requireCustomer(req), id(req), recordChangeSchema.parse(req.body)),
+    );
+  });
+  router.post('/documents/:id/restore', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await documents.restore(requireCustomer(req), id(req), recordChangeSchema.parse(req.body)),
     );
   });
 

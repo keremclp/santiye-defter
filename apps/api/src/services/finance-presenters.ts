@@ -211,6 +211,7 @@ export function presentAgreement(doc: Agreement, maps: NameMaps) {
     agreementDate: doc.agreementDate,
     trackingStartDate: doc.trackingStartDate,
     dueDate: doc.dueDate,
+    documentCount: doc.documentCount,
     ...recordMeta(doc, maps),
   };
 }

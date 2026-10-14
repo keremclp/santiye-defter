@@ -7,15 +7,25 @@ import type { AppDeps } from '../deps.js';
 import { CompanyModel, type Company } from '../models/company.js';
 import { UserModel } from '../models/user.js';
 import type { CustomerContext } from './customer-auth.js';
+import { storageBreakdown } from './documents.js';
 import { diffChanges, historyEntry } from './records.js';
 import { accessClosedError, type ServiceSummary } from './service-state.js';
 
-/** Ürün sahibinin işletim notu ve resmi kayıt alanları müşteriye açılmaz. */
-function presentCompany(company: Company, service: ServiceSummary) {
+type StorageBreakdown = Awaited<ReturnType<typeof storageBreakdown>>;
+
+/**
+ * Ürün sahibinin işletim notu ve resmi kayıt alanları müşteriye açılmaz. Depolama kullanımı orijinal,
+ * önizleme ve geri alınabilir silinmiş belgeler ayrı olarak döner (şartname 7.11, 9.6).
+ */
+function presentCompany(company: Company, service: ServiceSummary, breakdown?: StorageBreakdown) {
   return {
     displayName: company.displayName || company.name,
     contact: company.contact,
-    storage: { usedBytes: company.storageUsedBytes, quotaBytes: company.storageQuotaBytes },
+    storage: {
+      usedBytes: company.storageUsedBytes,
+      quotaBytes: company.storageQuotaBytes,
+      ...(breakdown ? { breakdown } : {}),
+    },
     service,
     updatedAt: company.updatedAt.toISOString(),
   };
@@ -24,8 +34,12 @@ function presentCompany(company: Company, service: ServiceSummary) {
 export class CompanyService {
   constructor(private readonly deps: AppDeps) {}
 
-  get(context: CustomerContext) {
-    return presentCompany(context.company, context.service);
+  async get(context: CustomerContext) {
+    return presentCompany(
+      context.company,
+      context.service,
+      await storageBreakdown(context.companyId),
+    );
   }
 
   /**
@@ -76,6 +90,6 @@ export class CompanyService {
       present: (company) => presentCompany(company, context.service),
       onMissing: () => accessClosedError('deleting'),
     });
-    return presentCompany(updated, context.service);
+    return presentCompany(updated, context.service, await storageBreakdown(context.companyId));
   }
 }

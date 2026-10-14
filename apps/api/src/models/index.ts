@@ -1,6 +1,7 @@
 import { AgreementModel } from './agreement.js';
 import { CategoryModel } from './category.js';
 import { CompanyModel } from './company.js';
+import { DocumentModel } from './document.js';
 import { IdempotencyRecordModel } from './idempotency-record.js';
 import { PartyModel } from './party.js';
 import { PlatformAdminModel } from './platform-admin.js';
@@ -22,6 +23,7 @@ export const models = [
   TransactionModel,
   AgreementModel,
   SearchHistoryModel,
+  DocumentModel,
 ];
 
 /** Koleksiyonları ve indeksleri oluşturur; transaction içinde ilk yazıdan önce hazır olmalı. */

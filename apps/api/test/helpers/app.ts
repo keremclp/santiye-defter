@@ -8,6 +8,7 @@ import { createDeps, type AppDeps } from '../../src/deps.js';
 import type { Clock } from '../../src/lib/clock.js';
 import { initModels, models } from '../../src/models/index.js';
 import { testDatabaseUri } from './database.js';
+import { MemoryStorage } from './memory-storage.js';
 
 export interface TestClock extends Clock {
   set(date: Date | string): void;
@@ -42,6 +43,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     totpEncryptionKey: secret(),
     platformBootstrap: null,
     bcryptCost: 4,
+    storage: null,
     ...overrides,
   };
 }
@@ -50,14 +52,21 @@ export interface TestApp {
   app: ReturnType<typeof createApp>;
   deps: AppDeps;
   clock: TestClock;
+  /** Bellek içi belge deposu; testler dosyayı tarayıcı yerine doğrudan yükler. */
+  storage: MemoryStorage;
 }
 
 export function buildTestApp(
-  options: { config?: Partial<Config>; clock?: TestClock } & AppOptions = {},
+  options: {
+    config?: Partial<Config>;
+    clock?: TestClock;
+    storage?: MemoryStorage;
+  } & AppOptions = {},
 ): TestApp {
   const clock = options.clock ?? createTestClock();
-  const deps = createDeps({ config: testConfig(options.config), clock });
-  return { app: createApp(deps, options), deps, clock };
+  const storage = options.storage ?? new MemoryStorage();
+  const deps = createDeps({ config: testConfig(options.config), clock, storage });
+  return { app: createApp(deps, options), deps, clock, storage };
 }
 
 /** Dosyaya özel veritabanı; her testten önce koleksiyonlar boşaltılır. */

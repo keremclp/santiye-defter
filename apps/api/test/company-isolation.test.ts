@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { buildTestApp, useTestDatabase } from './helpers/app.js';
+import { addDocument, pdfFile } from './helpers/documents.js';
 import { financeSetup, tl } from './helpers/finance.js';
 import { expectCompanyIsolation } from './helpers/isolation.js';
 import { companyIsolationCases } from './isolation-cases.js';
@@ -89,6 +90,26 @@ describe('firma yalıtımı: listeler, arama, pano ve gövdedeki kimlikler', () 
     });
     const dashboard = responses[6].body.data;
     expect(dashboard.totals).toMatchObject({ netExpense: 0, remainingPayable: 0 });
+  });
+
+  it('başka firmanın belgesi indirilemez; kullanım dökümü yalnız kendi belgelerini sayar', async () => {
+    const { owner, intruder, payment } = await twoCompanies();
+    const doc = await addDocument(
+      owner.api,
+      { ownerType: 'transaction', ownerId: payment.id },
+      pdfFile(4_242),
+      { fileName: 'Gizli fatura 4242.pdf', mimeType: 'application/pdf' },
+    );
+    for (const path of [`/documents/${doc.id}/download`, `/documents/${doc.id}/preview`]) {
+      const res = await intruder.get(path);
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toMatch(/4242|original/);
+    }
+    const ownInfo = await owner.api.ok(owner.api.get('/company'));
+    expect(ownInfo.storage.breakdown.originalBytes).toBe(4_242);
+    const intruderInfo = await intruder.ok(intruder.get('/company'));
+    expect(intruderInfo.storage).toMatchObject({ usedBytes: 0 });
+    expect(intruderInfo.storage.breakdown).toMatchObject({ originalBytes: 0, deletedBytes: 0 });
   });
 
   it('firma kullanıcı listesi yalnız aynı firmanın kullanıcılarını, yalnız id/ad/aktiflikle döner', async () => {

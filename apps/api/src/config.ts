@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { StorageConfig } from './lib/storage.js';
 
 // Gizli olmayan yerel geliştirme varsayılanları; üretimde kullanılmaz.
 const DEVELOPMENT_DEFAULTS = {
@@ -25,8 +26,26 @@ const envSchema = z
       .refine((value) => byteLength(value) >= 32, 'En az 32 bayt olmalı.'),
     PLATFORM_BOOTSTRAP_USERNAME: z.string().trim().optional(),
     PLATFORM_BOOTSTRAP_PASSWORD: z.string().optional(),
+    STORAGE_ENDPOINT: z.url().optional(),
+    STORAGE_BUCKET: z.string().trim().optional(),
+    STORAGE_ACCESS_KEY: z.string().optional(),
+    STORAGE_SECRET_KEY: z.string().optional(),
   })
   .superRefine((env, ctx) => {
+    // Belge deposu üretimde zorunlu; geliştirmede boşsa belge işlemleri açık hatayla reddedilir.
+    const storageKeys = [
+      'STORAGE_ENDPOINT',
+      'STORAGE_BUCKET',
+      'STORAGE_ACCESS_KEY',
+      'STORAGE_SECRET_KEY',
+    ] as const;
+    const anyStorage = storageKeys.some((key) => env[key]);
+    if (env.NODE_ENV === 'production' || anyStorage) {
+      for (const key of storageKeys) {
+        if (!env[key])
+          ctx.addIssue({ code: 'custom', message: 'Belge deposu için gerekli.', path: [key] });
+      }
+    }
     if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
       ctx.addIssue({
         code: 'custom',
@@ -47,6 +66,8 @@ export interface Config {
   totpEncryptionKey: string;
   platformBootstrap: { username: string; password: string } | null;
   bcryptCost: number;
+  /** Belge deposu; geliştirmede ayarlanmamışsa null. */
+  storage: StorageConfig | null;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -80,5 +101,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
           }
         : null,
     bcryptCost: BCRYPT_COST,
+    storage:
+      data.STORAGE_ENDPOINT &&
+      data.STORAGE_BUCKET &&
+      data.STORAGE_ACCESS_KEY &&
+      data.STORAGE_SECRET_KEY
+        ? {
+            endpoint: data.STORAGE_ENDPOINT,
+            bucket: data.STORAGE_BUCKET,
+            accessKey: data.STORAGE_ACCESS_KEY,
+            secretKey: data.STORAGE_SECRET_KEY,
+          }
+        : null,
   };
 }

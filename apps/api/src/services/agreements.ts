@@ -27,6 +27,7 @@ import { PartyModel } from '../models/party.js';
 import { ProjectModel } from '../models/project.js';
 import { TransactionModel } from '../models/transaction.js';
 import type { CustomerContext } from './customer-auth.js';
+import { documentsOf } from './documents.js';
 import {
   emptyNameMaps,
   historyActors,
@@ -309,6 +310,7 @@ export class AgreementService {
           .filter((allocation) => allocation.agreementId?.equals(agreement._id))
           .reduce((sum, allocation) => sum + allocation.amount, 0),
       })),
+      documents: await documentsOf(context.companyId, 'agreement', agreement._id),
     };
   }
 
