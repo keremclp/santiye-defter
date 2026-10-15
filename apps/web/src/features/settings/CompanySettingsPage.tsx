@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { apiPatch, errorMessage, isApiError } from '../../api/client';
 import { keys, useCompany } from '../../api/queries';
 import type { SaveState } from '../../api/submission';
@@ -19,6 +19,7 @@ import { formatBytes, formatLongDate } from '../../lib/format';
 import { SERVICE_STATE_LABEL } from '../../lib/labels';
 import { SUPPORT_CONTACT_TEXT } from '../../lib/support';
 import { useSession } from '../../stores/session';
+import { STORAGE_FULL_TEXT } from '../documents/limits';
 
 /**
  * Firma: ortak görünen ad ve iletişim (bütün firma kullanıcıları düzenleyebilir, geçmiş tutulur),
@@ -199,9 +200,35 @@ function CompanyForm({ company }: { company: CompanyInfo }) {
   );
 }
 
+/**
+ * Kullanılan / toplam; orijinal, önizleme ve silinmiş ama geri alınabilir belgeler ayrı
+ * (şartname 7.11, 9.6). Yüklenmekte olan dosyaların ayrılan yeri ve dışa aktarma paketleri
+ * yalnız varsa gösterilir; satırların toplamı kullanılan alanla aynıdır.
+ */
 function StorageCard({ company }: { company: CompanyInfo }) {
-  const { usedBytes, quotaBytes } = company.storage;
+  const { usedBytes, quotaBytes, breakdown } = company.storage;
   const full = usedBytes >= quotaBytes;
+  const rows = breakdown
+    ? [
+        {
+          label: 'Orijinal belgeler',
+          bytes: breakdown.originalBytes,
+          note: `${breakdown.documentCount} belge`,
+        },
+        { label: 'Önizlemeler', bytes: breakdown.previewBytes, note: null },
+        {
+          label: 'Silinmiş, geri alınabilir belgeler',
+          bytes: breakdown.deletedBytes,
+          note: `${breakdown.deletedDocumentCount} belge`,
+        },
+        ...(breakdown.pendingBytes > 0
+          ? [{ label: 'Yüklenmekte olan dosyalar', bytes: breakdown.pendingBytes, note: null }]
+          : []),
+        ...(breakdown.exportBytes > 0
+          ? [{ label: 'Dışa aktarma paketleri', bytes: breakdown.exportBytes, note: null }]
+          : []),
+      ]
+    : [];
   return (
     <Panel title="Belge alanı" icon={HardDrive}>
       <div className="panel__body stack stack--sm">
@@ -214,16 +241,27 @@ function StorageCard({ company }: { company: CompanyInfo }) {
           aria-label="Belge alanı kullanımı"
         />
         {full ? (
-          <div className="alert alert--danger">
-            Belge alanı doldu. Kayıt girmeye devam edebilirsiniz; yeni belge için ürün sahibiyle
-            görüşün.
+          <div className="alert alert--danger" role="status">
+            {STORAGE_FULL_TEXT}
           </div>
         ) : null}
+        {rows.length > 0 ? (
+          <dl className="definition-list" aria-label="Kullanım dökümü">
+            {rows.map((row) => (
+              <Fragment key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>
+                  {formatBytes(row.bytes)}
+                  {row.note ? <span className="muted"> · {row.note}</span> : null}
+                </dd>
+              </Fragment>
+            ))}
+          </dl>
+        ) : null}
         <p className="meta">
-          Orijinal, önizleme ve silinmiş ama geri alınabilir belgelerin ayrı dökümü belge yükleme
-          açıldığında burada görünecek.
+          Silinen belgeler geri alınabildiği için alan kaplamaya devam eder. Kapasite artırımı için:{' '}
+          {SUPPORT_CONTACT_TEXT}
         </p>
-        <p className="meta">Kapasite artırımı için: {SUPPORT_CONTACT_TEXT}</p>
       </div>
     </Panel>
   );

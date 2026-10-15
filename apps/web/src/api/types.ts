@@ -6,6 +6,8 @@ import type {
   CashTotals,
   Direction,
   DirectionSummary,
+  DocumentOwnerType,
+  DocumentStatus,
   PaymentStatus,
   Scope,
   TransactionKind,
@@ -114,10 +116,21 @@ export interface Contact {
   email: string;
 }
 
+/** Kullanım dökümü; toplamı `usedBytes` ile aynıdır (şartname 7.11, 9.6). */
+export interface StorageBreakdown {
+  originalBytes: number;
+  previewBytes: number;
+  deletedBytes: number;
+  pendingBytes: number;
+  exportBytes: number;
+  documentCount: number;
+  deletedDocumentCount: number;
+}
+
 export interface CompanyInfo {
   displayName: string;
   contact: Contact;
-  storage: { usedBytes: number; quotaBytes: number };
+  storage: { usedBytes: number; quotaBytes: number; breakdown?: StorageBreakdown };
   service: ServiceSummary;
   updatedAt: string;
 }
@@ -268,7 +281,7 @@ export interface TransactionDetail extends Transaction {
   history: HistoryEntry[];
   refunds: Transaction[];
   refundable: number | null;
-  documents: unknown[];
+  documents: DocumentInfo[];
 }
 
 export interface TransactionList extends Paged<Transaction> {
@@ -336,6 +349,7 @@ export interface AgreementDetail extends Agreement {
   amountHistory: ValueChange<number>[];
   dueDateHistory: ValueChange<string | null>[];
   transactions: (Transaction & { agreementShare: number })[];
+  documents: DocumentInfo[];
 }
 
 export interface AgreementList extends Paged<Agreement> {
@@ -359,6 +373,47 @@ export interface AmountPreview {
     paymentStatus: PaymentStatus;
   };
   updatedAt: string;
+}
+
+// ── Belge ─────────────────────────────────────────────────────────────────────
+
+/** Kayıt detayındaki belge; silinmiş ama geri alınabilir belgede `deletedAt` doludur. */
+export interface DocumentInfo {
+  id: string;
+  ownerType: DocumentOwnerType;
+  ownerId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number | null;
+  status: DocumentStatus;
+  hasPreview: boolean;
+  uploadedBy: ActorRef | null;
+  uploadedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  deletedBy: ActorRef | null;
+  deleteReason: string | null;
+}
+
+export interface UploadIntent {
+  document: DocumentInfo;
+  /** Belge artık beklemiyorsa (yüklendi, süresi doldu) adres verilmez. */
+  upload: {
+    method: 'PUT';
+    url: string;
+    headers: Record<string, string>;
+    expiresAt: string;
+  } | null;
+}
+
+/** 5 dakika geçerli indirme/önizleme adresi. */
+export interface DocumentLink {
+  url: string;
+  expiresAt: string;
+  isPreview: boolean;
+  fileName: string;
+  mimeType: string;
 }
 
 // ── Pano, vade, arama, silinenler ─────────────────────────────────────────────

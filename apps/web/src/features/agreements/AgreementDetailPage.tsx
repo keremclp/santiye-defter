@@ -11,7 +11,6 @@ import {
   HandCoins,
   Handshake,
   History,
-  Paperclip,
   Pencil,
   RotateCcw,
   Split,
@@ -27,7 +26,7 @@ import type { AgreementDetail, AmountPreview } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
 import { Amount, Badge, KindIcon } from '../../components/ui/Amount';
 import { Button, ButtonLink, DisabledAction } from '../../components/ui/Button';
-import { DocumentPlaceholder, Metric, PageHeader, Panel } from '../../components/ui/Card';
+import { Metric, PageHeader, Panel } from '../../components/ui/Card';
 import { ChipGroup } from '../../components/ui/Chips';
 import { DateInput, Field, TextArea, TextInput } from '../../components/ui/Field';
 import { HistoryList } from '../../components/ui/HistoryList';
@@ -49,6 +48,7 @@ import {
 } from '../../lib/labels';
 import { toast } from '../../stores/ui';
 import { AgreementStatusBadges, DueBadge } from '../common/RecordTables';
+import { DocumentsPanel } from '../documents/DocumentsPanel';
 
 type DialogName = 'amount' | 'due' | 'work' | 'cancel' | 'edit' | 'delete' | null;
 
@@ -523,11 +523,12 @@ function AgreementView({
             </div>
           </Panel>
 
-          <Panel title="Belgeler" icon={Paperclip}>
-            <div className="panel__body">
-              <DocumentPlaceholder titled={false} />
-            </div>
-          </Panel>
+          <DocumentsPanel
+            owner={{ ownerType: 'agreement', ownerId: a.id }}
+            documents={a.documents}
+            ownerDeleted={Boolean(a.deletedAt)}
+            onChanged={reload}
+          />
         </div>
       </div>
 

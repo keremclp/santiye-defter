@@ -2,6 +2,7 @@
 
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { http } from '../api/client';
+import { storageHttp } from '../features/documents/upload';
 
 export interface MockRequest {
   method: string;
@@ -13,10 +14,13 @@ export interface MockRequest {
 
 export type MockReply = { status: number; data?: unknown } | 'network';
 
-/** Her isteği kaydeder ve `handler` cevabını döner. */
+/**
+ * Her isteği kaydeder ve `handler` cevabını döner. İmzalı depo adresine yükleme (belgeler) de
+ * aynı işleyiciye tam adresiyle gelir.
+ */
 export function mockHttp(handler: (request: MockRequest) => MockReply) {
   const requests: MockRequest[] = [];
-  http.defaults.adapter = (config: InternalAxiosRequestConfig) => {
+  const adapter = (config: InternalAxiosRequestConfig) => {
     const request: MockRequest = {
       method: (config.method ?? 'get').toUpperCase(),
       url: config.url ?? '',
@@ -46,6 +50,8 @@ export function mockHttp(handler: (request: MockRequest) => MockReply) {
       new AxiosError('Request failed', 'ERR_BAD_RESPONSE', config, null, response),
     );
   };
+  http.defaults.adapter = adapter;
+  storageHttp.defaults.adapter = adapter;
   return requests;
 }
 

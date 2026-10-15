@@ -10,7 +10,6 @@ import { invalidateRecords, useCategories } from '../../api/queries';
 import { useCreateSubmission } from '../../api/submission';
 import type { Agreement, Transaction, Warning } from '../../api/types';
 import { Button } from '../../components/ui/Button';
-import { DocumentPlaceholder } from '../../components/ui/Card';
 import { ChipGroup } from '../../components/ui/Chips';
 import { Checkbox, DateInput, Field, SelectInput, TextArea } from '../../components/ui/Field';
 import { Icon } from '../../components/ui/Icon';
@@ -21,6 +20,8 @@ import { useWriteAccess } from '../../hooks/useWriteAccess';
 import { applyServerErrors, kurusToInput } from '../../lib/forms';
 import { formatMoney, formatTl } from '../../lib/format';
 import { PartyPicker, ScopePicker } from '../common/Pickers';
+import { DocumentFormField, UploadingNotice, UploadResultNotice } from '../documents/DocumentParts';
+import { useUploadQueue } from '../documents/useUploadQueue';
 import { projectById, useProjectOptions } from '../common/project-options';
 import { toast } from '../../stores/ui';
 import { AllocationEditor } from './AllocationEditor';
@@ -102,13 +103,21 @@ export function TransactionForm({
   // Bütün form değerleri; React Compiler ile uyumlu abonelik.
   const values = useWatch({ control, compute: (all) => all });
   const [agreementConfirmed, setAgreementConfirmed] = useState(!agreementConfirmationRequired);
-  const [created, setCreated] = useState<{ tx: Transaction; warnings: Warning[] } | null>(null);
+  // Kayıttan sonra gösterilen sonuç: mükerrer uyarısı veya yüklenemeyen belge.
+  const [created, setCreated] = useState<{
+    tx: Transaction;
+    warnings: Warning[];
+    /** "Kaydet ve yeni ekle" ile kaydedildiyse yeni kayıt için formun değerleri. */
+    next: TransactionFormValues | null;
+  } | null>(null);
+  const documents = useUploadQueue();
+  const [uploading, setUploading] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
   const [excessFromServer, setExcessFromServer] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const submission = useCreateSubmission<Transaction>();
   const { dialog, allowNavigation } = useUnsavedChanges(
-    isDirty && submission.state.status !== 'saved',
+    (isDirty || documents.items.length > 0) && submission.state.status !== 'saved',
     submission.state.status === 'verifying',
   );
 
@@ -183,6 +192,29 @@ export function TransactionForm({
     setValue('split', false, { shouldDirty: true });
   }
 
+  /** Tutar boşalır; kapsam ve tarih korunur; kişi/anlaşma bağlantısı yeniden sorulur. */
+  function startNext(formValues: TransactionFormValues, tx: Transaction, warnings: Warning[]) {
+    reset({
+      ...formValues,
+      amount: '',
+      party: lockedAgreement ? formValues.party : null,
+      agreementId: lockedAgreement ? lockedAgreement.id : '',
+      description: '',
+      reason: '',
+      split: false,
+      allocations: [],
+      confirmExcess: false,
+      excessReason: '',
+    });
+    submission.reset();
+    documents.clear();
+    setSavedNote(
+      `#${tx.recordNo} kaydedildi.${lockedAgreement ? '' : ' Yeni kayıt için kişi ve anlaşmayı yeniden seçin.'}${
+        warnings.length ? ` ${warnings.map((w) => w.message).join(' ')}` : ''
+      }`,
+    );
+  }
+
   const submit = (andNew: boolean) =>
     handleSubmit(async (formValues) => {
       setFormError(null);
@@ -217,30 +249,27 @@ export function TransactionForm({
         const label = tx.kind === 'expense' ? 'Gider' : 'Gelir';
         toast(result.message ?? `${label} kaydedildi (#${tx.recordNo}).`);
         setExcessFromServer(null);
+        // Belgeler finansal kayıttan sonra yüklenir; belge hatası kaydı tekrar oluşturmaz.
+        let failedDocuments = 0;
+        if (documents.items.length > 0) {
+          setUploading(true);
+          const summary = await documents
+            .uploadAll({ ownerType: 'transaction', ownerId: tx.id })
+            .finally(() => setUploading(false));
+          failedDocuments = summary.failed;
+          if (summary.uploaded > 0) await invalidateRecords(queryClient);
+        }
+        if (failedDocuments > 0) {
+          allowNavigation();
+          setCreated({ tx, warnings, next: andNew ? formValues : null });
+          return;
+        }
         if (andNew) {
-          // Tutar boşalır; kapsam ve tarih korunur; kişi/anlaşma bağlantısı yeniden sorulur.
-          reset({
-            ...formValues,
-            amount: '',
-            party: lockedAgreement ? formValues.party : null,
-            agreementId: lockedAgreement ? lockedAgreement.id : '',
-            description: '',
-            reason: '',
-            split: false,
-            allocations: [],
-            confirmExcess: false,
-            excessReason: '',
-          });
-          submission.reset();
-          setSavedNote(
-            `#${tx.recordNo} kaydedildi.${lockedAgreement ? '' : ' Yeni kayıt için kişi ve anlaşmayı yeniden seçin.'}${
-              warnings.length ? ` ${warnings.map((w) => w.message).join(' ')}` : ''
-            }`,
-          );
+          startNext(formValues, tx, warnings);
           return;
         }
         allowNavigation();
-        if (warnings.length > 0) setCreated({ tx, warnings });
+        if (warnings.length > 0) setCreated({ tx, warnings, next: null });
         else onDone(tx);
       } catch (caught) {
         if (isApiError(caught) && caught.code === 'EXCESS_CONFIRMATION_REQUIRED') {
@@ -258,6 +287,7 @@ export function TransactionForm({
     });
 
   if (created) {
+    const next = created.next;
     return (
       <div className="stack">
         <div className="alert alert--success" role="status">
@@ -265,6 +295,11 @@ export function TransactionForm({
             {created.tx.kind === 'expense' ? 'Gider' : 'Gelir'} kaydedildi (#{created.tx.recordNo})
           </p>
         </div>
+        <UploadResultNotice
+          saved="İşlem kaydedildi"
+          queue={documents}
+          owner={{ ownerType: 'transaction', ownerId: created.tx.id }}
+        />
         {created.warnings.map((warning) => (
           <div key={warning.code} className="alert alert--danger" role="alert">
             <p className="alert__title">Olası mükerrer kayıt</p>
@@ -281,7 +316,21 @@ export function TransactionForm({
           </div>
         ))}
         <div className="form-actions">
-          <Button onClick={() => onDone(created.tx)}>Devam et</Button>
+          {next ? (
+            <Button
+              disabled={documents.busy}
+              onClick={() => {
+                startNext(next, created.tx, created.warnings);
+                setCreated(null);
+              }}
+            >
+              Yeni kayıt ekle
+            </Button>
+          ) : (
+            <Button disabled={documents.busy} onClick={() => onDone(created.tx)}>
+              Devam et
+            </Button>
+          )}
           <Link className="btn btn--secondary" to={`/uygulama/islemler/${created.tx.id}`}>
             Kaydı aç
           </Link>
@@ -297,7 +346,8 @@ export function TransactionForm({
     : isExpense
       ? 'Gideri Kaydet'
       : 'Geliri Kaydet';
-  const busy = submission.busy;
+  // Belgeler yüklenirken de kilitli: kayıt tamamlandı, ikinci kez gönderilmemeli.
+  const busy = submission.busy || uploading;
 
   return (
     <form
@@ -616,7 +666,7 @@ export function TransactionForm({
               {(props) => <TextArea {...props} {...register('reason')} rows={2} />}
             </Field>
           ) : null}
-          <DocumentPlaceholder />
+          <DocumentFormField queue={documents} disabled={busy} />
         </section>
       </div>
 
@@ -652,6 +702,7 @@ export function TransactionForm({
         </div>
       ) : null}
       <SaveStatus state={submission.state} onVerify={() => void submission.verify()} />
+      {uploading ? <UploadingNotice queue={documents} /> : null}
 
       <div className="form-actions sticky-actions">
         <Button

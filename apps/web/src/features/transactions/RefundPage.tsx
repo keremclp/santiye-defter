@@ -15,7 +15,7 @@ import { useCreateSubmission } from '../../api/submission';
 import type { Transaction, TransactionDetail } from '../../api/types';
 import { Amount } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
-import { DocumentPlaceholder, PageHeader, Panel } from '../../components/ui/Card';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { DateInput, Field, TextArea } from '../../components/ui/Field';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { SaveStatus } from '../../components/ui/SaveStatus';
@@ -28,6 +28,8 @@ import { formatDate, formatMoney } from '../../lib/format';
 import { KIND_LABEL } from '../../lib/labels';
 import { parseMoney } from '@santiye/shared';
 import { toast } from '../../stores/ui';
+import { DocumentFormField, UploadingNotice, UploadResultNotice } from '../documents/DocumentParts';
+import { useUploadQueue } from '../documents/useUploadQueue';
 import { ImpactBlock } from './ImpactBlock';
 import { useImpactPreview, type ImpactAllocation } from './impact';
 
@@ -72,7 +74,15 @@ function RefundForm({ source }: { source: TransactionDetail }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const submission = useCreateSubmission<Transaction>();
-  const dirty = amount !== '' || reason !== '' || Object.values(parts).some(Boolean);
+  const documents = useUploadQueue();
+  const [uploading, setUploading] = useState(false);
+  // Belgesi yüklenemeyen iade: kayıt tamam, yalnız belge yeniden denenir.
+  const [saved, setSaved] = useState<Transaction | null>(null);
+  const dirty =
+    amount !== '' ||
+    reason !== '' ||
+    Object.values(parts).some(Boolean) ||
+    documents.items.length > 0;
   const { dialog, allowNavigation } = useUnsavedChanges(
     dirty && submission.state.status !== 'saved',
     submission.state.status === 'verifying',
@@ -148,6 +158,17 @@ function RefundForm({ source }: { source: TransactionDetail }) {
       await invalidateRecords(queryClient);
       toast(`İade kaydedildi (#${result.data.recordNo}).`);
       allowNavigation();
+      if (documents.items.length > 0) {
+        setUploading(true);
+        const summary = await documents
+          .uploadAll({ ownerType: 'transaction', ownerId: result.data.id })
+          .finally(() => setUploading(false));
+        if (summary.uploaded > 0) await invalidateRecords(queryClient);
+        if (summary.failed > 0) {
+          setSaved(result.data);
+          return;
+        }
+      }
       await navigate(`/uygulama/islemler/${source.id}`, { replace: true });
     } catch (caught) {
       if (isApiError(caught) && caught.issues.length > 0) {
@@ -155,6 +176,35 @@ function RefundForm({ source }: { source: TransactionDetail }) {
       }
     }
   }
+
+  if (saved) {
+    return (
+      <div className="stack">
+        <UploadResultNotice
+          saved={`İade kaydedildi (#${saved.recordNo})`}
+          queue={documents}
+          owner={{ ownerType: 'transaction', ownerId: saved.id }}
+        />
+        <div className="form-actions">
+          <Button
+            disabled={documents.busy}
+            onClick={() => void navigate(`/uygulama/islemler/${source.id}`, { replace: true })}
+          >
+            Kaynak kayda dön
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={documents.busy}
+            onClick={() => void navigate(`/uygulama/islemler/${saved.id}`, { replace: true })}
+          >
+            İade kaydını aç
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const busy = submission.busy || uploading;
 
   return (
     <form
@@ -259,7 +309,7 @@ function RefundForm({ source }: { source: TransactionDetail }) {
                 />
               )}
             </Field>
-            <DocumentPlaceholder />
+            <DocumentFormField queue={documents} disabled={busy} />
             {previewValid ? <ImpactBlock impact={impact} /> : null}
           </div>
         </Panel>
@@ -272,11 +322,12 @@ function RefundForm({ source }: { source: TransactionDetail }) {
       ) : null}
       {!canWrite ? <div className="alert alert--danger">{closedReason}</div> : null}
       <SaveStatus state={submission.state} onVerify={() => void submission.verify()} />
+      {uploading ? <UploadingNotice queue={documents} /> : null}
       <div className="form-actions sticky-actions">
         <Button
           type="submit"
           loading={submission.state.status === 'saving'}
-          disabled={submission.busy || !canWrite}
+          disabled={busy || !canWrite || submission.state.status === 'saved'}
         >
           İadeyi Kaydet
         </Button>

@@ -8,7 +8,6 @@ import { invalidateRecords } from '../../api/queries';
 import { useCreateSubmission } from '../../api/submission';
 import type { Agreement } from '../../api/types';
 import { Button } from '../../components/ui/Button';
-import { DocumentPlaceholder } from '../../components/ui/Card';
 import { ChipGroup } from '../../components/ui/Chips';
 import { DateInput, Field, TextArea, TextInput } from '../../components/ui/Field';
 import { MoneyInput } from '../../components/ui/MoneyInput';
@@ -18,6 +17,8 @@ import { useWriteAccess } from '../../hooks/useWriteAccess';
 import { applyServerErrors, toKurus } from '../../lib/forms';
 import { toast } from '../../stores/ui';
 import { PartyPicker, ScopePicker } from '../common/Pickers';
+import { DocumentFormField, UploadingNotice, UploadResultNotice } from '../documents/DocumentParts';
+import { useUploadQueue } from '../documents/useUploadQueue';
 import { OBLIGATION_FIELDS, obligationSchema, type ObligationValues } from './obligation-form';
 
 /**
@@ -44,8 +45,12 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
   // Bütün form değerleri; React Compiler ile uyumlu abonelik.
   const values = useWatch({ control, compute: (all) => all });
   const submission = useCreateSubmission<Agreement>();
+  const documents = useUploadQueue();
+  const [uploading, setUploading] = useState(false);
+  // Belgesi yüklenemeyen kayıt: kayıt tamam, yalnız belge yeniden denenir.
+  const [saved, setSaved] = useState<Agreement | null>(null);
   const { dialog, allowNavigation } = useUnsavedChanges(
-    isDirty && submission.state.status !== 'saved',
+    (isDirty || documents.items.length > 0) && submission.state.status !== 'saved',
     submission.state.status === 'verifying',
   );
 
@@ -76,6 +81,17 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
       await invalidateRecords(queryClient);
       toast(opening ? 'Başlangıç kaydı oluşturuldu.' : 'Anlaşma oluşturuldu.');
       allowNavigation();
+      if (documents.items.length > 0) {
+        setUploading(true);
+        const summary = await documents
+          .uploadAll({ ownerType: 'agreement', ownerId: result.data.id })
+          .finally(() => setUploading(false));
+        if (summary.uploaded > 0) await invalidateRecords(queryClient);
+        if (summary.failed > 0) {
+          setSaved(result.data);
+          return;
+        }
+      }
       await navigate(`/uygulama/anlasmalar/${result.data.id}`, { replace: true });
     } catch (caught) {
       const rest = applyServerErrors(caught, setError, OBLIGATION_FIELDS, {
@@ -85,6 +101,28 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
       if (rest.length > 0) setFormError(rest.join(' '));
     }
   });
+
+  if (saved) {
+    return (
+      <div className="stack">
+        <UploadResultNotice
+          saved={opening ? 'Başlangıç kaydı oluşturuldu' : 'Anlaşma kaydedildi'}
+          queue={documents}
+          owner={{ ownerType: 'agreement', ownerId: saved.id }}
+        />
+        <div className="form-actions">
+          <Button
+            disabled={documents.busy}
+            onClick={() => void navigate(`/uygulama/anlasmalar/${saved.id}`, { replace: true })}
+          >
+            Kaydı aç
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const busy = submission.busy || uploading;
 
   return (
     <form className="stack stack--lg" noValidate onSubmit={(event) => void onSubmit(event)}>
@@ -215,7 +253,7 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
           <Field label="Açıklama" error={errors.description?.message}>
             {(props) => <TextArea {...props} {...register('description')} rows={5} />}
           </Field>
-          <DocumentPlaceholder />
+          <DocumentFormField queue={documents} disabled={busy} />
         </section>
       </div>
       {formError ? (
@@ -225,11 +263,12 @@ export function ObligationForm({ initial }: { initial: ObligationValues }) {
       ) : null}
       {!canWrite ? <div className="alert alert--danger">{closedReason}</div> : null}
       <SaveStatus state={submission.state} onVerify={() => void submission.verify()} />
+      {uploading ? <UploadingNotice queue={documents} /> : null}
       <div className="form-actions sticky-actions">
         <Button
           type="submit"
           loading={submission.state.status === 'saving'}
-          disabled={submission.busy || !canWrite}
+          disabled={busy || !canWrite || submission.state.status === 'saved'}
         >
           {opening ? 'Başlangıç Kaydını Oluştur' : 'Anlaşmayı Oluştur'}
         </Button>

@@ -5,7 +5,6 @@ import {
   Copy,
   HardHat,
   History,
-  Paperclip,
   Pencil,
   Receipt,
   Split,
@@ -20,7 +19,7 @@ import type { DuplicateDraft, TransactionDetail } from '../../api/types';
 import { ActionDialog } from '../../components/ui/ActionDialog';
 import { Amount, Badge, KindBadge, KindIcon } from '../../components/ui/Amount';
 import { Button, ButtonLink, DisabledAction } from '../../components/ui/Button';
-import { DocumentPlaceholder, PageHeader, Panel } from '../../components/ui/Card';
+import { PageHeader, Panel } from '../../components/ui/Card';
 import { Checkbox, Field, TextArea } from '../../components/ui/Field';
 import { HistoryList } from '../../components/ui/HistoryList';
 import { Icon } from '../../components/ui/Icon';
@@ -31,6 +30,7 @@ import { useWriteAccess } from '../../hooks/useWriteAccess';
 import { formatDate, formatDateTime, formatMoney, formatTl } from '../../lib/format';
 import { KIND_LABEL } from '../../lib/labels';
 import { toast } from '../../stores/ui';
+import { DocumentsPanel } from '../documents/DocumentsPanel';
 import { ImpactBlock } from './ImpactBlock';
 import { allocationsEffect, useImpactPreview } from './impact';
 import type { CopyState } from './TransactionNewPage';
@@ -341,11 +341,12 @@ function TransactionDetailView({
             </Panel>
           ) : null}
 
-          <Panel title="Belgeler" icon={Paperclip}>
-            <div className="panel__body">
-              <DocumentPlaceholder titled={false} count={t.documentCount} />
-            </div>
-          </Panel>
+          <DocumentsPanel
+            owner={{ ownerType: 'transaction', ownerId: t.id }}
+            documents={t.documents}
+            ownerDeleted={deleted}
+            onChanged={reload}
+          />
         </div>
       </div>
 
