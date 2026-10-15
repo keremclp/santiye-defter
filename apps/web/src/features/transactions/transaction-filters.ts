@@ -81,3 +81,11 @@ export function transactionQuery(filters: TransactionFilters, today = todayInIst
     limit: 50,
   };
 }
+
+/** "Bu sonuçları indir": aynı filtrelerin bütün sonuçları, sayfa olmadan (şartname 7.10). */
+export function transactionExportQuery(filters: TransactionFilters, today = todayInIstanbul()) {
+  const query: Record<string, unknown> = { ...transactionQuery(filters, today) };
+  delete query.page;
+  delete query.limit;
+  return query;
+}

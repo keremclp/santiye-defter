@@ -10,5 +10,6 @@ export * from './finance/refund.js';
 export * from './finance/totals.js';
 export * from './money.js';
 export * from './record-schemas.js';
+export * from './reports.js';
 export * from './schemas.js';
 export * from './text.js';

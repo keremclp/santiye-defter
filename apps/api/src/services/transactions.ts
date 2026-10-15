@@ -107,7 +107,7 @@ export const transactionListQuerySchema = paginationSchema.extend({
 
 type ListQuery = z.infer<typeof transactionListQuerySchema>;
 
-const SORTS = {
+export const TRANSACTION_SORTS = {
   newest: { date: -1, recordNo: -1 },
   oldest: { date: 1, recordNo: 1 },
   amount_desc: { amount: -1, recordNo: -1 },
@@ -542,7 +542,8 @@ export class TransactionService {
     };
   }
 
-  private async listFilter(context: CustomerContext, query: ListQuery) {
+  /** Liste filtresi ve toplam kapsamı; "Bu sonuçları indir" de aynı filtreyi kullanır. */
+  async listFilter(context: CustomerContext, query: Omit<ListQuery, 'page' | 'limit'>) {
     const filter: QueryFilter<Transaction> = {};
     if (query.dateFrom || query.dateTo) {
       filter.date = {
@@ -624,7 +625,7 @@ export class TransactionService {
     const [transactions, total, totals] = await Promise.all([
       scope
         .find(filter, options)
-        .sort(SORTS[query.sort])
+        .sort(TRANSACTION_SORTS[query.sort])
         .skip((query.page - 1) * query.limit)
         .limit(query.limit),
       scope.countDocuments(filter, options),

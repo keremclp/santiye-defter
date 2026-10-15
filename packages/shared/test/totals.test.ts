@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { cashTotalsByMonth, computeCashTotals, type CashTransaction } from '../src/index.js';
+import {
+  cashTotalsByMonth,
+  cashTotalsOfRows,
+  computeCashTotals,
+  type CashTransaction,
+} from '../src/index.js';
 
 const tl = (lira: number) => lira * 100;
 
@@ -138,5 +143,45 @@ describe('cashTotalsByMonth', () => {
         (item) => item.totals.netExpense,
       ),
     ).toEqual([tl(15_000), -tl(2_000)]);
+  });
+});
+
+describe('cashTotalsOfRows (rapor satırları, şartname 7.10 ve 9.1)', () => {
+  it('ocakta 40.000 TL ödeme, şubatta 10.000 TL iade: dönem satırları ayrı ayrı ve birlikte', () => {
+    const january = [{ kind: 'expense' as const, amount: tl(40_000) }];
+    const february = [{ kind: 'expense_refund' as const, amount: tl(10_000) }];
+    expect(cashTotalsOfRows(january).netExpense).toBe(tl(40_000));
+    expect(cashTotalsOfRows(february).netExpense).toBe(-tl(10_000));
+    expect(cashTotalsOfRows([...january, ...february])).toEqual({
+      income: 0,
+      incomeRefund: 0,
+      expense: tl(40_000),
+      expenseRefund: tl(10_000),
+      netIncome: 0,
+      netExpense: tl(30_000),
+      difference: -tl(30_000),
+    });
+  });
+
+  it('paylaştırılmış hareketin şantiye satırı yalnız payıyla toplanır', () => {
+    // 40.000 TL gider: A 25.000 + B 15.000; A raporunda satır tutarı pay (25.000).
+    const projectA = [
+      { kind: 'income' as const, amount: tl(100_000) },
+      { kind: 'expense' as const, amount: tl(25_000) },
+      { kind: 'income_refund' as const, amount: tl(1_000) },
+    ];
+    expect(cashTotalsOfRows(projectA)).toMatchObject({
+      netIncome: tl(99_000),
+      netExpense: tl(25_000),
+      difference: tl(74_000),
+    });
+    expect(cashTotalsOfRows(projectA)).toEqual(
+      computeCashTotals(transactions, { target: { scope: 'project', projectId: 'A' } }),
+    );
+  });
+
+  it('boş satırlar sıfır; kuruş olmayan tutar reddedilir', () => {
+    expect(cashTotalsOfRows([]).difference).toBe(0);
+    expect(() => cashTotalsOfRows([{ kind: 'income', amount: 12.5 }])).toThrow(RangeError);
   });
 });

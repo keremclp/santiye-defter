@@ -2020,3 +2020,67 @@ a.card-list__item:hover {
     padding: var(--space-10) var(--space-22);
   }
 }
+
+/* ── Raporlar (şartname 7.10) ────────────────────────────────────────────── */
+
+.report-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.report-meta__list {
+  grid-template-columns: minmax(150px, max-content) 1fr;
+}
+
+.report-meta__warning {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 600;
+}
+
+.report-meta__warning svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+/* Toplam satırları: dosyadaki toplamlarla aynı, aynı satırlardan. */
+.report-totals {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--space-10) 18px var(--space-16);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-cell);
+}
+
+.report-totals__line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: 3px 0;
+}
+
+.report-totals__line dt {
+  color: var(--color-ink2);
+}
+
+.report-totals__line dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 759px) {
+  .report-meta__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .report-meta__list dd {
+    margin-bottom: var(--space-6);
+  }
+}

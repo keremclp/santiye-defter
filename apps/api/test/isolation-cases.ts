@@ -112,6 +112,27 @@ export const companyIsolationCases: IsolationCase[] = [
     method: 'get',
     path: `/parties/${party.id}/statement`,
   })),
+  // Raporlar (10.9); kimliksiz rapor ve dosyalar reports.test.ts'te ayrıca denenir.
+  caseFor('GET /reports/projects/:id/summary', ({ project }) => ({
+    method: 'get',
+    path: `/reports/projects/${project.id}/summary`,
+  })),
+  caseFor('GET /reports/parties/:id/statement', ({ party }) => ({
+    method: 'get',
+    path: `/reports/parties/${party.id}/statement`,
+  })),
+  caseFor('GET /reports/project/export.pdf', ({ project }) => ({
+    method: 'get',
+    path: `/reports/project/export.pdf?id=${project.id}`,
+  })),
+  caseFor('GET /reports/party/export.xlsx', ({ party }) => ({
+    method: 'get',
+    path: `/reports/party/export.xlsx?id=${party.id}`,
+  })),
+  caseFor('GET /reports/project/export.csv', ({ project }) => ({
+    method: 'get',
+    path: `/reports/project/export.csv?id=${project.id}`,
+  })),
   caseFor('PATCH /parties/:id', ({ party }) => ({
     method: 'patch',
     path: `/parties/${party.id}`,

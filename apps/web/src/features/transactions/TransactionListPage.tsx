@@ -1,5 +1,5 @@
-import { Calendar, Download, Search, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { Calendar, Search, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useCategories, useCompanyUsers, useParty, useTransactions } from '../../api/queries';
 import { Badge } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
@@ -13,10 +13,12 @@ import { usePageMeta } from '../../hooks/usePageMeta';
 import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { formatDate, formatMoney, formatSigned } from '../../lib/format';
 import { PartyPicker } from '../common/Pickers';
+import { ReportDownload } from '../reports/ReportDownload';
 import { useProjectOptions } from '../common/project-options';
 import { TransactionTable } from '../common/RecordTables';
 import {
   TRANSACTION_FILTER_DEFAULTS,
+  transactionExportQuery,
   transactionQuery,
   type TransactionFilters,
 } from './transaction-filters';
@@ -44,7 +46,6 @@ const KIND_FILTER_LABEL: Record<string, string> = {
 /** Gelir, gider ve iade listesi (şartname 7.4). Filtreler URL'de; toplamlar bütün sonuçları kapsar. */
 export function TransactionListPage() {
   usePageMeta('İşlemler');
-  const exportHintId = useId();
   const {
     values: filters,
     update,
@@ -58,6 +59,7 @@ export function TransactionListPage() {
   const users = useCompanyUsers();
   const selectedParty = useParty(filters.kisi || null);
   const query = useTransactions(transactionQuery(filters));
+  const exportParams = transactionExportQuery(filters);
 
   // Arama yazarken her harfte istek atılmaz.
   useEffect(() => {
@@ -98,18 +100,12 @@ export function TransactionListPage() {
         actions={
           <>
             <Refreshing active={query.isFetching && !query.isPending} />
-            <Button
-              variant="secondary"
-              className="hide-mobile"
-              disabled
-              aria-describedby={exportHintId}
-            >
-              <Icon icon={Download} />
-              Bu sonuçları indir
-            </Button>
-            <span id={exportHintId} className="visually-hidden">
-              İndirme yakında eklenecek.
-            </span>
+            <ReportDownload
+              type="transactions"
+              params={exportParams}
+              label="Bu sonuçları indir"
+              disabled={!data || data.total === 0}
+            />
           </>
         }
       />

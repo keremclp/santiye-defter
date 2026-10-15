@@ -37,6 +37,8 @@ export function createApp(deps: AppDeps, options: AppOptions = {}): express.Expr
     cors({
       origin: [deps.config.webOrigin],
       allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key'],
+      // Rapor dosyasının adı web'de indirme adı olarak kullanılır.
+      exposedHeaders: ['Content-Disposition'],
     }),
   );
   app.use(express.json({ limit: '1mb' }));

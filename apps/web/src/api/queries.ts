@@ -14,11 +14,15 @@ import type {
   DeletedType,
   DuesList,
   MeResult,
+  OpenBalancesReport,
   Paged,
   PartyDetail,
+  PartyReport,
   PartySuggestion,
   Party,
+  PeriodReport,
   Project,
+  ProjectReport,
   ProjectSummary,
   SearchHistoryItem,
   SearchResult,
@@ -62,6 +66,7 @@ export const keys = {
   search: (params: Params) => ['search', params] as const,
   searchHistory: ['search', 'history'] as const,
   deleted: (params: Params) => ['deleted', params] as const,
+  report: (path: string, params: Params) => ['reports', path, params] as const,
 };
 
 const STATIC_KEYS = new Set(['me']);
@@ -188,3 +193,22 @@ export const useDeleted = (type: DeletedType, page: number) =>
     queryKey: keys.deleted({ type, page }),
     queryFn: () => apiGet<Paged<DeletedItem>>('/deleted', { type, page }),
   });
+
+const useReport = <T>(path: string, params: Params, enabled = true) =>
+  useQuery({
+    queryKey: keys.report(path, params),
+    queryFn: () => apiGet<T>(path, params),
+    enabled,
+  });
+
+export const usePeriodReport = (params: Params) =>
+  useReport<PeriodReport>('/reports/period', params);
+
+export const useProjectReport = (id: string | undefined, params: Params) =>
+  useReport<ProjectReport>(`/reports/projects/${id}/summary`, params, enabledId(id));
+
+export const usePartyReport = (id: string | undefined | null, params: Params) =>
+  useReport<PartyReport>(`/reports/parties/${id}/statement`, params, enabledId(id));
+
+export const useOpenBalancesReport = (params: Params) =>
+  useReport<OpenBalancesReport>('/reports/open-balances', params);

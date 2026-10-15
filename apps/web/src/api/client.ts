@@ -159,6 +159,14 @@ http.interceptors.response.use(
       throw toApiError(error as AxiosError<ApiFailure>);
     }
     useUi.getState().setOffline(false);
+    // Dosya isteğinde hata gövdesi Blob olarak gelir; mesajı okumak için JSON'a çevrilir.
+    if (error.response.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text()) as unknown;
+      } catch {
+        error.response.data = null;
+      }
+    }
 
     const status = error.response.status;
     const url = config?.url ?? '';
@@ -232,4 +240,15 @@ export async function apiPatch<T>(url: string, body: unknown): Promise<T> {
 export async function apiDelete<T>(url: string, body: unknown): Promise<T> {
   const res = await http.delete<ApiSuccess<T>>(url, { data: body });
   return res.data.data;
+}
+
+/** Dosya indirme (rapor): Blob ve sunucunun verdiği dosya adı. */
+export async function apiDownload(
+  url: string,
+  params: Record<string, unknown> = {},
+): Promise<{ blob: Blob; fileName: string | null }> {
+  const res = await http.get<Blob>(url, { params, responseType: 'blob', timeout: 120_000 });
+  const disposition = String(res.headers['content-disposition'] ?? '');
+  const match = /filename="([^"]+)"/.exec(disposition);
+  return { blob: res.data, fileName: match?.[1] ?? null };
 }

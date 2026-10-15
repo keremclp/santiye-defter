@@ -52,9 +52,9 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 | Belge depolama | S3 uyumlu özel bucket (ör. Cloudflare R2); `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` | İmzalı ve süreli bağlantılar. Bölge adı `us-east-1`, yol biçimi (path-style) adresleme; yerel MinIO ve R2 bununla çalışır |
 | Görsel önizleme | sharp (HEIC için heic-convert) | Orijinal dosya korunur |
 | İki aşamalı doğrulama | otplib (TOTP, RFC 6238) | Yalnız ürün sahibi hesabı; doğrulama uygulamasıyla 6 haneli kod |
-| PDF | PDFKit | Türkçe karakter için gömülü yazı tipi |
-| Excel | exceljs | Rapor ve tam veri çıkışı |
-| CSV | UTF-8, BOM'lu, Türkçe başlık, `;` ayraç | Excel'de Türkçe karakter bozulmadan açılır |
+| PDF | PDFKit | Türkçe karakter için gömülü yazı tipi: DM Sans 400/700 ve Outfit 600 TTF dosyaları OFL lisans metinleriyle `apps/api/assets/fonts` altında; üretim dağıtımında bu klasör de bulunur. Outfit'te ₺ olmadığı için yalnız başlıklarda, tutarlar DM Sans. Bitişik harfler ("fi") kapalı; yoksa kopyalanan metin bozulur. Yatay A4; uzun tablolar sayfalara bölünür, başlık satırı her sayfada tekrarlanır |
+| Excel | exceljs | Rapor ve tam veri çıkışı. "Özet" sayfasında başlık bilgileri ve özetler, her tablo ayrı sayfada; tutarlar TL biçimli sayı hücresi, tarihler tarih hücresi |
+| CSV | UTF-8, BOM'lu, Türkçe başlık, `;` ayraç | Excel'de Türkçe karakter bozulmadan açılır. Tutar binlik ayraçsız, ondalık virgüllü (`12500,50`); tarih `GG.AA.YYYY` |
 | Paketleme | archiver | Tam veri çıkışında belge paketi |
 
 Klasör:
@@ -648,16 +648,21 @@ Listeler: işlemler, anlaşmalar, şantiyeler, kişiler. Satırda silen kişi, z
 
 ### 7.10 Raporlar ve veri çıkışı
 
-Dört standart rapor; telefonda da görüntülenir ve indirilir:
+Dört standart rapor; telefonda da görüntülenir ve indirilir. `/uygulama/raporlar` dört sekmelidir; şantiye sekmesi ve `/uygulama/projeler/:id/rapor` aynı görünümü kullanır. Her raporda Excel/CSV/PDF indirme menüsü vardır; tablolar telefonda kart listesine döner.
 
-1. **Dönem gelir/gider hareket dökümü:** tarih aralığı, kapsam, kategori filtreleri; kategori özeti.
-2. **Şantiye özeti ve hareket dökümü** (`/uygulama/projeler/:id/rapor`): özet kutuları (tahsilat, ödeme, fark, anlaşmalar, ödenen, kalan borç/alacak, fazla), altta gelir ve gider listeleri tarihe göre artan.
-3. **Kişi/firma hesap dökümü:** borç, alacak, fazla ödeme/tahsilat ve anlaşmaya bağlanmamış doğrudan hareketler ayrı.
-4. **Açık borç/alacak ve vade listesi:** başlangıç kayıtları dahil, etiketli.
+1. **Dönem gelir/gider hareket dökümü:** tarih aralığı (ekran "Bu ay" ile açılır), kapsam, kategori filtreleri; kategori özeti. Kapsam: tüm firma, firma geneli kayıtlar veya bir şantiye (tamamlanan ve arşivlenenler dahil); kapsam seçilince tutarlar o kapsama düşen paylardan hesaplanır. Kategori filtresi o kategorinin giderlerini ve ödeme iadelerini birlikte alır; "Kategorisiz" kategorisiz giderleri ve iadelerini alır. Kategori özeti her kategori için ödeme, ödeme iadesi ve net ödeme verir.
+2. **Şantiye özeti ve hareket dökümü** (`/uygulama/projeler/:id/rapor`): özet kutuları (tahsilat, ödeme, fark, anlaşmalar, ödenen, kalan borç/alacak, fazla), altta gelir ve gider listeleri tarihe göre artan. Bütün tarihlerle açılır.
+3. **Kişi/firma hesap dökümü:** borç, alacak, fazla ödeme/tahsilat ve anlaşmaya bağlanmamış doğrudan hareketler ayrı. Bütün tarihlerle açılır. Anlaşmalar ve başlangıç kayıtları tek tabloda, başlangıç kayıtları "Başlangıç kaydı" etiketiyle; ödenecek ve tahsil edilecek toplamları ayrı satırlarda (mahsup yok). Hareketler "Anlaşmaya bağlı" ve "Doğrudan (anlaşmaya bağlanmamış; borcu azaltmaz)" diye ayrılır; doğrudan hareket, hiçbir payı anlaşmaya bağlı olmayan harekettir (kişi detayıyla aynı tanım). Kişi detayındaki "Hesap dökümü indir" bu raporu o kişi için bütün tarihlerle açar.
+4. **Açık borç/alacak ve vade listesi:** başlangıç kayıtları dahil, etiketli. Kalanı olan anlaşmalar ve başlangıç kayıtları vade gruplarına (gecikmiş, yaklaşan 30 gün, daha sonra, vadesi belirlenmemiş; bölüm 9.3) ayrılır; her grupta kalan borç ve kalan alacak ayrı toplanır. Tarih filtresi yoktur; yön (borç, alacak, ikisi) ve kapsam (dönem dökümüyle aynı seçenekler) seçilir.
 
-Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, üretim tarihi/saati, "Güncel kalan — hesaplandığı tarih/saat" ve takip başlangıcı. Başlangıç kayıtları varsa "Bu rapor takip başlangıç tarihinden itibaren kayıtlı hareketleri kapsar" uyarısı.
+Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, üretim tarihi/saati, "Güncel kalan — hesaplandığı tarih/saat" ve takip başlangıcı. Tarih aralığı yalnız hareketleri daraltır; kalan borç/alacak, gecikmiş ve fazla tutarlar her zaman günceldir ve "Güncel kalan" satırındaki ana aittir. Takip başlangıcı, raporun kapsamındaki başlangıç kayıtlarının en erken takip başlangıç tarihidir; kapsamda başlangıç kaydı yoksa satır yine bulunur ve "Başlangıç kaydı yok" yazar. "Bu rapor takip başlangıç tarihinden itibaren kayıtlı hareketleri kapsar" uyarısı yalnız başlangıç kaydı varsa çıkar.
 
-İndir: Excel, CSV ve PDF. PDF başlığı rapor adı ve şantiye/kişi adı. "Bu sonuçları indir" etkin filtrelerin bütün sonuçlarını alır. Paylaştırılmış kayıtta ana işlem no, toplam gerçek tutar ve seçili kapsama düşen pay ayrı sütunlardır; toplamlar paydan hesaplanır, ana tutar tekrar sayılmaz. Dosyadaki toplamlar aynı satırlardan hesaplanır. Borç/alacak ile gerçekleşen hareketler karıştırılmaz.
+İndir: Excel, CSV ve PDF (biçimler bölüm 2). PDF başlığı rapor adı ve şantiye/kişi adı. "Bu sonuçları indir" etkin filtrelerin bütün sonuçlarını alır; telefonda da görünür, sonuç yoksa kapalıdır. Paylaştırılmış kayıtta ana işlem no, toplam gerçek tutar ve seçili kapsama düşen pay ayrı sütunlardır; toplamlar paydan hesaplanır, ana tutar tekrar sayılmaz. Dosyadaki toplamlar aynı satırlardan hesaplanır. Borç/alacak ile gerçekleşen hareketler karıştırılmaz. Ayrıntılar:
+
+- Dönem dökümünde ve "Bu sonuçları indir"de her hareket tek satırdır. "Toplam tutar" hareketin gerçek tutarıdır; kapsam seçildiyse "Kapsama düşen pay" ayrı sütundur ve toplam satırları bu sütundan hesaplanır. Paylar Excel ve CSV'de ayrıca "Kadıköy Villa: 25.000 TL; Şişli Ofis: 15.000 TL" biçiminde yazılır. İade satırında kaynak hareketin işlem no'su ayrı sütundur.
+- "Silinenleri göster" açıkken indirilen dosyada silinen kayıtlar "Silindi" durumuyla listelenir ama toplamlara katılmaz.
+- PDF okunabilir dökümdür: paylar, kaynak işlem no, sisteme girilme zamanı ve takip başlangıcı sütunları yalnız Excel ve CSV'dedir (takip başlangıcı başlık bilgisi PDF'te de vardır). Gelir yeşil, gider kırmızı; kalan borç/alacak bakiyedir ve `ink` renginde yazılır.
+- Dosya adı Türkçe harfleri sadeleştirilmiş ASCII ve İstanbul günüyle verilir (ör. `santiye-raporu-kadikoy-villa-2026-10-15.pdf`).
 
 **Tüm firma verisini dışa aktar:** Filtrelerden bağımsız, ayrı düğme. Arka planda hazırlanır, ilerleme ve hazır olunca indirme gösterilir. İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi; ilişkileri açıklanmış Excel sayfaları veya CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde. Silinen ama geri alınabilir kayıtlar durum etiketiyle. Şifre, token veya başka firma verisi içermez. Hazır paket 7 gün sonra silinir. Hazırlama hatası finansal kayıtları etkilemez.
 
@@ -883,7 +888,7 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Kişi özeti | O kişiye bağlı borç, alacak, fazla ödeme, fazla tahsilat ve doğrudan hareketler **ayrı**. Otomatik mahsup yok |
 | Kapsam | Tamamlanan ve arşivlenen şantiyelerin açık tutarları firma toplamında ve vade listelerinde kalır. Yalnız aktifleri kapsayan özet bunu açıkça yazar |
 | Başlangıç kayıtları özetlerde | Anlaşma toplamı, ödenen, kalan borç/alacak ve gecikmiş tutarlar anlaşmaları ve başlangıç kayıtlarını birlikte içerir; başlangıç kayıtları ayrıca ayrı alt toplam olarak döner. Ekran ve raporlarda bu toplamlar "Anlaşmalar ve başlangıç kayıtları" diye etiketlenir, başlangıç alt toplamı ayrıca gösterilir |
-| Hesap yeri | Veritabanı yalnız türe göre toplanmış tutarları getirir; net tahsilat/ödeme ve fark `cashTotalsFromSums`, kalan/fazla/ödeme durumu `computeAgreementBalance`, vade grupları `dueStateOf` ile `packages/shared` içinde hesaplanır |
+| Hesap yeri | Veritabanı yalnız türe göre toplanmış tutarları getirir; net tahsilat/ödeme ve fark `cashTotalsFromSums`, kalan/fazla/ödeme durumu `computeAgreementBalance`, vade grupları `dueStateOf` ile `packages/shared` içinde hesaplanır. Raporlarda bütün okumalar tek tutarlı okuma anından (MongoDB snapshot okuması) yapılır; hareket toplamları aynı satırlardan `cashTotalsOfRows`, borç/alacak özetleri `summarizeAgreements` ile hesaplanır. Ekran, API cevabı ve dosya aynı rapor verisinden üretilir; dosya ayrıca hesap yapmaz. Dosyalar için kuruşun ondalık metni `kurusToDecimalString` ile üretilir |
 
 ### 9.2 Anlaşma ve başlangıç kaydı
 
@@ -1135,7 +1140,7 @@ Anlaşmaya ödeme/tahsilat ayrı uç değil; `POST /transactions` ile `allocatio
 | GET | `/reports/projects/:id/summary` | şantiye raporu verisi |
 | GET | `/reports/parties/:id/statement` | hesap dökümü verisi |
 | GET | `/reports/open-balances` | açık borç/alacak ve vade |
-| GET | `/reports/:type/export.{xlsx,csv,pdf}` | aynı filtrelerle dosya |
+| GET | `/reports/:type/export.{xlsx,csv,pdf}` | aynı filtrelerle dosya. `type`: `period`, `project`, `party`, `open-balances`, `transactions`; şantiye ve kişi raporunda kayıt `?id=` ile. `transactions` "Bu sonuçları indir"dir ve `GET /transactions` filtrelerini sayfasız alır. Bilinmeyen tür veya biçim 400 `VALIDATION`, başka firmanın kaydı 404. Dosya adı `Content-Disposition` başlığında |
 | POST | `/exports/full` | tam firma veri çıkışı başlat |
 | GET | `/exports/:id` | durum, ilerleme, hazırsa indirme adresi |
 | GET | `/deleted` | `type` ile silinen kayıtlar |
@@ -1186,6 +1191,7 @@ Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 
 - Para inputu sayısal klavye ve `inputMode="decimal"`. Kullanıcı `12500`, `12.500` veya `12.500,50` yazabilir; kuruşa çevrilir. `12.5` gibi girdide alanın altında "Ondalık için virgül kullanın" görünür (bölüm 3 "Para"). Gösterim `tr-TR`. Telefon dili İngilizce olan cihazlarda sayısal klavyede virgül çıkmayabilir; bu durum İngilizce dilli bir telefonda denenmeli. Ondalık girilemiyorsa giriş kuralını değiştirmeden önce kullanıcıya sorulmalı.
 - Tarih inputu `type="date"` veya özel takvim. Etiket Türkçe. Seçilen takvim günü korunur.
 - Belge seçimi telefonda ayrı "Fotoğraf çek" (`capture="environment"`) ve "Galeriden seç" düğmeleriyle, masaüstünde tek "Dosya ekle" düğmesiyle; hepsi `accept="image/*,application/pdf"` (bölüm 4.4).
+- Rapor dosyası indirilirken dosya adı sunucunun `Content-Disposition` başlığından alınır (CORS ayarında bu başlık açıktır). Dosya ucunun hata cevabı okunup mesaj olarak gösterilir.
 - Demo ve görüntüleme döneminde bant her sayfada; kapalı eylemlerde neden yazılı.
 - Erişilebilirlik: her inputun etiketi var, ikon düğmenin `aria-label`ı var, renk tek başına anlam taşımasın (gelir/gider, gecikmiş, iade yazısı da görünsün), kontrast lacivert üzerinde beyaz metinle kalsın.
 - SEO yalnız tanıtım sayfalarında: başlık, açıklama, Open Graph. Uygulama, demo ve yönetim rotaları `noindex`.

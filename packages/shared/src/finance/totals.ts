@@ -96,6 +96,22 @@ export function cashTotalsFromSums(
   };
 }
 
+/**
+ * Rapor satırlarının toplamı: her satırın tutarı (paylaştırılmış harekette seçili kapsama düşen pay)
+ * türüne göre toplanır, net ve fark `cashTotalsFromSums` ile hesaplanır. Dosyadaki ve ekrandaki
+ * toplamlar aynı satırlardan bu fonksiyonla çıkar (şartname 7.10).
+ */
+export function cashTotalsOfRows(
+  rows: readonly { kind: TransactionKind; amount: number }[],
+): CashTotals {
+  const totals = emptyTotals();
+  for (const row of rows) {
+    assertKurus(row.amount);
+    add(totals, row.kind, row.amount);
+  }
+  return totals;
+}
+
 /** Dönem toplamı: her hareket, iade de dahil, kendi işlem tarihinin dönemine yazılır. */
 export function computeCashTotals(
   transactions: readonly CashTransaction[],

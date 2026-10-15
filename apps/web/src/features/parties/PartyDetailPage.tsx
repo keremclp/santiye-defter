@@ -172,13 +172,18 @@ function PartyView({
                       </button>
                     </>
                   ) : null}
-                  <button type="button" className="dropdown__item" role="menuitem" disabled>
+                  <Link
+                    className="dropdown__item"
+                    role="menuitem"
+                    to={`/uygulama/raporlar?rapor=kisi&kisi=${p.id}&donem=tumu`}
+                    onClick={close}
+                  >
                     <Icon icon={Download} />
                     <span>
                       Hesap dökümü indir
-                      <small>Rapor ve indirme sonraki sürüm adımında açılacak.</small>
+                      <small>Dökümü görüntüle; Excel, CSV veya PDF indir</small>
                     </span>
-                  </button>
+                  </Link>
                   {canWrite ? (
                     <>
                       <div className="dropdown__sep" role="separator" />

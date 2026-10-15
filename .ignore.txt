@@ -1,0 +1,1 @@
+- Tarih görünümü değiştirilip daha güzel bir görüntü yapılacak.

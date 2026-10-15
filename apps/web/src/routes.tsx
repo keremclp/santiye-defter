@@ -77,9 +77,10 @@ const AgreementPaymentPage = page(
 const DuesPage = page(() => import('./features/dues/DuesPage'), 'DuesPage');
 const SearchPage = page(() => import('./features/search/SearchPage'), 'SearchPage');
 const DeletedPage = page(() => import('./features/deleted/DeletedPage'), 'DeletedPage');
-const ReportsPlaceholderPage = page(
-  () => import('./features/reports/ReportsPlaceholderPage'),
-  'ReportsPlaceholderPage',
+const ReportsPage = page(() => import('./features/reports/ReportsPage'), 'ReportsPage');
+const ProjectReportPage = page(
+  () => import('./features/reports/ProjectReportPage'),
+  'ProjectReportPage',
 );
 const SettingsMenuPage = page(
   () => import('./features/settings/SettingsMenuPage'),
@@ -128,7 +129,7 @@ export const routes: RouteObject[] = [
               { path: 'projeler/yeni', element: el(ProjectFormPage) },
               { path: 'projeler/:id', element: el(ProjectDetailPage) },
               { path: 'projeler/:id/duzenle', element: el(ProjectFormPage) },
-              { path: 'projeler/:id/rapor', element: el(ReportsPlaceholderPage) },
+              { path: 'projeler/:id/rapor', element: el(ProjectReportPage) },
               { path: 'kisiler', element: el(PartyListPage) },
               { path: 'kisiler/yeni', element: el(PartyFormPage) },
               { path: 'kisiler/:id', element: el(PartyDetailPage) },
@@ -144,7 +145,7 @@ export const routes: RouteObject[] = [
               { path: 'anlasmalar/:id', element: el(AgreementDetailPage) },
               { path: 'anlasmalar/:id/odeme', element: el(AgreementPaymentPage) },
               { path: 'vadeler', element: el(DuesPage) },
-              { path: 'raporlar', element: el(ReportsPlaceholderPage) },
+              { path: 'raporlar', element: el(ReportsPage) },
               { path: 'ara', element: el(SearchPage) },
               { path: 'silinenler', element: el(DeletedPage) },
               { path: 'ayarlar', element: el(SettingsMenuPage) },

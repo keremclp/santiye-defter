@@ -53,8 +53,11 @@ export function parseMoney(input: string): ParseMoneyResult {
   return { ok: true, value: Number(kurus) };
 }
 
-// Intl'e sayı yerine ondalık metin verilir; böylece biçimleme de kayan noktaya düşmez.
-function toDecimalString(kurus: number): string {
+/**
+ * Kuruşu ondalık metne çevirir: 1250050 → "12500.50", -500 → "-5.00". Intl'e ve dosya çıktılarına
+ * sayı yerine bu metin verilir; böylece biçimleme de kayan noktaya düşmez.
+ */
+export function kurusToDecimalString(kurus: number): string {
   assertKurus(kurus);
   const sign = kurus < 0 ? '-' : '';
   const abs = Math.abs(kurus);
@@ -78,17 +81,17 @@ const fractionFormat = new Intl.NumberFormat('tr-TR', {
 
 /** Ekran gösterimi (şartname 4.4): 1250050 → "₺12.500,50". */
 export function formatMoney(kurus: number): string {
-  return currencyFormat.format(toDecimalString(kurus) as Intl.StringNumericLiteral);
+  return currencyFormat.format(kurusToDecimalString(kurus) as Intl.StringNumericLiteral);
 }
 
 /** Özet kutularındaki kuruşsuz gösterim (şartname 4.4): 1250050 → "₺12.501" (yarım yukarı). */
 export function formatMoneyWhole(kurus: number): string {
-  return currencyWholeFormat.format(toDecimalString(kurus) as Intl.StringNumericLiteral);
+  return currencyWholeFormat.format(kurusToDecimalString(kurus) as Intl.StringNumericLiteral);
 }
 
 /** Mesaj metinlerindeki biçim (şartname 7.4, 7.5): 4000000 → "40.000 TL", 1250050 → "12.500,50 TL". */
 export function formatTl(kurus: number): string {
-  const value = toDecimalString(kurus) as Intl.StringNumericLiteral;
+  const value = kurusToDecimalString(kurus) as Intl.StringNumericLiteral;
   const text = kurus % 100 === 0 ? wholeFormat.format(value) : fractionFormat.format(value);
   return `${text} TL`;
 }

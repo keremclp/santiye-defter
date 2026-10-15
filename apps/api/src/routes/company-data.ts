@@ -22,6 +22,8 @@ import {
   projectUpdateSchema,
   recordChangeSchema,
   refundCreateSchema,
+  REPORT_EXPORT_TYPES,
+  REPORT_FORMATS,
   transactionCorrectionSchema,
   transactionCreateSchema,
   transactionRestoreSchema,
@@ -47,6 +49,14 @@ import {
 import { PartyService, partyListQuerySchema } from '../services/parties.js';
 import { ProjectService, projectListQuerySchema } from '../services/projects.js';
 import { runCompanyIdempotent, runOptionallyIdempotent } from '../services/records.js';
+import {
+  openBalancesQuerySchema,
+  periodReportQuerySchema,
+  reportRangeQuerySchema,
+  ReportService,
+} from '../services/reports.js';
+import { toDocument } from '../reports/document.js';
+import { renderReport } from '../reports/render.js';
 import { TransactionService, transactionListQuerySchema } from '../services/transactions.js';
 
 function respond(res: Response, outcome: IdempotentOutcome) {
@@ -64,6 +74,7 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
   const transactions = new TransactionService(deps);
   const overview = new OverviewService(deps, transactions);
   const documents = new DocumentService(deps);
+  const reports = new ReportService(deps, transactions);
   const id = (req: Parameters<typeof routeParam>[0]) => routeParam(req, 'id');
 
   // ── Firma ve kategoriler (10.3) ──────────────────────────────────────────────
@@ -455,6 +466,48 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
       sendSuccess(res, null, { message: 'Arama geçmişi temizlendi.' });
     },
   );
+
+  // ── Raporlar (10.9): okuma sayılır; görüntüleme döneminde de açıktır ──────────
+  router.get('/reports/period', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await reports.period(requireCustomer(req), periodReportQuerySchema.parse(req.query)),
+    );
+  });
+  router.get('/reports/projects/:id/summary', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await reports.project(requireCustomer(req), id(req), reportRangeQuerySchema.parse(req.query)),
+    );
+  });
+  router.get('/reports/parties/:id/statement', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await reports.party(requireCustomer(req), id(req), reportRangeQuerySchema.parse(req.query)),
+    );
+  });
+  router.get('/reports/open-balances', auth, async (req, res) => {
+    sendSuccess(
+      res,
+      await reports.openBalances(requireCustomer(req), openBalancesQuerySchema.parse(req.query)),
+    );
+  });
+  /** Aynı filtrelerle dosya; şantiye ve kişi raporunda kayıt `id` sorgu parametresiyle verilir. */
+  router.get('/reports/:type/export.:format', auth, async (req, res) => {
+    const type = z.enum(REPORT_EXPORT_TYPES).parse(routeParam(req, 'type'));
+    const format = z.enum(REPORT_FORMATS).parse(routeParam(req, 'format'));
+    const report = await reports.build(requireCustomer(req), type, req.query);
+    const file = await renderReport(toDocument(report), format, report.data.header.generatedAt);
+    res
+      .status(200)
+      .set({
+        'Content-Type': file.contentType,
+        'Content-Disposition': `attachment; filename="${file.fileName}"`,
+        'Cache-Control': 'no-store',
+      })
+      .send(file.body);
+  });
+
   router.get('/deleted', auth, async (req, res) => {
     sendSuccess(
       res,

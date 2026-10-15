@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, formatMoneyWhole, formatTl, isKurus, parseMoney } from '../src/index.js';
+import {
+  formatMoney,
+  formatMoneyWhole,
+  formatTl,
+  isKurus,
+  kurusToDecimalString,
+  parseMoney,
+} from '../src/index.js';
 
 const MAX = Number.MAX_SAFE_INTEGER;
 
@@ -132,5 +139,16 @@ describe('isKurus', () => {
     expect(isKurus(1.5)).toBe(false);
     expect(isKurus(MAX + 1)).toBe(false);
     expect(isKurus('100')).toBe(false);
+  });
+});
+
+describe('kurusToDecimalString', () => {
+  it.each([
+    [1250050, '12500.50'],
+    [5, '0.05'],
+    [0, '0.00'],
+    [-1500000, '-15000.00'],
+  ])('%i → %s', (kurus, expected) => {
+    expect(kurusToDecimalString(kurus)).toBe(expected);
   });
 });

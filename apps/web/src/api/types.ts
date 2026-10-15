@@ -9,6 +9,7 @@ import type {
   DocumentOwnerType,
   DocumentStatus,
   PaymentStatus,
+  ReportExportType,
   Scope,
   TransactionKind,
   WorkStatus,
@@ -491,4 +492,94 @@ export interface DeletedItem {
 export interface IdempotencyStatus {
   status: 'done' | 'not_found';
   resultRef?: { type: string; id: string };
+}
+
+// ── Raporlar (şartname 7.10, 10.9; apps/api/src/services/reports.ts ile aynı) ──
+
+export interface ReportHeader {
+  type: ReportExportType;
+  title: string;
+  subject: string | null;
+  companyName: string;
+  scope: string;
+  /** Kapsam seçildi: tutarlar seçili kapsama düşen paylardan */
+  scoped: boolean;
+  dateFrom: string | null;
+  dateTo: string | null;
+  generatedAt: string;
+  balancesAt: string;
+  trackingStart: string | null;
+  filters: string[];
+}
+
+export interface ReportTransactionRow {
+  id: string;
+  recordNo: number;
+  date: string;
+  kind: TransactionKind;
+  party: string | null;
+  category: string | null;
+  scope: string;
+  agreement: string | null;
+  description: string;
+  isSplit: boolean;
+  allocations: string;
+  amount: number;
+  share: number;
+  sourceRecordNo: number | null;
+  linkedToAgreement: boolean;
+  deleted: boolean;
+  createdAt: string;
+}
+
+export interface ReportAgreementRow {
+  id: string;
+  kind: AgreementKind;
+  label: string;
+  direction: Direction;
+  party: string | null;
+  scope: string;
+  currentAmount: number;
+  netSettled: number;
+  remaining: number;
+  excess: number;
+  agreementDate: string | null;
+  trackingStartDate: string | null;
+  dueDate: string | null;
+  dueState: DueState | null;
+  overdueDays: number;
+  workStatus: WorkStatus | null;
+  settlementPending: boolean;
+}
+
+export interface PeriodReport {
+  header: ReportHeader;
+  totals: CashTotals;
+  categories: { category: string; expense: number; expenseRefund: number; netExpense: number }[];
+  rows: ReportTransactionRow[];
+  obligations: ObligationSummary;
+}
+
+export interface ProjectReport extends ObligationSummary {
+  header: ReportHeader;
+  project: { id: string; name: string; status: ProjectStatus };
+  cash: CashTotals;
+  incomeRows: ReportTransactionRow[];
+  expenseRows: ReportTransactionRow[];
+}
+
+export interface PartyReport extends ObligationSummary {
+  header: ReportHeader;
+  party: { id: string; name: string };
+  agreements: ReportAgreementRow[];
+  linkedRows: ReportTransactionRow[];
+  linkedTotals: CashTotals;
+  directRows: ReportTransactionRow[];
+  directTotals: CashTotals;
+}
+
+export interface OpenBalancesReport {
+  header: ReportHeader;
+  summary: ObligationSummary;
+  groups: { state: DueState; rows: ReportAgreementRow[] }[];
 }

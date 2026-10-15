@@ -12,6 +12,27 @@ export async function withTransaction<T>(work: (session: ClientSession) => Promi
   return result as T;
 }
 
+/**
+ * Okumaları tek tutarlı veri görünümünden (snapshot) yapar; rapor satırları ve özetleri eşzamanlı
+ * bir değişiklikle birbirini çelişmez (şartname 7.10). Oturum paralel sorguda kullanılmaz.
+ */
+export async function withReadSnapshot<T>(
+  work: (session: ClientSession) => Promise<T>,
+): Promise<T> {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction({ readConcern: { level: 'snapshot' } });
+    const result = await work(session);
+    await session.commitTransaction();
+    return result;
+  } catch (error) {
+    if (session.inTransaction()) await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+}
+
 interface MongoServerErrorLike {
   code?: number;
   keyPattern?: Record<string, unknown>;

@@ -274,7 +274,7 @@ Bitti sayılması için:
 
 ```text
 ADIM 6b — Raporlar: tam firma veri çıkışı
-Okunacaklar: şartnamede bölüm 7.10 (son paragraf: tam firma veri çıkışı), 8 girişi (ortak alanlar), 8.8, 8.10 (ExportJob), 9.6 (kapasite hesabı), 10.3 (`storage.breakdown`), 10.9 (/exports uçları). Adım 6a'nın dosya üretim kodunu örnek olarak incele.
+Okunacaklar: şartnamede bölüm 2 (yalnız Excel, CSV ve paketleme satırları), 7.10 (son paragraf: tam firma veri çıkışı; dosya biçimi ve dosya adı için "İndir" paragrafı ve altındaki maddeler), 8 girişi (ortak alanlar), 8.8, 8.10 (ExportJob), 9.6 (kapasite hesabı), 10.3 (`storage.breakdown`), 10.9 (/exports uçları). Adım 6a'nın dosya üretim kodunu örnek olarak incele.
 
 Yap:
 - `POST /exports/full` ve `GET /exports/:id`: arka plan işi, ilerleme, hazır olunca süreli indirme adresi.
@@ -384,8 +384,9 @@ Yap:
 - Playwright uçtan uca testleri (telefon ve masaüstü görünümü): giriş, ilk şifre, gider oluşturma, anlaşmaya ödeme, paylaştırma, iade, sil/geri al, belge yükleme hatası, bağlantı kesintisinde "doğrulanıyor" akışı, demo sıfırlama, ürün sahibi TOTP girişi.
 - Bölüm 13'teki her kabul maddesini bir teste veya belgelenmiş elle kontrole bağlayan kontrol listesi (docs/kabul_kontrol_listesi.md).
 - Önceki adımlarda denenmemiş kalan belge akışlarını kontrol listesine ekle ve dene: anlaşma formu ve detayında belge ekleme, önizleme, sil/geri al (tarayıcıda); indirmenin gerçek dosya kaydetmesi; gerçek telefon kamerasıyla çekim ve gerçek bir HEIC dosyasının önizlemesi (son ikisi elle kontrol olabilir).
+- Rapor dosyalarını kontrol listesine ekle: indirilen Excel, CSV ve PDF gerçek Excel'de ve gerçek bir telefonda açılıyor, Türkçe karakterler ve toplamlar doğru (elle kontrol olabilir).
 - Eksik veya hatalı çıkan noktaları düzelt; şartnameden sapma gerekiyorsa dur ve sor.
-- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar, üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü kuralı (şartname 9.6).
+- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar, üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü kuralı (şartname 9.6), PDF yazı tipi klasörünün (`apps/api/assets/fonts`) üretim dağıtımına dahil edilmesi (şartname bölüm 2).
 
 Bitti sayılması için: Bölüm 13'ün her maddesi işaretli; bütün testler CI'da geçer.
 ```
