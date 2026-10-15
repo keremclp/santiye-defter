@@ -49,7 +49,7 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 | Kimlik | JWT access + refresh (`jose`) | Access 15 dk, refresh 30 gün, her yenilemede döner |
 | Şifre | bcrypt algoritması (`bcryptjs`) | Maliyet 12. Yük artarsa yerel `bcrypt` paketine geçilebilir |
 | Yerel geliştirme | Docker: MongoDB 8.2 replica set, `pgsty/minio` (S3 uyumlu) | Resmi MinIO imajları dağıtılmadığı için topluluk imajı; yalnız yerelde, sürümü sabit. Kod yalnız S3 API'sini kullanır |
-| Belge depolama | S3 uyumlu özel bucket (ör. Cloudflare R2) | İmzalı ve süreli bağlantılar |
+| Belge depolama | S3 uyumlu özel bucket (ör. Cloudflare R2); `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` | İmzalı ve süreli bağlantılar. Bölge adı `us-east-1`, yol biçimi (path-style) adresleme; yerel MinIO ve R2 bununla çalışır |
 | Görsel önizleme | sharp (HEIC için heic-convert) | Orijinal dosya korunur |
 | İki aşamalı doğrulama | otplib (TOTP, RFC 6238) | Yalnız ürün sahibi hesabı; doğrulama uygulamasıyla 6 haneli kod |
 | PDF | PDFKit | Türkçe karakter için gömülü yazı tipi |
@@ -77,7 +77,7 @@ Ortam değişkenleri:
 | `MONGODB_DEMO_URI` | Demo veritabanı; gerçek veriden ayrı |
 | `JWT_ACCESS_SECRET` | Access imzası, en az 32 karakter |
 | `JWT_REFRESH_SECRET` | Refresh imzası, access'ten farklı |
-| `STORAGE_ENDPOINT` `STORAGE_BUCKET` `STORAGE_ACCESS_KEY` `STORAGE_SECRET_KEY` | Belge depolama |
+| `STORAGE_ENDPOINT` `STORAGE_BUCKET` `STORAGE_ACCESS_KEY` `STORAGE_SECRET_KEY` | Belge depolama. Üretimde zorunlu. Geliştirmede boşsa API yine açılır; yalnız belge işlemleri "Belge deposu yapılandırılmadı" hatasıyla reddedilir |
 | `APP_NAME` | Şantiye Hesap |
 | `WEB_ORIGIN` | CORS |
 | `VITE_API_URL` | Web'in API adresi |
@@ -150,7 +150,7 @@ Kurallar:
 - **Tarih:** İşlem, vade, anlaşma, başlangıç ve takip tarihleri `YYYY-MM-DD` metni olarak saklanır; saat dilimi kayması olmaz. Sistem zamanları (`createdAt` vb.) ISO UTC. "Bugün" ve gecikme hesabı Europe/Istanbul gününe göre yapılır.
 - **Atomik işlem:** Bir para hareketinin, payların, bağlı anlaşma bakiyelerinin, iade toplamlarının ve kayıt geçmişinin değiştiği her işlem tek MongoDB transaction'ı içinde tamamlanır. Yarım güncelleme olmaz.
 - **Eşzamanlı güncelleme:** Sabitleme ve arama geçmişini temizleme dışındaki bütün değiştirme işlemlerinde (güncelleme, tamamlama, arşiv, bedel/vade/iş durumu, iptal, silme, geri yükleme) `expectedUpdatedAt` zorunlu. Kayıt bu arada değişmişse 409 `CONFLICT`, mesaj "Kayıt başka bir yerde güncellendi" ve güncel kayıt `details` içinde döner. Sessizce üzerine yazma.
-- **Güvenli tekrar:** Para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturma `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Şantiye, kişi ve kategori oluşturmada isteğe bağlıdır; gelirse uygulanır. Web, çift tıklamaya karşı bütün oluşturma isteklerinde anahtar gönderir. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
+- **Güvenli tekrar:** Para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturma `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Şantiye, kişi, kategori oluşturmada ve belge yükleme niyetinde (`POST /documents/upload-intent`) isteğe bağlıdır; gelirse uygulanır. Web, çift tıklamaya karşı bütün oluşturma isteklerinde anahtar gönderir. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Tek istisna yükleme niyetidir: tekrarda aynı bekleyen belge döner ama imzalı yükleme adresi yeniden üretilir; ikinci rezervasyon yapılmaz. Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
 - **Hizmet durumu her istekte hesaplanır** (bölüm 9.10). Görüntüleme döneminde yazma isteği 403 `READ_ONLY`; kapalı durumlarda 403 `ACCESS_CLOSED`.
 
 Kimlik akışı:
@@ -264,7 +264,10 @@ Google Fonts'tan Outfit ve DM Sans yükle. Gövde satır yüksekliği 1.45. Büt
 - **Toast / dialog:** tarayıcı `alert` kullanma. Markalı dialog: başlık, mesaj, Vazgeç ve onay. Kritik veya belirsiz durumlar (kayıt doğrulanıyor, belge yüklenemedi) yalnız kısa toast'ta kalmaz, sayfada kalıcı görünür.
 - **Etki önizlemesi:** Bedel değişikliği, iptal, iade, silme, geri yükleme ve düzeltme dialoglarında önce "önce → sonra" kutusu: etkilenen kalan borç/alacak, fazla tutar ve toplamlar. Altında zorunlu gerekçe alanı. Silme, geri yükleme, iade ve düzeltme önizlemeleri `packages/shared` içindeki `previewAgreementBalance` ve `previewCashTotals` ile hesaplanır; bedel değişikliği ve iptalde API önizlemesi (`?preview=1`) kullanılır.
 - **Kaydetme durumu:** Kaydediliyor / Kaydedildi / Kaydedilemedi / Kaydın durumu doğrulanıyor. Dördü ayrı metin ve ikonla gösterilir, yalnız renkle değil.
-- **Belge satırı:** küçük önizleme veya dosya ikonu, ad, boyut, durum (bekliyor / yükleniyor / yüklendi / başarısız) ve yeniden dene.
+- **Belge satırı:** küçük önizleme veya dosya ikonu, ad, boyut, durum (bekliyor / yükleniyor / yüklendi / başarısız) ve yeniden dene. Görsellerin küçük önizlemesi için 5 dakikalık önizleme adresi alınır. 760 px altında ad ve hata metni tam genişlikte, durum rozeti ve eylemler alt satırdadır.
+- **Belge ekleme düğmeleri:** Dokunmatik cihazda iki düğme: "Fotoğraf çek" (`capture="environment"`) ve "Galeriden seç"; Android'de `capture` galeri seçeneğini kaldırdığı için ayrıdırlar. Masaüstünde tek "Dosya ekle" düğmesi. Hepsi `accept="image/*,application/pdf"`. Değişiklik kapalıysa (ör. görüntüleme dönemi), kayıt silinmişse, belge alanı doluysa veya kayıtta 10 belge varsa düğme kapalıdır ve nedeni yanında yazılıdır. Kapasite bilgisi alınamazsa yükleme engellenmez; sınırları sunucu uygular.
+- **Belge paneli (işlem ve anlaşma detayı):** Yüklenmiş belgeler; her birinde önizle, indir, sil (gerekçeli). Silinen belgeler aynı panelde "Silinen belgeler" bölümünde silen kişi, zaman ve gerekçeyle listelenir ve oradan gerekçeyle geri alınır. Başka oturumdan kalmış yarım yüklemeler "Bekliyor" olarak, bir saat içinde kendiliğinden kalkacağı notuyla görünür. Silme ve geri alma kapasite veya 10 belge sınırı yüzünden kapanmaz; 10 belgeli kayıtta geri alma dialogu nedeni gösterir. Görüntüleme döneminde silme ve geri alma da kapalıdır.
+- **Belge önizleme dialogu:** Görselin önizlemesi dialogda gösterilir. Önizlemesi olmayan belgede (PDF, çözülemeyen görsel, kotaya sığmayan önizleme) dialog "Orijinali aç" bağlantısı ve "Orijinali indir" düğmesi verir; orijinal yeni sekmede kendiliğinden açılmaz (telefon tarayıcılarının açılır pencere engeli). İndirme imzalı adresi `attachment` olarak açar; sayfa değişmez.
 
 ### 4.5 Yerleşim
 
@@ -287,7 +290,7 @@ Google Fonts'tan Outfit ve DM Sans yükle. Gövde satır yüksekliği 1.45. Büt
   | Anlaşma / başlangıç kaydı | Ad, yön, kişi, kapsam, bedel, tarihler | Açıklama, belgeler |
   | Şantiye formu | Ad, adres, başlangıç tarihi | Açıklama |
   | Kişi formu | Ad, tür, etiketler | İletişim, not |
-  | İade | Kaynak hareket | İade formu ve etki önizlemesi |
+  | İade | Kaynak hareket | İade formu, etki önizlemesi ve belgeler |
   | Finansal düzeltme | Alanlar | Değişiklik önizlemesi (finansal alan değişmediyse kısa açıklama) |
   | Profil | Görünen ad, telefon, e-posta | Kullanıcı adı ve şifre sayfasına bağlantı |
   | Şifre | Form | Şifre kuralları |
@@ -542,7 +545,7 @@ Form:
 | Gider kategorisi | Hayır, giderde | Seçilmezse "Kategorisiz" |
 | Anlaşma | Hayır | Seçilen kişinin aynı kapsam ve yöndeki açık anlaşmaları önerilir; **otomatik bağlanmaz**. Seçilirse kalan tutar görünür |
 | Açıklama | Hayır | Giderde örnek: demir, beton, usta ödemesi |
-| Belgeler | Hayır | Kameradan veya galeriden; en fazla 10 |
+| Belgeler | Hayır | Kameradan veya galeriden (bölüm 4.4 belge ekleme düğmeleri); en fazla 10 |
 
 Kurallar:
 
@@ -553,8 +556,9 @@ Kurallar:
 - **Mükerrer uyarısı:** Aynı gün, aynı tutar, aynı kişi ve kapsamda başka kayıt varsa kayıt engellenmez. Oluşturma cevabı uyarıyı ve benzer kayıtların numaralarını döner; ekran bunu kayıttan sonra gösterir ve benzer kayıtlara bağlantı verir.
 - Kaydet başarılı olunca geldiği liste/detaya dön. "Kaydet ve yeni ekle" tutarı boşaltır, kapsam ve tarihi korur, kişi/anlaşma bağlantısını görünür biçimde yeniden sorar.
 - Kayıt finansal kayıt ile belge yüklemesini ayrı gösterir: "İşlem kaydedildi; 1 belge yüklenemedi" → yalnız belge yeniden denenir.
+- **Formda belge akışı** (gelir/gider, anlaşmaya ödeme, iade, anlaşma ve başlangıç kaydı formları aynı): Seçilen dosyalar "Bekliyor" olarak listelenir; finansal kayıt oluştuktan sonra sırayla yüklenir (yükleme niyeti → imzalı adrese doğrudan yükleme → tamamlama). Yükleme sürerken kaydet düğmeleri kilitlidir. Bir belge yüklenemezse form "İşlem kaydedildi; 1 belge yüklenemedi." sonuç görünümünde kalır; yalnız o belge yeniden denenir, kayıt tekrar oluşturulmaz. Bütün belgeler yüklenince kayıt sonrası olağan dönüş yapılır. 20 MB üstü, boş veya desteklenmeyen türdeki dosya gönderilmeden "Başarısız" gösterilir ve yeniden denenmez.
 
-Detay: kayıt no, tür, tutar, tarih, kapsam ve paylar, kişi, kategori, anlaşma, açıklama, belgeler, iadeler, oluşturan ve zaman, son güncelleyen, değişiklik geçmişi (eski → yeni, kim, ne zaman, gerekçe).
+Detay: kayıt no, tür, tutar, tarih, kapsam ve paylar, kişi, kategori, anlaşma, açıklama, belgeler (bölüm 4.4 belge paneli; detaydan eklenen belge hemen yüklenir), iadeler, oluşturan ve zaman, son güncelleyen, değişiklik geçmişi (eski → yeni, kim, ne zaman, gerekçe). Belge ekleme, silme ve geri alma kaydın değişiklik geçmişine değil belgenin kendi geçmişine yazılır; silme bilgisi belge panelinde, belgenin bütün geçmişi tam firma veri çıkışında görünür.
 
 Eylemler:
 
@@ -613,7 +617,7 @@ Kayıt olunca anlaşma `ongoing` iş durumunda doğar. **Anlaşma oluşturmak ge
 
 Formda bilgi: "Bu tutar yeni gider/gelir sayılmaz. Aynı borcu ayrıca geçmiş anlaşma olarak girmeyin." Başlangıç kaydı yeni para hareketi değildir; ondan açılan ödeme/tahsilat bu kayda bağlanır.
 
-**Detay:** güncel bedel (ilk bedel ve değişiklikler), net ödenen/tahsil edilen, kalan, fazla, iş durumu, ödeme durumu, vade ve vade durumu, bağlı hareketler ve iadeler, belgeler, geçmiş.
+**Detay:** güncel bedel (ilk bedel ve değişiklikler), net ödenen/tahsil edilen, kalan, fazla, iş durumu, ödeme durumu, vade ve vade durumu, bağlı hareketler ve iadeler, belgeler (işlem detayındakiyle aynı belge paneli ve formdaki belge akışı, bölüm 4.4 ve 7.4), geçmiş.
 
 Eylemler:
 
@@ -638,7 +642,7 @@ Tek kutu: şantiye, kişi, anlaşma, tutar, açıklama, kayıt numarası. Sonuç
 
 ### 7.9 Silinenler
 
-Listeler: işlemler, anlaşmalar, şantiyeler, kişiler. Satırda silen kişi, zaman ve gerekçe. Silinen kayıtlar normal toplamlara girmez.
+Listeler: işlemler, anlaşmalar, şantiyeler, kişiler. Satırda silen kişi, zaman ve gerekçe. Silinen kayıtlar normal toplamlara girmez. Silinen belgeler bu sayfada listelenmez; bağlı oldukları işlem veya anlaşmanın detayındaki "Silinen belgeler" bölümünden geri alınır (bölüm 4.4).
 
 **Geri al:** Güncel ilişkiler doğrulanır (anlaşma hâlâ aktif mi, kapsam ve kişi uyumlu mu, iade sınırı aşılıyor mu). Bakiye etkisi önizlenir, gerekçe istenir. Geçersiz ilişki varsa sessizce düzeltme; nedeni ve çözüm yolunu göster. Finansal etki bir kez uygulanır. Kalıcı silme eylemi müşteriye sunulmaz.
 
@@ -661,7 +665,7 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
 
 - **Profil:** görünen ad, telefon, e-posta. Kullanıcı adını yalnız ürün sahibi değiştirir.
 - **Şifre:** mevcut, yeni, tekrar. Yeni en az 8 karakter. Başarılı olunca bütün oturumlar düşer, girişe al.
-- **Firma:** ortak firma görünen adı ve iletişim bilgileri (bütün firma kullanıcıları düzenleyebilir, geçmiş tutulur). Depolama kullanımı: kullanılan / toplam, orijinal, önizleme ve silinmiş ama geri alınabilir belgeler ayrı. Hizmet durumu ve varsa bitiş tarihleri. Kapasite artırımı için `SUPPORT_CONTACT_TEXT`; satın alma akışı yok.
+- **Firma:** ortak firma görünen adı ve iletişim bilgileri (bütün firma kullanıcıları düzenleyebilir, geçmiş tutulur). Depolama kullanımı: kullanılan / toplam; orijinal belgeler (belge sayısıyla), önizlemeler ve silinmiş ama geri alınabilir belgeler her zaman ayrı satırda; yüklenmekte olan dosyalar ve dışa aktarma paketleri yalnız varsa. Satırların toplamı kullanılan alana eşittir (`GET /company` `storage.breakdown`). Hizmet durumu ve varsa bitiş tarihleri. Kapasite artırımı için `SUPPORT_CONTACT_TEXT`; satın alma akışı yok.
 - **Kategoriler:** gider kategorisi ekle, yeniden adlandır, pasifleştir. Kullanılmış kategori silinmez, pasifleşir. Ad firma içinde Türkçe harf farkı gözetmeden benzersizdir. Pasif kategori yeni kayıtta seçilemez; pasif kategorili kaydın geri yüklenmesine engel olmaz.
 - **Hakkında:** ürün adı, slogan, sürüm, "veriler sunucuda, dil Türkçe".
 
@@ -826,6 +830,7 @@ Anlaşmalar ve başlangıç borç/alacakları aynı koleksiyondadır.
 | `workStatus` | Anlaşmada `ongoing` `completed` `cancelled` |
 | `settlementPending` | İptal edildi ama kesin bedel belli değil |
 | `netSettled` `remaining` `excess` `paymentStatus` | Önbellek, bağlı her harekette aynı transaction'da yeniden hesaplanır |
+| `documentCount` | Atomik sayaç, en fazla 10 (Transaction'daki gibi) |
 
 `paymentStatus` nete göre ve şu sırayla belirlenir: fazla > 0 → `overpaid`; kalan 0 → `settled`; net ödenen/tahsil edilen 0 → `open`; aksi halde `partial`. Böylece bedeli 0'a inmiş ve ödemesi olmayan anlaşma `settled`, ödemeleri tamamen iade edilmiş anlaşma `open` görünür. Hesabı kesinleşmemiş iptal (`settlementPending`) ekranda ayrıca "İptal — hesap kesinleşmedi" olarak gösterilir.
 
@@ -836,13 +841,14 @@ Anlaşmalar ve başlangıç borç/alacakları aynı koleksiyondadır.
 | Alan | Kural |
 | --- | --- |
 | `ownerType` `ownerId` | `transaction` veya `agreement` |
-| `fileName` `mimeType` | Dosya imzasından doğrulanmış tür |
+| `fileName` `mimeType` | Tür, istemcinin bildirdiğine değil dosyanın ilk baytlarına (dosya imzası) göre belirlenir ve kaydedilir |
 | `sizeBytes` | Sunucunun ölçtüğü gerçek boyut |
-| `storageKey` `previewKey` | Nihai orijinal ve önizleme anahtarları |
+| `storageKey` `previewKey` | Nihai orijinal ve önizleme anahtarları. Nihai anahtar her tamamlama denemesine özgüdür ve üzerine yazılmaz. `previewKey` önizleme üretilemediyse boştur |
 | `status` | `pending` `uploaded` `failed` `expired` |
 | `uploadedBy` `uploadedAt` | Otomatik |
+| Ortak alanlar | Silme alanları ve `history` bölüm 8 başındaki gibi; belge silme ve geri yükleme gerekçesiyle belgenin kendi `history`'sine yazılır |
 
-Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kayıt başına en fazla 10 belge.
+Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kayıt başına en fazla 10 belge. Bağlı kaydın `documentCount` değeri yalnız silinmemiş `pending` ve `uploaded` belgeleri sayar. Belge eklemek, silmek veya geri yüklemek bağlı kaydın `updatedAt` değerini ve `history`'sini değiştirmez; açık bir düzenleme formu bu yüzden çakışma almaz.
 
 ### 8.9 SearchHistory
 
@@ -942,13 +948,19 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 
 | Kural | Davranış |
 | --- | --- |
-| Yükleme niyeti | `POST /documents/upload-intent`: 20 MB, kayıt başına 10 belge (`documentCount` koşullu `$inc`) ve firma kapasitesi (`storageUsedBytes` koşullu `$inc`) atomik kontrol edilir. Geçici anahtara 15 dk geçerli imzalı yükleme adresi döner |
+| Yükleme niyeti | `POST /documents/upload-intent`: 20 MB, kayıt başına 10 belge (`documentCount` koşullu `$inc`) ve firma kapasitesi (`storageUsedBytes` koşullu `$inc`) atomik kontrol edilir. Kapasite bildirilen orijinal boyutla ayrılır. Geçici anahtara 15 dk geçerli imzalı yükleme adresi döner. `Idempotency-Key` isteğe bağlıdır; aynı anahtarla tekrar aynı bekleyen belgeyi ve yeni imzalı adresi döner, ikinci rezervasyon yapılmaz (bölüm 3) |
 | Tamamlama | `POST /documents/:id/complete`: durum koşullu `pending → uploaded` geçmeden önce sunucu gerçek boyutu ve dosya imzasını kendisi doğrular, dosyayı değiştirilemeyen nihai anahtara kopyalar, geçici kopyayı siler, kapasiteyi gerçek boyuta göre düzeltir. Önizleme üretir |
-| Temizlik | 1 saati geçen ve hâlâ `pending` olan yüklemeler `expired` olur; rezervasyon ve sayaç iade edilir |
+| Doğrulama sonucu | Desteklenmeyen içerik veya 20 MB'tan büyük gerçek boyut belgeyi `failed` yapar; rezervasyon ve sayaç iade edilir, geçici dosya silinir. Gerçek boyut bildirilenden büyükse fark da kotaya sığmalıdır (değilse 409 `STORAGE_FULL`); küçükse fark iade edilir |
+| Önizleme | Görseller için üretilir; PDF için üretilmez. Önizleme kalan kapasiteye sığmazsa saklanmaz ve belge önizlemesiz yüklenir; firma kotası hiçbir durumda aşılmaz. Çözülemeyen görsel (ör. bozuk HEIC) de önizlemesiz yüklenir |
+| Temizlik | 1 saati geçen ve hâlâ `pending` olan yüklemeler `expired` olur; rezervasyon ve sayaç iade edilir. İş 10 dakikada bir çalışır ve sorgularını firma bazında yapar |
+| Tamamlama–temizlik çakışması | Tamamlama belgeyi 5 dakikalık bir kilitle sahiplenir; temizlik kilitli belgeye dokunmaz. Kilit dolup temizlik kazanırsa tamamlama kendi kopyasını siler ve 409 döner. Rezervasyon ve sayaç yalnız bir kez iade edilir |
+| Geçici klasör | Üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü (otomatik silme) kuralı tanımlanır; reddedilen yüklemenin adresine sonradan konan yetim dosyaları temizler |
 | Kapasite dolu | Yeni belge yükleme 409 `STORAGE_FULL`; finansal kayıt ve mevcut belgelere erişim devam eder |
-| Kapasite hesabı | Orijinaller, önizlemeler, geri alınabilir silinmiş belgeler ve hazır dışa aktarma paketleri sayılır |
-| Erişim | Bağlı kaydın firmasıyla sınırlı; indirme için 5 dk geçerli imzalı adres. Bucket herkese kapalı |
-| Orijinal | Asla değiştirilmez; önizleme ayrıca üretilir. Önizleme yoksa orijinal indirilir |
+| Kapasite hesabı | Orijinaller, önizlemeler, geri alınabilir silinmiş belgeler, yüklenmekte olan dosyaların rezervasyonları ve hazır dışa aktarma paketleri sayılır |
+| Belge silme ve geri yükleme | Yumuşak; gerekçe ve `expectedUpdatedAt` ister. Silinen belge kayıt başına 10 sınırında sayılmaz (`documentCount` bir azalır), kapasitede sayılmaya devam eder; silme alanı boşaltmaz. Geri yüklemede kayıtta 10 belge varsa 422 `LIMIT_EXCEEDED`: "Bu kayıtta 10 belge var; geri yüklemek için önce birini silin." |
+| Silinmiş kayıt | Silinmiş işlem veya anlaşmanın belgeleri indirilebilir ve önizlenebilir. Bu kayda yeni belge yükleme, belge silme ve geri yükleme 409 `CONFLICT`: "Kayıt silinmiş. Belge işlemi için önce kaydı geri yükleyin." |
+| Erişim | Bağlı kaydın firmasıyla sınırlı; indirme ve önizleme için 5 dk geçerli imzalı adres. Bucket herkese kapalı |
+| Orijinal | Asla değiştirilmez; önizleme ayrıca üretilir. Önizleme yoksa önizleme isteği orijinali tarayıcıda açılacak (inline) adresle döner; ekran bunu "Orijinali aç" ve "Orijinali indir" ile sunar (bölüm 4.4) |
 
 ### 9.7 Güvenli tekrar ve bağlantı
 
@@ -959,7 +971,7 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Kesin ret | Doğrulama hatasında kayıt oluşmaz; kullanıcı formu düzeltip kaydedince yeni anahtar üretilir |
 | Düğme | Gönderim sürerken kilitli; çift tıklama iki kayıt açmaz |
 | Form | Bağlantı kesilince açık formdaki bilgiler korunur; taslak toplamlara girmez. Tarayıcı kapanınca kalıcı taslak yok |
-| Belge | Finansal kayıt başarılıysa belge hatası kaydı tekrar oluşturmaz; yalnız belge yeniden denenir |
+| Belge | Finansal kayıt başarılıysa belge hatası kaydı tekrar oluşturmaz; yalnız belge yeniden denenir. Yükleme niyetinin tekrarında aynı `Idempotency-Key` kullanılır, böylece kaldığı yerden devam eder; kesin retten veya süresi dolmuş yüklemeden sonra yeni anahtar üretilir. Tamamlama bağlantı hatası alırsa yalnız tamamlama tekrarlanır. İstemcide reddedilen dosya (20 MB üstü, boş, desteklenmeyen tür) gönderilmez ve yeniden denenmez. Tarayıcı türü vermezse (bazı HEIC dosyaları) tür uzantıdan belirlenir; asıl tür sunucuda doğrulanır |
 
 ### 9.8 Kimlik
 
@@ -983,7 +995,7 @@ Firma filtresi zorunlu. Ad ve açıklama alanları Türkçe küçük harf ve kar
 
 Firmanın etkin durumu her istekte tarihlerden ve işaretlerden hesaplanır; zamanlanmış bir işe bağlı değildir.
 
-| Etkin durum | Giriş | Okuma, rapor, dışa aktarma | Kayıt değiştirme ve belge yükleme | Kendi şifresi ve profili |
+| Etkin durum | Giriş | Okuma, rapor, dışa aktarma | Kayıt değiştirme, belge yükleme, silme ve geri yükleme | Kendi şifresi ve profili |
 | --- | --- | --- | --- | --- |
 | Aktif | Açık | Açık | Açık | Açık |
 | Görüntüleme dönemi (D … `viewUntil`) | Açık | Açık | Kapalı (`READ_ONLY`) | Açık |
@@ -1028,7 +1040,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 
 | Metot | Yol | Not |
 | --- | --- | --- |
-| GET | `/company` | görünen ad, iletişim, depolama kullanımı, hizmet durumu |
+| GET | `/company` | görünen ad, iletişim, depolama kullanımı, hizmet durumu. `storage.breakdown` orijinal, önizleme, geri alınabilir silinmiş, yüklenmekte olan ve dışa aktarma baytlarını ayrı döner; toplamı `storageUsedBytes` ile aynıdır |
 | PATCH | `/company` | `displayName, contact`, `expectedUpdatedAt` |
 | GET | `/company/users` | aynı firmanın kullanıcıları: kimlik, görünen ad, aktiflik (pasifler dahil; kullanıcı adı ve iletişim dönmez). "Kaydı oluşturan" filtresi için |
 | GET | `/categories` | `includeInactive` |
@@ -1074,7 +1086,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 | GET | `/transactions` | filtreler bölüm 7.4; cevapta `totals` |
 | GET | `/transactions/suggestions?kind=` | son açıklama önerileri |
 | POST | `/transactions` | `kind, amount, date, partyId?, categoryId?, description, allocations[], confirmExcess?, excessReason?, reason?`. `reason`, tamamlanan/arşivlenen şantiyeye anlaşmasız giderde zorunlu. Cevap mükerrer uyarısı ve benzer kayıt numaralarını içerebilir |
-| GET | `/transactions/:id` | detay, paylar, iadeler, belgeler, geçmiş |
+| GET | `/transactions/:id` | detay, paylar, iadeler, belgeler, geçmiş. `documents` yüklenmiş ve yüklenmekte olan belgeleri içerir; silinmiş ama geri alınabilir belgeler `deletedAt` dolu gelir; `failed` ve `expired` listelenmez |
 | PATCH | `/transactions/:id` | düzeltme; finansal alan değişirse `reason` zorunlu |
 | POST | `/transactions/:id/refunds` | `amount, date, reason, parts[]` |
 | DELETE | `/transactions/:id` | `reason`; aktif iade varsa 409 `HAS_DEPENDENCIES` |
@@ -1088,7 +1100,7 @@ Taban yol `/`. Tümü JSON, dosya indirme hariç. Oturumlu rotalar Bearer ister.
 | --- | --- | --- |
 | GET | `/agreements` | `kind, direction, projectId, scope, partyId, workStatus, paymentStatus, dueState, remainingOnly` |
 | POST | `/agreements` | anlaşma veya başlangıç kaydı oluştur; hareket yazmaz |
-| GET | `/agreements/:id` | detay, bağlı hareketler, iadeler, kalan, fazla, geçmiş |
+| GET | `/agreements/:id` | detay, bağlı hareketler, iadeler, kalan, fazla, belgeler (`/transactions/:id` ile aynı kural), geçmiş |
 | PATCH | `/agreements/:id` | ad, açıklama, anlaşma tarihi |
 | POST | `/agreements/:id/amount` | `newAmount, reason`; önizleme için `?preview=1` |
 | POST | `/agreements/:id/due-date` | `dueDate, reason` |
@@ -1103,12 +1115,12 @@ Anlaşmaya ödeme/tahsilat ayrı uç değil; `POST /transactions` ile `allocatio
 
 | Metot | Yol | Not |
 | --- | --- | --- |
-| POST | `/documents/upload-intent` | `ownerType, ownerId, fileName, mimeType, sizeBytes`; imzalı yükleme adresi |
+| POST | `/documents/upload-intent` | `ownerType, ownerId, fileName, mimeType, sizeBytes`; `Idempotency-Key` isteğe bağlı. Cevap `{ document, upload: { method, url, headers, expiresAt } }`; istemci dosyayı dönen başlıklarla (`Content-Type` imzaya dahil) doğrudan depoya yükler |
 | POST | `/documents/:id/complete` | doğrulama ve nihai kayıt |
-| GET | `/documents/:id/download` | 5 dk imzalı adres |
-| GET | `/documents/:id/preview` | önizleme adresi |
-| DELETE | `/documents/:id` | `reason`; yumuşak |
-| POST | `/documents/:id/restore` | `reason` |
+| GET | `/documents/:id/download` | 5 dk imzalı adres (`attachment`), `isPreview`, dosya adı ve türü |
+| GET | `/documents/:id/preview` | 5 dk imzalı önizleme adresi; önizleme yoksa orijinal tarayıcıda açılacak biçimde (`isPreview: false`) |
+| DELETE | `/documents/:id` | `reason, expectedUpdatedAt`; yumuşak |
+| POST | `/documents/:id/restore` | `reason, expectedUpdatedAt` |
 
 ### 10.9 Arama, pano, vade, rapor, dışa aktarma, silinenler
 
@@ -1173,7 +1185,7 @@ Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 
 - Hata ilgili alanın yanında açık dille gösterilsin; telefonda ilk hatalı alana kaydırılsın.
 - Para inputu sayısal klavye ve `inputMode="decimal"`. Kullanıcı `12500`, `12.500` veya `12.500,50` yazabilir; kuruşa çevrilir. `12.5` gibi girdide alanın altında "Ondalık için virgül kullanın" görünür (bölüm 3 "Para"). Gösterim `tr-TR`. Telefon dili İngilizce olan cihazlarda sayısal klavyede virgül çıkmayabilir; bu durum İngilizce dilli bir telefonda denenmeli. Ondalık girilemiyorsa giriş kuralını değiştirmeden önce kullanıcıya sorulmalı.
 - Tarih inputu `type="date"` veya özel takvim. Etiket Türkçe. Seçilen takvim günü korunur.
-- Belge seçimi telefonda `accept="image/*,application/pdf"` ve `capture` desteğiyle kameradan veya galeriden.
+- Belge seçimi telefonda ayrı "Fotoğraf çek" (`capture="environment"`) ve "Galeriden seç" düğmeleriyle, masaüstünde tek "Dosya ekle" düğmesiyle; hepsi `accept="image/*,application/pdf"` (bölüm 4.4).
 - Demo ve görüntüleme döneminde bant her sayfada; kapalı eylemlerde neden yazılı.
 - Erişilebilirlik: her inputun etiketi var, ikon düğmenin `aria-label`ı var, renk tek başına anlam taşımasın (gelir/gider, gecikmiş, iade yazısı da görünsün), kontrast lacivert üzerinde beyaz metinle kalsın.
 - SEO yalnız tanıtım sayfalarında: başlık, açıklama, Open Graph. Uygulama, demo ve yönetim rotaları `noindex`.
@@ -1205,6 +1217,9 @@ Arayüz dili Türkçe. Kısa ve doğrudan yaz. Örnekler:
 | Fazla ödeme | Bu ödeme anlaşmanın kalanını {tutar} aşıyor. |
 | Anlaşmasız kayıt | Bu kayıt anlaşmaya bağlı değil; anlaşmanın kalanı değişmez. |
 | Kapasite | Belge alanı doldu. Kayıt girmeye devam edebilirsiniz; yeni belge için ürün sahibiyle görüşün. |
+| Belge sayısı dolu | Bu kayda en fazla 10 belge eklenebilir. |
+| Belge geri yükleme sınırı | Bu kayıtta 10 belge var; geri yüklemek için önce birini silin. |
+| Silinmiş kayıtta belge | Kayıt silinmiş. Belge işlemi için önce kaydı geri yükleyin. |
 | Görüntüleme dönemi | Hizmetiniz sona erdi. Kayıtları görüntüleyip dışa aktarabilirsiniz. |
 | Demo bandı | Örnek veriler — değişiklikler geçicidir. |
 | Boş şantiye | Aktif proje bulunamadı |

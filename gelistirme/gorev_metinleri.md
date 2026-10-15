@@ -252,6 +252,8 @@ Bitti sayılması için:
 ADIM 6a — Raporlar: standart raporlar ve filtreli dışa aktarma
 Okunacaklar: şartnamede bölüm 2 (PDF/Excel/CSV satırları), 7.10 (tam firma veri çıkışı paragrafı hariç), 9.1, 10.9 (rapor uçları), 4.4–4.5 (ekran düzeni için). Geri kalanı okuma.
 
+Önce (kısa iş): `pnpm dev` API'yi başlatıyor ama Vite (web) dinlemeye başlamıyor; API ve web ayrı başlatılınca sorun yok (karar belgesi 10.14, "Açık noktalar"). Nedenini bul ve `pnpm dev` ikisini birlikte çalıştıracak biçimde düzelt. Çözüm şartnamede olmayan bir bağımlılık gerektirirse dur ve sor. Düzeltmeyi `pnpm dev` ile web adresinin açıldığını göstererek raporla.
+
 Yap:
 - Dört standart rapor verisi ve ekranı: dönem dökümü, şantiye özeti ve hareket dökümü, kişi/firma hesap dökümü, açık borç/alacak ve vade listesi. Raporlar telefonda da görüntülenip indirilebilir.
 - Excel (exceljs), CSV (UTF-8 BOM'lu, `;`), PDF (PDFKit, gömülü Türkçe yazı tipi). Başlık bilgileri: firma, kapsam, tarih aralığı, üretim zamanı, güncel kalanın hesaplandığı zaman, takip başlangıcı uyarısı.
@@ -272,11 +274,11 @@ Bitti sayılması için:
 
 ```text
 ADIM 6b — Raporlar: tam firma veri çıkışı
-Okunacaklar: şartnamede bölüm 7.10 (son paragraf: tam firma veri çıkışı), 8.10 (ExportJob), 9.6 (kapasite hesabı), 10.9 (/exports uçları). Adım 6a'nın dosya üretim kodunu örnek olarak incele.
+Okunacaklar: şartnamede bölüm 7.10 (son paragraf: tam firma veri çıkışı), 8 girişi (ortak alanlar), 8.8, 8.10 (ExportJob), 9.6 (kapasite hesabı), 10.3 (`storage.breakdown`), 10.9 (/exports uçları). Adım 6a'nın dosya üretim kodunu örnek olarak incele.
 
 Yap:
 - `POST /exports/full` ve `GET /exports/:id`: arka plan işi, ilerleme, hazır olunca süreli indirme adresi.
-- İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi; ilişkileri açıklanmış Excel sayfaları veya CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde (archiver). Silinen ama geri alınabilir kayıtlar durum etiketiyle.
+- İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi (belgelerin kendi geçmişi dahil: ekleme, silme, geri yükleme, kim, ne zaman, gerekçe; şartname 7.4 ve 8.8); ilişkileri açıklanmış Excel sayfaları veya CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde (archiver). Silinen ama geri alınabilir kayıtlar durum etiketiyle.
 - Firma verisi tek tutarlı okumadan alınır; dosyadaki toplamlar aynı satırlardan.
 - Hazır paket 7 gün sonra silinir; bekleyen paket kapasite kullanımında görünür. Hazırlama hatası finansal kayıtları etkilemez.
 - Raporlar sayfasında ayrı "Tüm firma verisini dışa aktar" düğmesi, ilerleme ve indirme.
@@ -381,8 +383,9 @@ ADIM 10 — Uçtan uca testler ve kabul
 Yap:
 - Playwright uçtan uca testleri (telefon ve masaüstü görünümü): giriş, ilk şifre, gider oluşturma, anlaşmaya ödeme, paylaştırma, iade, sil/geri al, belge yükleme hatası, bağlantı kesintisinde "doğrulanıyor" akışı, demo sıfırlama, ürün sahibi TOTP girişi.
 - Bölüm 13'teki her kabul maddesini bir teste veya belgelenmiş elle kontrole bağlayan kontrol listesi (docs/kabul_kontrol_listesi.md).
+- Önceki adımlarda denenmemiş kalan belge akışlarını kontrol listesine ekle ve dene: anlaşma formu ve detayında belge ekleme, önizleme, sil/geri al (tarayıcıda); indirmenin gerçek dosya kaydetmesi; gerçek telefon kamerasıyla çekim ve gerçek bir HEIC dosyasının önizlemesi (son ikisi elle kontrol olabilir).
 - Eksik veya hatalı çıkan noktaları düzelt; şartnameden sapma gerekiyorsa dur ve sor.
-- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar.
+- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar, üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü kuralı (şartname 9.6).
 
 Bitti sayılması için: Bölüm 13'ün her maddesi işaretli; bütün testler CI'da geçer.
 ```

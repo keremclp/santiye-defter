@@ -44,7 +44,7 @@ Bunlardan herhangi birini çiğneyen değişiklik hatalıdır:
 3. **Finans formülleri:** Kalan, fazla, gecikme, dönem neti ve iade sınırı yalnız `packages/shared` içindeki saf fonksiyonlarla hesaplanır. API veya web bu formülleri yeniden yazmaz.
 4. **Anlaşma gider değildir:** Anlaşma veya başlangıç kaydı oluşturmak gelir/gider hareketi yazmaz. Gelir ve gideri yalnız gerçek para hareketi oluşturur.
 5. **Atomiklik:** Hareket, paylar, bağlı anlaşma önbellekleri, `refundedAmount`, kayıt geçmişi ve idempotency kaydı tek MongoDB transaction'ında değişir.
-6. **Çift kayıt yok:** Oluşturan `POST` istekleri `Idempotency-Key` ister. Güncellemeler `expectedUpdatedAt` ile çakışma kontrolü yapar ve sessizce üzerine yazmaz.
+6. **Çift kayıt yok:** Oluşturan `POST` istekleri `Idempotency-Key` kuralına şartname bölüm 3'teki "Güvenli tekrar" listesine göre uyar: para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturmasında zorunlu; şantiye, kişi, kategori ve belge yükleme niyetinde isteğe bağlı. Web her oluşturma isteğinde anahtar gönderir. Güncellemeler `expectedUpdatedAt` ile çakışma kontrolü yapar ve sessizce üzerine yazmaz.
 7. **Silme yumuşaktır:** Müşteri tarafında fiziksel silme yoktur. Finansal değişiklik, silme ve geri yükleme gerekçe ister ve `history`'ye yazılır. Kalıcı silme yalnız ürün sahibinin firma silme akışındadır.
 8. **Tarih:** İş tarihleri `YYYY-MM-DD` metnidir. "Bugün" Europe/Istanbul gününe göre hesaplanır.
 9. **Tasarım:** Renkler, yazı tipleri ve ölçüler yalnız şartname bölüm 4'teki token'lardan gelir. Yakın renk uydurulmaz. Gelir yeşil, gider kırmızıdır; anlam yalnız renge bırakılmaz.
