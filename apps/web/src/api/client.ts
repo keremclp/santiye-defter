@@ -73,7 +73,7 @@ export function configureApiHandlers(next: Partial<Handlers>): void {
   Object.assign(handlers, next);
 }
 
-function serializeParams(params: Record<string, unknown>): string {
+export function serializeParams(params: Record<string, unknown>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === '') continue;
@@ -129,7 +129,7 @@ export function refreshSession(): Promise<'ok' | 'expired' | 'network'> {
   return refreshing;
 }
 
-function toApiError(error: AxiosError<ApiFailure>): ApiError {
+export function toApiError(error: AxiosError<ApiFailure>): ApiError {
   if (!error.response) return new ApiError('network', NETWORK_ERROR_MESSAGE);
   const body = error.response.data;
   if (body && typeof body === 'object' && body.success === false) {

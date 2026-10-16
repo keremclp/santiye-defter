@@ -247,7 +247,7 @@ Sonuç: Belge özelliği değerlendirilebilir. Ortalama dosya boyutu, kopya/yede
 | 2 — İlk sürüm kapsamı | Kapsam, demo/hesap modeli, eşit firma yetkisi, belge limitleri, saklama/çıkış kuralları | Tamamlandı; 5 Ekim 2026 |
 | 3 — Ekranlar ve kullanıcı akışları | Telefon ve masaüstü ekranları, alanlar ve işlemler | Tamamlandı; 5 Ekim 2026 |
 | 4 — Teknik plan | Veri modeli, teknoloji, firma ayrımı, izinler, depolama, yedekleme, test ve maliyet | Tamamlandı; 11 Ekim 2026 itibarıyla teknik plan yerine uygulama promptu esas (bölüm 9) |
-| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Adım 4 (uygulama ekranları) tamamlandı; 13 Ekim 2026 (bölüm 10.9). Adım 4b-1 (görsel revizyon: temel) tamamlandı; 14 Ekim 2026 (bölüm 10.11). Adım 4b-2 (görsel revizyon: kalan ekranlar) tamamlandı; 14 Ekim 2026 (bölüm 10.12). Adım 5a (belge API'si ve depolama) tamamlandı; 14 Ekim 2026 (bölüm 10.13). Adım 5b (belge ekranları) tamamlandı; 15 Ekim 2026 (bölüm 10.14). Adım 6a (standart raporlar ve filtreli dışa aktarma) tamamlandı; 15 Ekim 2026 (bölüm 10.16). Adım 6b (tam firma veri çıkışı) tamamlandı; 16 Ekim 2026 (bölüm 10.17). Adım 7a (yönetim API'si ve tek hazır paket düzeltmesi) tamamlandı; 16 Ekim 2026 (bölüm 10.19). Pilot planı bekliyor |
+| 5 — Geliştirme ve pilot planı | Uygulama sırası, doğrulama ve gerçek kullanıcı pilotu | Geliştirme planı kabul edildi; 11 Ekim 2026 (bölüm 10). Adım 0 (proje iskeleti) tamamlandı; 12 Ekim 2026 (bölüm 10.5). Adım 1 (finans çekirdeği) tamamlandı; 12 Ekim 2026 (bölüm 10.6). Adım 2 (API temeli) tamamlandı; 12 Ekim 2026 (bölüm 10.7). Adım 3 (finans API'si) tamamlandı; 12 Ekim 2026 (bölüm 10.8). Adım 4 (uygulama ekranları) tamamlandı; 13 Ekim 2026 (bölüm 10.9). Adım 4b-1 (görsel revizyon: temel) tamamlandı; 14 Ekim 2026 (bölüm 10.11). Adım 4b-2 (görsel revizyon: kalan ekranlar) tamamlandı; 14 Ekim 2026 (bölüm 10.12). Adım 5a (belge API'si ve depolama) tamamlandı; 14 Ekim 2026 (bölüm 10.13). Adım 5b (belge ekranları) tamamlandı; 15 Ekim 2026 (bölüm 10.14). Adım 6a (standart raporlar ve filtreli dışa aktarma) tamamlandı; 15 Ekim 2026 (bölüm 10.16). Adım 6b (tam firma veri çıkışı) tamamlandı; 16 Ekim 2026 (bölüm 10.17). Adım 7a (yönetim API'si ve tek hazır paket düzeltmesi) tamamlandı; 16 Ekim 2026 (bölüm 10.19). Adım 7b (yönetim ekranları) tamamlandı; 16 Ekim 2026 (bölüm 10.21). Pilot planı bekliyor |
 
 ## 6. Aşama 1 — Kabul edilen senaryolar ve finansal kurallar
 
@@ -1140,6 +1140,64 @@ Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
 
 Ayrıca: kalıcı silmenin depo temizliğinin gerçek MinIO'da denenmesi ve yedekten çıkarma son tarihinin takibi Adım 10 görev metnine eklendi. İşletim geçmişinde silmeden sonra kalan gerekçe metinleri ve firma adı KVKK değerlendirmesine soru olarak eklendi (bölüm 11).
 
+### 10.21. Adım 7b'de uygulanan yönetim ekranları kararları (16 Ekim 2026)
+
+Adım 7b (ürün sahibi yönetimi: ekranlar) tamamlandı. "Önce" işinde 10.20'deki özet grubu eklendi. Ardından yönetim girişi, zorunlu güvenlik kurulumu, güvenlik sayfası, işletim özeti ve firma listesi, firma oluşturma, firma detayı, kullanıcı, kapasite ve hizmet yaşam döngüsü dialogları ve kalıcı silme ekranı yapıldı. `pnpm lint`, `pnpm typecheck` ve `pnpm build` temiz. `pnpm test`'te shared 217, API 295 ve web 89 test geçti; bir tam çalıştırmada ilgisiz bir müşteri giriş testi bir kez kaldı (açık noktalar). Masaüstünde ilk kurulumdan kalıcı silmeye kadar akış ekrandan çalıştı: kurulum, firma oluşturma, kullanıcı ekleme, kullanıcı adı değiştirme, pasifleştirme, kapasite, önizlemeli hizmet sonu, 180 gün sonra silme onayı, firma adıyla onaylı kalıcı silme. Oturum süresinin dolması ve TOTP yeniden kurulumu da denendi. Bu deneme bellek içi MongoDB replica set, bellek içi depo ve ileri alınabilir saatle çalışan geçici bir API ile yapıldı; geçici sunucu depoya girmedi. Telefonda (375 px) özet, liste, detay ve menü yatay taşma olmadan çalıştı. Geçici şifrenin ve kurtarma kodlarının yalnız bir kez gösterildiği, tarayıcı deposuna ve adres geçmişine yazılmadığı testle ve tarayıcıda doğrulandı.
+
+Şartnamedeki boşluklar için kullanıcı iki karar verdi:
+
+- **Giriş sonrası TOTP yeniden kurulumu için küçük API:** Şartname 7.13 ve 5.3 "giriş sonrası TOTP yeniden kurulabilir" der, ama `/platform/auth/totp/setup` yalnız ara token ile ve kurulum yapılmamışsa çalışıyordu. 7b "Önce işi dışında API değişikliği yapma" dediği için soruldu; iki oturumlu uç eklendi:
+  - `POST /platform/auth/totp/reset` yeni anahtar ve QR adresi döner.
+  - `POST /platform/auth/totp/reset/confirm` yeni uygulamadaki kodla onaylar.
+
+  Yeni anahtar onaylanana kadar eski anahtar geçerli kalır; onayda eski anahtar geçersizleşir ve PlatformLog'a `admin.totp_reset` yazılır. Kurtarma kodları değişmez; gerekirse ayrıca yenilenir. Hatalı kodlar mevcut deneme sınırına sayılır.
+- **QR kütüphanesi:** Web'e `qrcode-generator` eklendi (MIT, bağımlılıksız, kendi TS tipleri var). QR tarayıcıda SVG olarak çizilir; gizli anahtar dış servise gönderilmez ve elle giriş için ayrıca yazılı gösterilir.
+
+Uygulamada belirlenen ve sonraki adımları bağlayan noktalar:
+
+- **Kurtarma koduyla yeniden kurulum:** `totp/reset` başlatma isteği mevcut 6 haneli kodun yanında kullanılmamış bir kurtarma kodunu da kabul eder; kullanılan kod geçersizleşir. Yalnız TOTP koduyla başlatılsaydı, telefonunu kaybedip kurtarma koduyla giren ürün sahibi yeniden kurulum yapamazdı. Bu ayrıntı kullanıcıya sunulan seçenekte yoktu; şartnameye işlenirken onaylanmalı.
+- **Özet grubu (`deletionIncomplete`):** `summary`'deki altıncı grubun adı `deletionIncomplete`'tir. Bekleyen, süren ve başarısız silmeler ad sırasıyla bu gruba girer; tamamlanmış silmeler girmez. Bütün özet öğeleri artık `deletionStatus` da taşır. Bu firmalar beş durum filtresinin hiçbirine girmez; listede silme durumlarıyla görünür. Başarısız silme bu gruptan "Silmeyi yeniden başlat" ile kalıcı silme ekranına gider.
+- **Ayrı yönetim oturumu:** Ürün sahibi oturumu müşteri oturumundan ayrı saklanır ve ayrı yenilenir (`/platform/auth/refresh`); müşteri oturumu yönetim alanını açmaz. Şifre adımından sonraki ara token yalnız bellekte tutulur. Oturum düşünce "Oturumunuz sona erdi" notuyla yönetim girişine dönülür.
+- **Kod doğrulayan oturumlu istekler:** Kurtarma kodu yenileme ve TOTP yeniden kurulumu isteklerinden hemen önce oturum yenilenir. Böylece 401 yalnız "kod hatalı" anlamına gelir; hatalı kod otomatik yeniden denemeyle iki kez sayılmaz.
+- **Bir kez gösterim:**
+  - Kurtarma kodları ve geçici şifre yalnız bileşen durumunda tutulur; tarayıcı deposuna ve adres geçmişine yazılmaz.
+  - Kurtarma kodları indirilebilir (`.txt`) ve kopyalanabilir; "Kodları güvenli bir yere kaydettim" işaretlenmeden devam edilemez.
+  - Geçici şifre dialogu "Şifreyi kaydettim veya müşteriye ilettim" işaretlenmeden kapanmaz.
+  - Aynı `Idempotency-Key` ile tekrar gelen kullanıcı oluşturma cevabında şifre yoktur; API'nin açıklama mesajı gösterilir.
+- **Güvenli tekrar:** Firma ve kullanıcı oluşturma `Idempotency-Key` ile gider. Müşteri tarafındaki `/idempotency/:key` sorgusu yönetimde olmadığı için, cevap alınamazsa aynı istek aynı anahtarla yeniden gönderilir.
+- **Yaşam döngüsü dialogları:**
+  - Hizmeti sonlandırmada son görüntüleme günü ve saklama bitişi seçili tarihin API önizlemesiyle (`?preview=1`) kesin tarih olarak gösterilir; onay yalnız seçili tarihin önizlemesi gelince açılır.
+  - Yeniden açma ve arşiv uzatma "önce → sonra" tarih kutusu gösterir.
+  - Kapasite GB olarak girilir (1 GB = 1024³ bayt, virgüllü ondalık kabul edilir); kullanımın altındaki değer ekranda engellenir, sunucu da 409 döner.
+  - Geçici durdurma ve kullanıcı pasifleştirme gerekçe ister.
+- **Kalıcı silme ekranı:** Firma adı, durum, saklama bitişi, kullanıcı ve kayıt sayıları ile geri döndürülemez sonuç gösterilir. Kayıtlı ad kırpılıp birebir yazılmadan düğme açılmaz; büyük/küçük ve Türkçe harf farkı kabul edilmez. Silme sürerken detay sayfası durumu 3 saniyede bir yeniler.
+- **İşletim geçmişi:**
+  - İşlem adları Türkçe gösterilir; Adım 2'deki hesap işlemleri ve `admin.*` olayları da etiketlidir.
+  - Kullanıcı işlemlerinde hedef kullanıcının adı yazılır.
+  - Kalıcı silme tamamlanınca silinen kayıt ve dosya sayıları koleksiyon adlarının Türkçe karşılıklarıyla gösterilir.
+  - İşlem yapan, oturumdaki ürün sahibi ise kullanıcı adıyla, değilse "Ürün sahibi" olarak yazılır; API yalnız kimlik döndürür.
+- **Görünüm:** Müşteri uygulamasıyla aynı token'lar ve bileşenler kullanılır. Yönetim alanı lacivert (`navy-deep`) menü, "Yönetim" işareti ve üst çubuktaki "Yönetim alanı" rozetiyle ayrılır. 1100 px altında menü drawer'dır; alt menü ve yüzen düğme yoktur. Yeni renk değeri eklenmedi.
+- **Rotalar:** Şartname 5.3'teki rotalar kullanıldı. Firma düzenleme ayrı rota yerine firma detayında dialogdur, çünkü 5.3'te düzenleme rotası yok.
+- **Kod yeri:**
+  - API: `apps/api/src/services/platform-auth.ts` (yeniden kurulum), `apps/api/src/services/platform-management.ts` (özet grubu), `apps/api/src/models/platform-admin.ts` (`pendingTotpSecretEncrypted`)
+  - Paylaşılan paket: `packages/shared/src/account-schemas.ts` (`totpResetStartSchema`)
+  - Web: `apps/web/src/features/admin/`, `apps/web/src/components/layout/AdminShell.tsx`, `apps/web/src/api/admin-client.ts`, `admin-queries.ts`, `admin-types.ts`, `apps/web/src/stores/admin-session.ts`, `apps/web/src/lib/admin-labels.ts`, `apps/web/src/styles/admin.css`
+- **Açık noktalar:**
+  - `apps/api/test/customer-auth.test.ts` içindeki "aynı IP'den çok sayıda hatalı deneme" testi bir tam çalıştırmada kaldı; tek başına üç kez ve tam API paketinde yeniden geçti. 7b o koda dokunmadı; yük altında kararsız görünüyor.
+  - "Kodları indir" düğmesiyle tarayıcıdan gerçek dosya kaydı yapılmadı; yalnız düğme test edildi.
+  - Bu kararlar 16 Ekim 2026'da şartnameye işlendi (bölüm 10.22).
+
+### 10.22. Yönetim ekranları kararlarının şartnameye işlenmesi (16 Ekim 2026)
+
+10.21 şartnameye işlendi: bölüm 2 (`qrcode-generator`), 5.3 (firma düzenleme dialogu, başarısız silmenin yeniden başlatılması, yönetim alanının görünümü), 7.13 (`deletionIncomplete` grubu; TOTP yeniden kurulumu; kurtarma kodlarının indirilmesi ve onay kutusu; kod doğrulayan isteklerden önce oturum yenileme; ayrı yönetim oturumu; bir kez gösterim; yönetimde güvenli tekrar; kapasitenin GB = 1024³ bayt girilmesi; yaşam döngüsü ve silme dialogları; işletim geçmişinin gösterimi), 8.10 (`pendingTotpSecretEncrypted`, `admin.totp_reset`) ve 10.10 (`/platform/auth/totp/reset` ve `/reset/confirm`, `summary.deletionIncomplete`, özet öğelerinde `deletionStatus`). 10.20'de şartnameye "silmesi tamamlanmayanlar" diye yazılan grubun adı `deletionIncomplete` olarak düzeltildi. Kod yeri yalnız bu belgede kaldı.
+
+İnceleme sırasında kullanıcı iki karar verdi:
+
+- **Kurtarma koduyla yeniden kurulum onaylandı:** TOTP yeniden kurulumu mevcut 6 haneli kodla veya kullanılmamış bir kurtarma koduyla başlatılabilir. Şartname 7.13'teki "telefon kaybolunca kurtarma koduyla gir, sonra TOTP'yi yeniden kur" akışı ancak böyle mümkündür. Yeni bir açık getirmez: şifreyi ve kurtarma kodunu bilen zaten girebilir, yeniden kurulum ayrıca bir kurtarma kodu harcar.
+- **Kararsız `customer-auth` testi Adım 8'in ilk işi:** "Aynı IP'den çok sayıda hatalı deneme" testinin ara sıra düşmesinin gerçek nedeni Adım 8'in başında ("Önce") bulunup düzeltilecek; demo açma sınırı da aynı altyapıyı kullanır. Adım 8 görev metnine ayrıca "Okunacaklar" satırı ve lint/typecheck/test/build bitiş ölçütü eklendi.
+
+Ayrıca "Kodları indir" düğmesiyle gerçek dosya kaydı Adım 10'un kontrol listesine eklendi.
+
 ## 11. Açık ürün ve teknik kararlar
 
 - Barındırma sağlayıcısı, veritabanı paketi, yedekleme yöntemi ve aylık maliyet (zamanlama 10.4). İptal edilen teknik plandaki kademeli düşük maliyet yaklaşımı ve pilotta en fazla 24 saatlik veri kaybı kabulü artık bağlayıcı değil; yeniden kararlaştırılacak.
@@ -1206,3 +1264,5 @@ Ayrıca: kalıcı silmenin depo temizliğinin gerçek MinIO'da denenmesi ve yede
 | 16 Ekim 2026 | Adım 6b kararları (10.17) şartnameye işlendi (bölüm 10.18): bölüm 3, 7.10, 8.10, 9.6, 10.9 ve 12; AGENTS.md'nin 6. kuralı güncellendi. İncelemede hazır paketlerin birikip depolamayı sınırsız büyütebildiği bulundu; kullanıcı "yeni paket hazır olunca önceki silinir, en fazla bir hazır paket" kuralını seçti, kod düzeltmesi Adım 7a'nın ilk işi oldu. Şartname 9.6'daki "kota hiç aşılmaz" cümlesi düzeltildi. Büyük firma ölçümü ve gerçek dosya denemeleri Adım 10'a, `exports/` yaşam döngüsü kuralı ve API'nin sürekli açık kalması canlıya hazırlık notuna ve 10.4'e eklendi. Sıradaki iş Adım 7a. |
 | 16 Ekim 2026 | Adım 7a (ürün sahibi yönetimi: kalan API) tamamlandı ve kabul edildi (bölüm 10.19). Önce tek hazır paket düzeltmesi yapıldı: yeni paket hazır olunca önceki silinir, kapasite bir kez iade edilir. Firma listesi ve işletim özeti, firma düzenleme, kullanıcı adı değiştirme, kapasite, geçici durdurma, hizmeti sonlandırma (önizlemeli), yeniden açma, arşiv uzatma ve kalıcı silme uçları eklendi; açılıştan kalıcı silmeye akış testli. Kullanıcı altı karar verdi: kalıcı silinen firmada asgari iz kaydı kalır; `PATCH /platform/companies/:id` 7a'da yapıldı; ad ve kullanıcı adı değişiminde gerekçe isteğe bağlı; kapasite %90'da yaklaşan, %100'de dolu; görüntüleme dönemi 7 gün içinde bitenler ve arşiv saklaması 30 gün içinde bitenler özetlenir. İşletim geçmişinin silme sonrası asgari kaydı, silme adımları, yeniden açma ve arşiv uzatma sınırları ve yarıda kalan silmenin devamı sonraki adımlar için kaydedildi. Kararlar henüz şartnameye işlenmedi. Sıradaki iş kararların şartnameye işlenmesi ve Adım 7b. |
 | 16 Ekim 2026 | Adım 7a kararları (10.19) şartnameye işlendi (bölüm 10.20): bölüm 3, 7.13, 8.1, 8.10, 9.8, 9.10, 10.10 ve 12. Kullanıcı üç karar verdi: bekleyen, süren veya başarısız kalıcı silmeler işletim özetinde ayrı grupta görünecek (API işi Adım 7b'nin ilk işi); "API ilk sürümde tek süreç çalışır" kuralı şartnameye ve 10.4'e yazıldı; "yeniden aç, sonra sonlandır" yolu bilinçli olarak kabul edildi. Depo temizliğinin gerçek MinIO'da denenmesi ve yedekten çıkarma takibi Adım 10'a, işletim geçmişinde kalan gerekçeler KVKK sorularına eklendi. Sıradaki iş Adım 7b. |
+| 16 Ekim 2026 | Adım 7b (ürün sahibi yönetimi: ekranlar) tamamlandı (bölüm 10.21). "Önce" işinde bekleyen, süren ve başarısız kalıcı silmeler işletim özetinde `deletionIncomplete` grubuna alındı. Yönetim girişi, QR ile zorunlu güvenlik kurulumu, bir kez gösterilen kurtarma kodları, güvenlik sayfası, işletim özeti ve firma listesi, firma oluşturma ve detayı, kullanıcı ve yaşam döngüsü dialogları ve firma adıyla onaylı kalıcı silme ekranı yapıldı; ilk kurulumdan kalıcı silmeye akış ekrandan çalıştı. Kullanıcı iki karar verdi: giriş sonrası TOTP yeniden kurulumu için iki oturumlu uç eklendi (`totp/reset`, `totp/reset/confirm`); QR için `qrcode-generator` eklendi. Yeniden kurulumun kurtarma koduyla da başlatılabilmesi uygulamada eklendi, onay bekliyor. Kararlar henüz şartnameye işlenmedi. |
+| 16 Ekim 2026 | Adım 7b kararları (10.21) şartnameye işlendi (bölüm 10.22): bölüm 2, 5.3, 7.13, 8.10 ve 10.10; özet grubunun adı `deletionIncomplete` olarak düzeltildi. Kullanıcı TOTP yeniden kurulumunun kurtarma koduyla da başlatılabilmesini onayladı. Ara sıra düşen `customer-auth` testinin düzeltilmesi Adım 8'in ilk işi oldu; Adım 8 görev metnine "Okunacaklar" satırı ve bitiş ölçütü eklendi. "Kodları indir" ile gerçek dosya kaydı Adım 10'a eklendi. Sıradaki iş Adım 8. |

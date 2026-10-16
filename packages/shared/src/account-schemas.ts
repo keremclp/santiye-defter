@@ -95,6 +95,15 @@ export const recoveryCodeSchema = z.object({
   recoveryCode: z.string().trim().min(1, 'Kurtarma kodunu girin.'),
 });
 
+/**
+ * Giriş sonrası TOTP yeniden kurulumunu başlatma: mevcut 6 haneli kod veya telefon kaybolduysa
+ * kullanılmamış bir kurtarma kodu.
+ */
+export const totpResetStartSchema = z.union(
+  [totpCodeSchema.strict(), recoveryCodeSchema.strict()],
+  { message: 'Doğrulama uygulamasındaki kodu veya bir kurtarma kodunu girin.' },
+);
+
 const companyNameSchema = z
   .string()
   .trim()
@@ -192,6 +201,7 @@ export const platformCompanyDeleteSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+export type TotpResetStartInput = z.infer<typeof totpResetStartSchema>;
 export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type PlatformCompanyCreateInput = z.infer<typeof platformCompanyCreateSchema>;

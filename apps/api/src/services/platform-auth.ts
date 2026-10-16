@@ -1,6 +1,6 @@
 // Ürün sahibi kimliği: şifre + zorunlu TOTP veya kurtarma kodu (şartname 3, 7.13, 8.2, 9.8, 10.10).
 
-import { normalizeUsername, type LoginInput } from '@santiye/shared';
+import { normalizeUsername, type LoginInput, type TotpResetStartInput } from '@santiye/shared';
 import { isValidObjectId, type Types } from 'mongoose';
 import { generateSecret, generateURI, verify } from 'otplib';
 import { withTransaction } from '../db/transaction.js';
@@ -149,32 +149,40 @@ export class PlatformAuthService {
     throw new AppError('UNAUTHORIZED', 'Doğrulama kodu hatalı.');
   }
 
+  /** ±1 zaman adımı toleransla doğrular; geçerliyse kodun zaman adımını döner. */
+  private async matchTimeStep(
+    encryptedSecret: string,
+    code: string,
+    afterTimeStep: number | null,
+  ): Promise<number | null> {
+    const result = await verify({
+      secret: decryptSecret(encryptedSecret, this.deps.config.totpEncryptionKey),
+      token: code,
+      epoch: this.nowSeconds(),
+      epochTolerance: 30,
+      ...(afterTimeStep !== null ? { afterTimeStep } : {}),
+    });
+    return result.valid && 'timeStep' in result ? result.timeStep : null;
+  }
+
   /** TOTP kodunu ±1 zaman adımı toleransla doğrular; aynı kod ikinci kez kabul edilmez. */
   private async checkTotp(admin: PlatformAdminDocument, code: string): Promise<boolean> {
     const withSecret = await PlatformAdminModel.findById(admin._id).select('+totpSecretEncrypted');
     if (!withSecret?.totpSecretEncrypted) return false;
-    const secret = decryptSecret(
+    const timeStep = await this.matchTimeStep(
       withSecret.totpSecretEncrypted,
-      this.deps.config.totpEncryptionKey,
+      code,
+      withSecret.totpLastUsedStep,
     );
-    const result = await verify({
-      secret,
-      token: code,
-      epoch: this.nowSeconds(),
-      epochTolerance: 30,
-      ...(withSecret.totpLastUsedStep !== null
-        ? { afterTimeStep: withSecret.totpLastUsedStep }
-        : {}),
-    });
-    if (!result.valid || !('timeStep' in result)) return false;
+    if (timeStep === null) return false;
 
     // Zaman adımı atomik olarak işaretlenir; eşzamanlı aynı kod yalnız bir kez geçer.
     const claimed = await PlatformAdminModel.findOneAndUpdate(
       {
         _id: admin._id,
-        $or: [{ totpLastUsedStep: null }, { totpLastUsedStep: { $lt: result.timeStep } }],
+        $or: [{ totpLastUsedStep: null }, { totpLastUsedStep: { $lt: timeStep } }],
       },
-      { $set: { totpLastUsedStep: result.timeStep } },
+      { $set: { totpLastUsedStep: timeStep } },
       { timestamps: false },
     );
     return claimed !== null;
@@ -259,11 +267,24 @@ export class PlatformAuthService {
 
   /** Telefon kaybolursa kod yerine kurtarma koduyla giriş; kullanılan kod geçersizleşir. */
   async loginWithRecoveryCode(admin: PlatformAdminDocument, recoveryCode: string) {
-    const { deps } = this;
     this.assertNotLocked(admin);
     if (!admin.totpConfirmedAt) {
       throw new AppError('CONFLICT', 'Önce iki aşamalı doğrulama kurulumunu tamamlayın.');
     }
+    const remainingRecoveryCodes = await this.consumeRecoveryCode(admin, recoveryCode);
+    await this.resetSecondFactorFailures(admin._id);
+    return {
+      ...(await this.issueSession(admin._id)),
+      admin: presentPlatformAdmin(admin),
+      remainingRecoveryCodes,
+    };
+  }
+
+  /** Kurtarma kodunu atomik olarak harcar; kalan kod sayısını döner. Hatalı kod denemeye sayılır. */
+  private async consumeRecoveryCode(
+    admin: PlatformAdminDocument,
+    recoveryCode: string,
+  ): Promise<number> {
     const hash = hashRecoveryCode(recoveryCode);
     const consumed = await PlatformAdminModel.findOneAndUpdate(
       { _id: admin._id, recoveryCodeHashes: hash },
@@ -278,14 +299,77 @@ export class PlatformAuthService {
       changes: [
         { field: 'remainingRecoveryCodes', old: null, new: consumed.recoveryCodeHashes.length },
       ],
-      at: deps.clock.now(),
+      at: this.deps.clock.now(),
     });
+    return consumed.recoveryCodeHashes.length;
+  }
+
+  /**
+   * Giriş sonrası TOTP yeniden kurulumu, 1. adım: mevcut kod veya (telefon kaybolduysa) bir kurtarma
+   * koduyla yeni anahtar üretilir. Yeni anahtar onaylanana kadar eski anahtar geçerli kalır.
+   */
+  async startTotpReset(admin: PlatformAdminDocument, input: TotpResetStartInput) {
+    this.assertNotLocked(admin);
+    if ('code' in input) {
+      if (!(await this.checkTotp(admin, input.code))) return this.recordSecondFactorFailure(admin);
+    } else {
+      await this.consumeRecoveryCode(admin, input.recoveryCode);
+    }
     await this.resetSecondFactorFailures(admin._id);
+
+    const secret = generateSecret();
+    await PlatformAdminModel.updateOne(
+      { _id: admin._id },
+      {
+        $set: {
+          pendingTotpSecretEncrypted: encryptSecret(secret, this.deps.config.totpEncryptionKey),
+        },
+      },
+      { timestamps: false },
+    );
     return {
-      ...(await this.issueSession(admin._id)),
-      admin: presentPlatformAdmin(admin),
-      remainingRecoveryCodes: consumed.recoveryCodeHashes.length,
+      otpauthUrl: generateURI({ issuer: this.deps.config.appName, label: admin.username, secret }),
+      secret,
     };
+  }
+
+  /** 2. adım: yeni anahtardan bir doğru kodla onaylanır; eski anahtar o anda geçersizleşir. */
+  async confirmTotpReset(admin: PlatformAdminDocument, code: string): Promise<void> {
+    const { deps } = this;
+    this.assertNotLocked(admin);
+    const withPending = await PlatformAdminModel.findById(admin._id).select(
+      '+pendingTotpSecretEncrypted',
+    );
+    const pending = withPending?.pendingTotpSecretEncrypted;
+    if (!pending) {
+      throw new AppError('CONFLICT', 'Önce yeniden kurulumu başlatın.');
+    }
+    // Yeni anahtarda önceki kodların zaman adımı geçerli değildir; son adım yeni koddan başlar.
+    const timeStep = await this.matchTimeStep(pending, code, null);
+    if (timeStep === null) return this.recordSecondFactorFailure(admin);
+
+    await withTransaction(async (session) => {
+      const updated = await PlatformAdminModel.updateOne(
+        { _id: admin._id, pendingTotpSecretEncrypted: pending },
+        {
+          $set: {
+            totpSecretEncrypted: pending,
+            pendingTotpSecretEncrypted: null,
+            totpLastUsedStep: timeStep,
+            failedSecondFactorCount: 0,
+            secondFactorLockedUntil: null,
+          },
+        },
+        { session },
+      );
+      if (updated.matchedCount === 0) {
+        throw new AppError('CONFLICT', 'Yeniden kurulum başka bir yerde değişti; baştan başlatın.');
+      }
+      await writePlatformLog(
+        { adminId: admin._id, action: 'admin.totp_reset', at: deps.clock.now() },
+        session,
+      );
+    });
   }
 
   /** Geçerli TOTP koduyla yeni 10 kod; eskileri geçersiz olur. */
@@ -376,6 +460,7 @@ export async function resetPlatformTwoFactor(username: string, clock: Clock): Pr
       {
         $set: {
           totpSecretEncrypted: null,
+          pendingTotpSecretEncrypted: null,
           totpConfirmedAt: null,
           totpLastUsedStep: null,
           recoveryCodeHashes: [],

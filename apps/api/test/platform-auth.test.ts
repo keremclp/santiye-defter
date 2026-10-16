@@ -248,6 +248,113 @@ describe('kurtarma kodları', () => {
   });
 });
 
+describe('giriş sonrası TOTP yeniden kurulumu', () => {
+  async function loginWith(testApp: TestApp, secret: string) {
+    const { pendingToken } = await platformPassword(testApp);
+    return verifyCode(testApp, pendingToken, await totpCode(testApp, secret));
+  }
+
+  it('mevcut kodla başlar; yeni anahtar onaylanana kadar eskisi geçerli; onaydan sonra yalnız yenisi', async () => {
+    const testApp = buildTestApp();
+    const { secret: oldSecret, accessToken, recoveryCodes } = await enrollPlatformAdmin(testApp);
+    const reset = (path: string, body: Record<string, unknown>) =>
+      request(testApp.app)
+        .post(`/platform/auth/totp/reset${path}`)
+        .set(bearer(accessToken))
+        .send(body);
+
+    // Kurulum başlatılmadan onay yok; hatalı mevcut kod denemeye sayılır.
+    expect((await reset('/confirm', { code: '123456' })).status).toBe(409);
+    expect((await reset('', { code: '000000' })).status).toBe(401);
+    expect((await reset('', {})).status).toBe(400);
+    expect((await reset('', { code: '123456', recoveryCode: 'X' })).status).toBe(400);
+
+    const started = await reset('', { code: await totpCode(testApp, oldSecret) });
+    expect(started.status, JSON.stringify(started.body)).toBe(200);
+    expect(started.body.data.otpauthUrl).toMatch(/^otpauth:\/\/totp\//);
+    const newSecret = started.body.data.secret as string;
+    expect(newSecret).not.toBe(oldSecret);
+
+    // Onaylanmadan eski anahtarla giriş sürer.
+    testApp.clock.advance(30_000);
+    expect((await loginWith(testApp, oldSecret)).status).toBe(200);
+
+    testApp.clock.advance(30_000);
+    expect((await reset('/confirm', { code: '000000' })).status).toBe(401);
+    const confirmed = await reset('/confirm', { code: await totpCode(testApp, newSecret) });
+    expect(confirmed.status, JSON.stringify(confirmed.body)).toBe(200);
+    expect(confirmed.body.message).toBe('İki aşamalı doğrulama yeniden kuruldu.');
+    // Onayda kullanılan kod girişte ikinci kez kabul edilmez.
+    expect((await loginWith(testApp, newSecret)).status).toBe(401);
+
+    testApp.clock.advance(30_000);
+    expect((await loginWith(testApp, oldSecret)).status).toBe(401);
+    testApp.clock.advance(30_000);
+    expect((await loginWith(testApp, newSecret)).status).toBe(200);
+    expect((await reset('/confirm', { code: await totpCode(testApp, newSecret) })).status).toBe(
+      409,
+    );
+
+    // Kurtarma kodları değişmez.
+    const { pendingToken } = await platformPassword(testApp);
+    const recovery = await request(testApp.app)
+      .post('/platform/auth/recovery')
+      .set(bearer(pendingToken))
+      .send({ recoveryCode: recoveryCodes[0] });
+    expect(recovery.status).toBe(200);
+
+    const admin = await PlatformAdminModel.findOne().select('+pendingTotpSecretEncrypted');
+    expect(admin!.pendingTotpSecretEncrypted).toBeNull();
+    expect(await PlatformLogModel.countDocuments({ action: 'admin.totp_reset' })).toBe(1);
+    expect(JSON.stringify(await PlatformLogModel.find().lean())).not.toContain(newSecret);
+  });
+
+  it('telefon kaybolunca kurtarma koduyla girilip kurtarma koduyla yeniden kurulur; kod tek kullanımlık', async () => {
+    const testApp = buildTestApp();
+    const { recoveryCodes } = await enrollPlatformAdmin(testApp);
+    const { pendingToken } = await platformPassword(testApp);
+    const signedIn = await request(testApp.app)
+      .post('/platform/auth/recovery')
+      .set(bearer(pendingToken))
+      .send({ recoveryCode: recoveryCodes[0] });
+    const auth = bearer(signedIn.body.data.accessToken as string);
+
+    const reused = await request(testApp.app)
+      .post('/platform/auth/totp/reset')
+      .set(auth)
+      .send({ recoveryCode: recoveryCodes[0] });
+    expect(reused.status).toBe(401);
+
+    const started = await request(testApp.app)
+      .post('/platform/auth/totp/reset')
+      .set(auth)
+      .send({ recoveryCode: recoveryCodes[1] });
+    expect(started.status, JSON.stringify(started.body)).toBe(200);
+    const confirmed = await request(testApp.app)
+      .post('/platform/auth/totp/reset/confirm')
+      .set(auth)
+      .send({ code: await totpCode(testApp, started.body.data.secret as string) });
+    expect(confirmed.status).toBe(200);
+    expect(await PlatformLogModel.countDocuments({ action: 'admin.recovery_code_used' })).toBe(2);
+    const admin = await PlatformAdminModel.findOne().select('+recoveryCodeHashes');
+    expect(admin!.recoveryCodeHashes).toHaveLength(8);
+  });
+
+  it('ara token ve müşteri token’ı yeniden kurulumu başlatamaz', async () => {
+    const testApp = buildTestApp();
+    await enrollPlatformAdmin(testApp);
+    const { pendingToken } = await platformPassword(testApp);
+    const customer = await createCustomer(testApp);
+    for (const token of [pendingToken, customer.accessToken]) {
+      const res = await request(testApp.app)
+        .post('/platform/auth/totp/reset')
+        .set(bearer(token))
+        .send({ code: '123456' });
+      expect(res.status).toBe(401);
+    }
+  });
+});
+
 describe('ürün sahibi oturumu', () => {
   it('refresh dönen çift üretir; logout refresh token’ı siler', async () => {
     const testApp = buildTestApp();

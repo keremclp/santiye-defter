@@ -1,6 +1,7 @@
 // Testlerde HTTP istemcisinin cevaplarını taklit eder; gerçek ağa çıkılmaz.
 
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
+import { adminHttp } from '../api/admin-client';
 import { http } from '../api/client';
 import { storageHttp } from '../features/documents/upload';
 
@@ -52,6 +53,7 @@ export function mockHttp(handler: (request: MockRequest) => MockReply) {
   };
   http.defaults.adapter = adapter;
   storageHttp.defaults.adapter = adapter;
+  adminHttp.defaults.adapter = adapter;
   return requests;
 }
 

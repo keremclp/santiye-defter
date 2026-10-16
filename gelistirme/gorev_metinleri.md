@@ -346,7 +346,9 @@ Bitti sayılması için:
 
 ```text
 ADIM 8 — Demo
-İlgili şartname bölümleri: 5.1 (/demo), 5.2 (demo rotaları), 6.3, 10.2, 13 (madde 2).
+Okunacaklar: şartnamede bölüm 5.1 (/demo), 5.2 (demo rotaları), 6.3, 10.2, 13 (madde 2); "Önce" işi için bölüm 3'teki "Tek süreç" maddesi ve 9.8 "Deneme sınırı" satırı. Geri kalanı okuma; gerekirse ilgili başlığı Grep ile bul.
+
+Önce (kısa iş): `apps/api/test/customer-auth.test.ts` içindeki "aynı IP'den çok sayıda hatalı deneme" testi tam test paketi çalışırken ara sıra düşüyor (karar belgesi 10.21, "Açık noktalar"). Nedenini bul ve gerçek nedeni düzelt (ör. testler arasında paylaşılan bellek içi deneme sayacı, zaman penceresine bağlı bekleme, eksik `await`). Testi atlama, beklemeyi yalnız uzatma veya beklenen değeri gevşetme. Demo açma sınırı da aynı altyapıyı kullanacağı için bu iş demodan önce yapılır. Tam API paketini en az 5 kez art arda çalıştırıp her seferinde geçtiğini raporla.
 
 Yap:
 - Ayrı demo veritabanı bağlantısı (MONGODB_DEMO_URI); demo token'ı gerçek veritabanına hiçbir koşulda erişemez.
@@ -360,6 +362,8 @@ Bitti sayılması için:
 - İki ayrı demo oturumunun değişiklikleri birbirini etkilemez (test).
 - Demo hiçbir uçtan gerçek firma verisine erişemez ve gerçek veritabanına yazamaz (test).
 - Sıfırlama başlangıç verisine döner.
+- `customer-auth.test.ts` 5 art arda tam çalıştırmada da geçiyor.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` temiz.
 ```
 
 ## Adım 9 — Tanıtım sitesi
@@ -390,6 +394,7 @@ Yap:
 - Önceki adımlarda denenmemiş kalan belge akışlarını kontrol listesine ekle ve dene: anlaşma formu ve detayında belge ekleme, önizleme, sil/geri al (tarayıcıda); indirmenin gerçek dosya kaydetmesi; gerçek telefon kamerasıyla çekim ve gerçek bir HEIC dosyasının önizlemesi (son ikisi elle kontrol olabilir).
 - Rapor dosyalarını kontrol listesine ekle: indirilen Excel, CSV ve PDF ile tam veri çıkışı paketindeki `veri.xlsx` ve CSV dosyaları gerçek Excel'de ve gerçek bir telefonda açılıyor, Türkçe karakterler ve toplamlar doğru; paket tarayıcıdan gerçekten indiriliyor (elle kontrol olabilir).
 - Kalıcı silmenin depo temizliğini (`removePrefix`, yarım çok parçalı yüklemelerin iptali) yerel MinIO'da gerçek nesnelerle dene; silinen firmanın `companies/<firma>/` altında nesne kalmadığını doğrula.
+- Yönetim güvenlik kurulumunda "Kodları indir" düğmesiyle tarayıcıdan gerçek `.txt` dosyası kaydedildiğini ve içeriğin ekrandaki kodlarla aynı olduğunu dene (elle kontrol olabilir).
 - Yedekten çıkarma son tarihi: kalıcı silmeden sonra kalan yedek kopyaların en geç 30 gün içinde saklama döngüsünden çıkarılması (karar belgesi 7.7) yedekleme yöntemi seçildiyse takibe bağla; seçilmediyse canlıya hazırlık notunda açık nokta olarak yaz.
 - Büyük firma ölçümü: on binlerce hareket ve yaklaşık bin belgelik örnek firmayla tam veri çıkışında tek snapshot okumanın MongoDB transaction süre sınırına (60 sn) takılıp takılmadığını ve Excel üretiminin bellek kullanımını ölç; raporlar için de süreyi kaydet. Sınır aşılıyorsa dur ve seçenekleri sor.
 - Eksik veya hatalı çıkan noktaları düzelt; şartnameden sapma gerekiyorsa dur ve sor.

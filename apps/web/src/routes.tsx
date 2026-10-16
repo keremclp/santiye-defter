@@ -2,6 +2,7 @@ import { lazy, type ComponentType } from 'react';
 import { Navigate, type RouteObject } from 'react-router';
 import { GuestOnly, RequireSession } from './app/guards';
 import { Lazy, Root } from './app/Root';
+import { AdminGuestOnly, AdminShell } from './components/layout/AdminShell';
 import { AppShell } from './components/layout/AppShell';
 
 // Rota bazlı kod bölme (şartname 11).
@@ -94,6 +95,25 @@ const CompanySettingsPage = page(
 );
 const CategoriesPage = page(() => import('./features/settings/CategoriesPage'), 'CategoriesPage');
 const AboutPage = page(() => import('./features/settings/AboutPage'), 'AboutPage');
+const AdminLoginPage = page(() => import('./features/admin/AdminLoginPage'), 'AdminLoginPage');
+const AdminSetupPage = page(() => import('./features/admin/AdminSetupPage'), 'AdminSetupPage');
+const AdminSecurityPage = page(
+  () => import('./features/admin/AdminSecurityPage'),
+  'AdminSecurityPage',
+);
+const AdminHomePage = page(() => import('./features/admin/AdminHomePage'), 'AdminHomePage');
+const AdminCompanyNewPage = page(
+  () => import('./features/admin/AdminCompanyNewPage'),
+  'AdminCompanyNewPage',
+);
+const AdminCompanyDetailPage = page(
+  () => import('./features/admin/AdminCompanyDetailPage'),
+  'AdminCompanyDetailPage',
+);
+const AdminCompanyDeletePage = page(
+  () => import('./features/admin/AdminCompanyDeletePage'),
+  'AdminCompanyDeletePage',
+);
 const NotFoundPage = page(() => import('./features/NotFoundPage'), 'NotFoundPage');
 const DemoPlaceholderPage = page(() => import('./features/NotFoundPage'), 'DemoPlaceholderPage');
 
@@ -157,6 +177,21 @@ export const routes: RouteObject[] = [
               { path: '*', element: el(NotFoundPage) },
             ],
           },
+        ],
+      },
+      // Ürün sahibi yönetimi (şartname 5.3): ayrı oturum; müşteri oturumundan bağımsızdır.
+      { path: '/yonetim/giris', element: <AdminGuestOnly>{el(AdminLoginPage)}</AdminGuestOnly> },
+      { path: '/yonetim/guvenlik-kurulumu', element: el(AdminSetupPage) },
+      {
+        path: '/yonetim',
+        element: <AdminShell />,
+        children: [
+          { index: true, element: el(AdminHomePage) },
+          { path: 'guvenlik', element: el(AdminSecurityPage) },
+          { path: 'firmalar/yeni', element: el(AdminCompanyNewPage) },
+          { path: 'firmalar/:id', element: el(AdminCompanyDetailPage) },
+          { path: 'firmalar/:id/sil', element: el(AdminCompanyDeletePage) },
+          { path: '*', element: el(NotFoundPage) },
         ],
       },
       { path: '*', element: el(NotFoundPage) },

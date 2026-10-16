@@ -8,6 +8,8 @@ export interface PlatformAdmin {
   refreshTokens: StoredRefreshToken[];
   /** PLATFORM_TOTP_ENCRYPTION_KEY ile AES-256-GCM şifreli */
   totpSecretEncrypted: string | null;
+  /** Giriş sonrası yeniden kurulumda onay bekleyen yeni anahtar (şifreli); onaylanana kadar eskisi geçerli */
+  pendingTotpSecretEncrypted: string | null;
   /** null ise ilk girişte kurulum zorunlu */
   totpConfirmedAt: Date | null;
   /** Kabul edilen son TOTP zaman adımı; aynı kod ikinci kez kabul edilmez */
@@ -26,6 +28,7 @@ const platformAdminSchema = new Schema<PlatformAdmin>(
     passwordHash: { type: String, required: true, select: false },
     refreshTokens: { type: [refreshTokenSchema], default: [], select: false },
     totpSecretEncrypted: { type: String, default: null, select: false },
+    pendingTotpSecretEncrypted: { type: String, default: null, select: false },
     totpConfirmedAt: { type: Date, default: null },
     totpLastUsedStep: { type: Number, default: null },
     recoveryCodeHashes: { type: [String], default: [], select: false },

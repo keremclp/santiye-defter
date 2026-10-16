@@ -33,7 +33,7 @@ const empty = {
 };
 
 // Gizli pencere veya engellenmiş depolamada uygulama yine çalışır; yalnız oturum kalıcı olmaz.
-const safeStorage = createJSONStorage(() => ({
+export const safeStorage = createJSONStorage(() => ({
   getItem: (name: string) => {
     try {
       return localStorage.getItem(name);

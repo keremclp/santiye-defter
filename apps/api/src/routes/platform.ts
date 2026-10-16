@@ -15,6 +15,7 @@ import {
   recoveryCodeSchema,
   refreshTokenSchema,
   totpCodeSchema,
+  totpResetStartSchema,
 } from '@santiye/shared';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -79,6 +80,17 @@ export function platformRouter(
   router.post('/platform/auth/recovery-codes/regenerate', signedIn, async (req, res) => {
     const { code } = totpCodeSchema.parse(req.body);
     sendSuccess(res, await auth.regenerateRecoveryCodes(requirePlatformAdmin(req), code));
+  });
+
+  router.post('/platform/auth/totp/reset', signedIn, async (req, res) => {
+    const input = totpResetStartSchema.parse(req.body);
+    sendSuccess(res, await auth.startTotpReset(requirePlatformAdmin(req), input));
+  });
+
+  router.post('/platform/auth/totp/reset/confirm', signedIn, async (req, res) => {
+    const { code } = totpCodeSchema.parse(req.body);
+    await auth.confirmTotpReset(requirePlatformAdmin(req), code);
+    sendSuccess(res, null, { message: 'İki aşamalı doğrulama yeniden kuruldu.' });
   });
 
   router.post('/platform/auth/refresh', async (req, res) => {

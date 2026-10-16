@@ -52,6 +52,7 @@ Web'de görünen ad her yerde **Şantiye Hesap**. Slogan: **Şantiye parasını 
 | Belge depolama | S3 uyumlu özel bucket (ör. Cloudflare R2); `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` | İmzalı ve süreli bağlantılar. Bölge adı `us-east-1`, yol biçimi (path-style) adresleme; yerel MinIO ve R2 bununla çalışır |
 | Görsel önizleme | sharp (HEIC için heic-convert) | Orijinal dosya korunur |
 | İki aşamalı doğrulama | otplib (TOTP, RFC 6238) | Yalnız ürün sahibi hesabı; doğrulama uygulamasıyla 6 haneli kod |
+| QR kodu | `qrcode-generator` (web) | TOTP kurulum QR'ı tarayıcıda SVG olarak çizilir; gizli anahtar dış servise gönderilmez, elle giriş için ayrıca yazılı gösterilir |
 | PDF | PDFKit | Türkçe karakter için gömülü yazı tipi: DM Sans 400/700 ve Outfit 600 TTF dosyaları OFL lisans metinleriyle `apps/api/assets/fonts` altında; üretim dağıtımında bu klasör de bulunur. Outfit'te ₺ olmadığı için yalnız başlıklarda, tutarlar DM Sans. Bitişik harfler ("fi") kapalı; yoksa kopyalanan metin bozulur. Yatay A4; uzun tablolar sayfalara bölünür, başlık satırı her sayfada tekrarlanır |
 | Excel | exceljs | Rapor ve tam veri çıkışı. "Özet" sayfasında başlık bilgileri ve özetler, her tablo ayrı sayfada; tutarlar TL biçimli sayı hücresi, tarihler tarih hücresi |
 | CSV | UTF-8, BOM'lu, Türkçe başlık, `;` ayraç | Excel'de Türkçe karakter bozulmadan açılır. Tutar binlik ayraçsız, ondalık virgüllü (`12500,50`); tarih `GG.AA.YYYY` |
@@ -374,10 +375,12 @@ Sol menü (bölüm 4.5): Özet, Şantiyeler, İşlemler, Kişiler, Anlaşmalar; 
 | `/yonetim/guvenlik` | TOTP'yi yeniden kurma ve kurtarma kodlarını yenileme |
 | `/yonetim` | İşletim özeti ve firma listesi |
 | `/yonetim/firmalar/yeni` | Firma oluştur |
-| `/yonetim/firmalar/:id` | Firma detay: kullanıcılar, depolama, hizmet durumu, işletim geçmişi |
-| `/yonetim/firmalar/:id/sil` | Kalıcı silme onayı (yalnız saklama süresi dolmuşsa) |
+| `/yonetim/firmalar/:id` | Firma detay: kullanıcılar, depolama, hizmet durumu, işletim geçmişi. Firma düzenleme ayrı rota değil, bu sayfada dialogdur |
+| `/yonetim/firmalar/:id/sil` | Kalıcı silme onayı (yalnız saklama süresi dolmuşsa veya başarısız silme yeniden başlatılıyorsa) |
 
 Müşteri menüsünde hesap açma ekranı yoktur. Yönetim rotaları `noindex`.
+
+Yönetim alanı müşteri uygulamasıyla aynı token'ları ve bileşenleri kullanır; yeni renk değeri yoktur. Lacivert (`navy-deep`) kenar menü, "Yönetim" işareti ve üst çubuktaki "Yönetim alanı" rozetiyle ayrılır. 1100 px altında menü drawer'dır; alt menü ve yüzen + düğmesi yoktur.
 
 ---
 
@@ -700,30 +703,36 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
   - Görüntüleme süresi biten: görüntüleme dönemi bugünden itibaren 7 gün içinde bitecek firmalar (bitmiş olanlar arşiv saklama filtresindedir).
   - Saklama bitişi yaklaşan: arşiv saklaması 30 gün içinde bitecek firmalar.
   - Silme onayı bekleyen: saklama süresi dolmuş firmalar.
-  - Silmesi tamamlanmayan: kalıcı silmesi bekleyen, süren veya başarısız olan firmalar; başarısız silme buradan yeniden başlatılır.
+  - Silmesi tamamlanmayan (`deletionIncomplete`): kalıcı silmesi bekleyen, süren veya başarısız olan firmalar, ad sırasıyla; başarısız silme buradan "Silmeyi yeniden başlat" ile kalıcı silme ekranına gider.
   Kalıcı silmesi tamamlanmış firmalar listede "Silindi" durumuyla kalır, beş durum filtresinin hiçbirine ve özete girmez. Otomatik müşteri mesajı ve faturalama yok.
 - **Firma düzenle:** ad, iletişim, işletim notu; çakışma kontrolüyle, gerekçe isteğe bağlı, değişiklikler işletim geçmişine yazılır. Firma detayında kalıcı silme ekranı için kayıt sayıları (hareket, anlaşma ve başlangıç kaydı, şantiye, kişi, belge; silinmiş ama geri alınabilir kayıtlar dahil) görünür; ürün sahibi kayıtların kendisini görmez.
 - **Firma oluştur:** ad zorunlu; yetkili kişi, telefon, e-posta, işletim notu isteğe bağlı. Yeni firma aktif, boş ve 20 GB kapasiteyle başlar; demo verisi aktarılmaz. Benzer ad uyarısı engellemez.
-- **Kullanıcı ekle:** ad soyad, kullanıcı adı (sistem genelinde benzersiz, küçük harfe ve Türkçe kurallara göre normalize) ve firma zorunlu; telefon/e-posta isteğe bağlı. Sistem geçici şifre üretir ve **yalnız bir kez** gösterir; 72 saat geçerlidir. Ürün sahibi bunu müşteriye kendisi iletir; uygulama mesaj göndermez. Kullanıcı tek firmaya bağlıdır.
+- **Kullanıcı ekle:** ad soyad, kullanıcı adı (sistem genelinde benzersiz, küçük harfe ve Türkçe kurallara göre normalize) ve firma zorunlu; telefon/e-posta isteğe bağlı. Sistem geçici şifre üretir ve **yalnız bir kez** gösterir; 72 saat geçerlidir. Ürün sahibi bunu müşteriye kendisi iletir; uygulama mesaj göndermez. Kullanıcı tek firmaya bağlıdır. Geçici şifre dialogu "Şifreyi kaydettim veya müşteriye ilettim" işaretlenmeden kapanmaz.
+  - **Bir kez gösterim:** Geçici şifre ve kurtarma kodları yalnız ekran bileşeninin durumunda tutulur; tarayıcı deposuna ve adres geçmişine yazılmaz.
+  - **Güvenli tekrar:** Firma ve kullanıcı oluşturma `Idempotency-Key` ile gider. Yönetimde sonuç sorgulama ucu (`/idempotency/:key`) yoktur; cevap alınamazsa aynı istek aynı anahtarla yeniden gönderilir.
   - Kullanıcı adı biçimi: 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi ve tire.
   - Geçici şifre hiçbir yerde düz metin saklanmaz. Oluşturma isteği aynı `Idempotency-Key` ile tekrar gelirse kullanıcı şifresiz döner ve "Geçici şifre ilk yanıtta gösterildi; görmediyseniz şifreyi sıfırlayın" denir.
 - **Şifre sıfırla:** gerekçe zorunlu. Yeni geçici şifre üretir, mevcut şifre hiç görüntülenmez, bütün oturumlar hemen düşer.
 - **Kullanıcıyı pasifleştir / aktifleştir:** gerekçe zorunlu. Giriş ve oturumlar hemen kapanır; geçmişteki kayıt atıfları kalır.
 - **Kullanıcı düzenle:** ad ve kullanıcı adı; gerekçe isteğe bağlı. Kullanıcı adı çakışması 409.
 - Firma ve kullanıcı oluşturmada gerekçe isteğe bağlıdır. Bütün yönetim işlemleri işletim geçmişine yazılır.
-- **Kapasite:** gerekçeyle artır veya mevcut kullanımın altına inmeden azalt (kontrol atomik; altına inen istek 409 "Kapasite mevcut kullanımın altına indirilemez."); önceki/yeni değer ve kim/ne zaman kaydedilir. Değer aynıysa kayıt yazılmaz.
+- **Kapasite:** GB olarak girilir (1 GB = 1024³ bayt; virgüllü ondalık kabul edilir; varsayılan 20 GB da bu birimdedir). Gerekçeyle artır veya mevcut kullanımın altına inmeden azalt (ekranda engellenir; sunucu kontrolü atomik; altına inen istek 409 "Kapasite mevcut kullanımın altına indirilemez."); önceki/yeni değer ve kim/ne zaman kaydedilir. Değer aynıysa kayıt yazılmaz.
 - **Hizmet yaşam döngüsü:** Geçici durdur, Hizmeti sonlandır, Yeniden aç ayrı eylemler. Kurallar bölüm 9.10.
-  - Geçici durdurma hizmet sonu tarihlerine dokunmaz; erişim bir sonraki istekte kapanır. Aynı durum yeniden istenirse işlem ve kayıt yapılmaz.
-  - Sonlandırmada yürürlük tarihi (geçmişe çekilemez, ileri tarih seçilebilir), son görüntüleme günü (`viewUntil`) ve saklama bitişi (`retainUntil`) kesin tarih olarak önizlenir (gün sınırları bölüm 9.10); gerekçe ve onay alınır.
-  - Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
-- **Kalıcı silme:** Yalnız saklama süresi dolmuş (silme onayı bekleyen) firmada veya başarısız silmenin yeniden başlatılmasında, ayrı ekranda. Firma adı, durum, kapsanan kayıt ve belge sayısı, geri döndürülemeyecek sonuç gösterilir; firma adını (ürün sahibinin kaydettiği `name`, kırpılmış hâliyle birebir; büyük/küçük ve Türkçe harf farkı kabul edilmez) yazarak onay ve gerekçe. Silme arka planda sürer: açık dışa aktarma işleri iptal edilir; depoda `companies/<firma>/` altındaki bütün nesneler silinir ve yarım çok parçalı yüklemeler iptal edilir; `companyId` alanı olan bütün koleksiyonlardaki firma verisi (kullanıcılar, güvenli tekrar kayıtları, arama geçmişi dahil) silinir; son olarak depo bir kez daha temizlenir. Adımlar tekrar çalıştırılabilir. Durum: bekliyor / sürüyor / tamamlandı / başarısız; hata işletim geçmişine yazılır. API açılışta yarıda kalan silmeyi yeniden bekleyene alır. Silme başlamış firmada yeniden açma, düzenleme, kapasite, durdurma, arşiv uzatma ve kullanıcı ekleme 409 döner; kullanıcıları kalmadığı için girişleri 401'dir. Kalıcı silinen firma yeniden açılamaz.
-- **İşletim geçmişi:** hesap, şifre sıfırlama, kapasite, hizmet ve silme işlemleri kim, ne zaman, gerekçe ile kaydedilir; şifre hiçbir yerde loglanmaz. İşlem adlarının Türkçe karşılıkları ekranda gösterilir (bölüm 8.10).
+  - Geçici durdurma hizmet sonu tarihlerine dokunmaz; erişim bir sonraki istekte kapanır. Aynı durum yeniden istenirse işlem ve kayıt yapılmaz. Gerekçe ister.
+  - Sonlandırmada yürürlük tarihi (geçmişe çekilemez, ileri tarih seçilebilir), son görüntüleme günü (`viewUntil`) ve saklama bitişi (`retainUntil`) seçili tarihin API önizlemesiyle (`?preview=1`) kesin tarih olarak gösterilir (gün sınırları bölüm 9.10); onay düğmesi yalnız seçili tarihin önizlemesi gelince açılır; gerekçe ve onay alınır.
+  - Yeniden açma ve arşiv uzatma dialogları "önce → sonra" tarih kutusu gösterir. Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
+- **Kalıcı silme:** Yalnız saklama süresi dolmuş (silme onayı bekleyen) firmada veya başarısız silmenin yeniden başlatılmasında, ayrı ekranda. Firma adı, durum, kapsanan kayıt ve belge sayısı, geri döndürülemeyecek sonuç gösterilir; firma adını (ürün sahibinin kaydettiği `name`, kırpılmış hâliyle birebir; büyük/küçük ve Türkçe harf farkı kabul edilmez) yazarak onay ve gerekçe. Silme arka planda sürer: açık dışa aktarma işleri iptal edilir; depoda `companies/<firma>/` altındaki bütün nesneler silinir ve yarım çok parçalı yüklemeler iptal edilir; `companyId` alanı olan bütün koleksiyonlardaki firma verisi (kullanıcılar, güvenli tekrar kayıtları, arama geçmişi dahil) silinir; son olarak depo bir kez daha temizlenir. Adımlar tekrar çalıştırılabilir. Durum: bekliyor / sürüyor / tamamlandı / başarısız; hata işletim geçmişine yazılır. API açılışta yarıda kalan silmeyi yeniden bekleyene alır. Silme başlamış firmada yeniden açma, düzenleme, kapasite, durdurma, arşiv uzatma ve kullanıcı ekleme 409 döner; kullanıcıları kalmadığı için girişleri 401'dir. Kalıcı silinen firma yeniden açılamaz. Silme ekranında firma adı, durum, saklama bitişi, kullanıcı ve kayıt sayıları ile geri döndürülemez sonuç gösterilir; kayıtlı ad birebir yazılmadan düğme açılmaz. Silme sürerken firma detayı durumu 3 saniyede bir yeniler.
+- **İşletim geçmişi:** hesap, şifre sıfırlama, kapasite, hizmet ve silme işlemleri kim, ne zaman, gerekçe ile kaydedilir; şifre hiçbir yerde loglanmaz. Ekranda işlem adlarının Türkçe karşılıkları (Adım 2'deki hesap işlemleri ve `admin.*` olayları dahil, bölüm 8.10), kullanıcı işlemlerinde hedef kullanıcının adı, kalıcı silme tamamlanınca silinen kayıt ve dosya sayıları Türkçe koleksiyon adlarıyla gösterilir. İşlem yapan, oturumdaki ürün sahibiyse kullanıcı adıyla, değilse "Ürün sahibi" olarak yazılır; API yalnız kimlik döner.
 - Ürün sahibi müşteri finansal kayıtlarını görüntülemez ve düzenlemez.
 - **Hesap güvenliği:**
   - Giriş iki aşamalıdır: şifre, ardından doğrulama uygulamasındaki 6 haneli TOTP kodu. İki aşamalı doğrulama kapatılamaz.
   - İlk girişte (bootstrap hesabı) QR kodla TOTP kurulumu zorunludur. Kurulum bir doğru kodla onaylanmadan yönetim alanı açılmaz.
   - Kurulum onaylanınca 10 adet tek kullanımlık kurtarma kodu **bir kez** gösterilir ve indirilebilir. Ekranda "Bu kodları çevrimdışı ve güvenli bir yerde saklayın" uyarısı olur. Kodlar yalnız hash olarak saklanır.
   - Telefon kaybolursa giriş, kod yerine bir kurtarma kodu ile yapılır. Kullanılan kod geçersizleşir. Giriş sonrası TOTP yeniden kurulabilir ve kurtarma kodları yenilenebilir; yenileme eski kodları geçersiz kılar.
+  - **TOTP'yi yeniden kurma:** Mevcut 6 haneli kodla veya kullanılmamış bir kurtarma koduyla başlatılır (kullanılan kurtarma kodu geçersizleşir); böylece telefonunu kaybedip kurtarma koduyla giren ürün sahibi de yeniden kurabilir. Yeni anahtar ve QR verilir; yeni uygulamadaki kodla onaylanana kadar eski anahtar geçerli kalır, onayda eski anahtar geçersizleşir ve PlatformLog'a `admin.totp_reset` yazılır. Kurtarma kodları değişmez; gerekirse ayrıca yenilenir. Hatalı kodlar ikinci adım deneme sınırına sayılır.
+  - Kurtarma kodları kurulumda `.txt` olarak indirilebilir ve kopyalanabilir; "Kodları güvenli bir yere kaydettim" işaretlenmeden devam edilemez.
+  - Kod doğrulayan oturumlu isteklerden (kurtarma kodu yenileme, TOTP yeniden kurma) hemen önce oturum yenilenir; böylece 401 yalnız "kod hatalı" anlamına gelir ve hatalı kod otomatik yeniden denemeyle iki kez sayılmaz.
+  - Yönetim oturumu müşteri oturumundan ayrı saklanır ve `/platform/auth/refresh` ile ayrı yenilenir; müşteri oturumu yönetim alanını açmaz. Şifre adımından sonraki ara token yalnız bellekte tutulur. Oturum düşünce "Oturumunuz sona erdi" notuyla yönetim girişine dönülür.
   - Hem telefon hem kurtarma kodları kaybolursa web üzerinden kurtarma yolu yoktur. Yalnız sunucuya erişimi olan kişi `pnpm --filter api platform:reset-2fa --username <ad>` komutunu çalıştırabilir. Komut TOTP'yi ve kurtarma kodlarını sıfırlar, bütün ürün sahibi oturumlarını düşürür ve PlatformLog'a yazar. Sonraki girişte kurulum yeniden zorunludur.
   - Yanlış TOTP veya kurtarma kodu denemeleri sınırlıdır; aşılınca kısa süreli kilit uygulanır.
 
@@ -779,7 +788,7 @@ Firmanın `updatedAt` değerini yalnız ad, iletişim ve not düzenlemeleri değ
 | `refreshTokens` | Hash'lenmiş token dizisi, en fazla son 10 |
 | `tokensValidAfter` | Şifre değişimi, sıfırlama veya pasifleştirmede güncellenir; bu andan önce verilmiş access token'lar süresini beklemeden reddedilir |
 
-**PlatformAdmin:** `username`, `passwordHash`, `refreshTokens`, `totpSecretEncrypted` (`PLATFORM_TOTP_ENCRYPTION_KEY` ile şifreli), `totpConfirmedAt` (null ise kurulum zorunlu), `recoveryCodeHashes` (kullanılmamış kodlar), `totpLastUsedStep` (aynı kodun tekrar kullanılmaması için), `tokensValidAfter` (2FA sıfırlamasında güncellenir), `failedSecondFactorCount` ve `secondFactorLockedUntil`. Ayrı koleksiyon; müşteri firmasına bağlı değildir.
+**PlatformAdmin:** `username`, `passwordHash`, `refreshTokens`, `totpSecretEncrypted` (`PLATFORM_TOTP_ENCRYPTION_KEY` ile şifreli), `totpConfirmedAt` (null ise kurulum zorunlu), `pendingTotpSecretEncrypted` (yeniden kurulumda onay bekleyen yeni anahtar; onaylanınca `totpSecretEncrypted` olur), `recoveryCodeHashes` (kullanılmamış kodlar), `totpLastUsedStep` (aynı kodun tekrar kullanılmaması için), `tokensValidAfter` (2FA sıfırlamasında güncellenir), `failedSecondFactorCount` ve `secondFactorLockedUntil`. Ayrı koleksiyon; müşteri firmasına bağlı değildir.
 
 ### 8.3 Project
 
@@ -896,7 +905,7 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 
 - **IdempotencyRecord:** `companyId`, `userId`, `key` (benzersiz `companyId + key`), `requestHash`, `resultRef`, `createdAt` (30 gün TTL).
 - **ExportJob:** `companyId`, `requestedBy`, `type`, `status` (`queued` `running` `ready` `failed`), `progress` (0–100), `fileKey` ve `fileName` (paket silinince `fileKey` null), `sizeBytes`, `countedBytes` (firmanın kullanımında bu paket için sayılan bayt; paket silinince 0), `expiresAt` (hazır olma + 7 gün), `startedAt`, `finishedAt`, `error` (kullanıcıya gösterilen metin), `active` (bekleyen veya süren işte true; `companyId + active` kısmi benzersiz indeksiyle firma başına tek etkin iş), `attempts`, `lease` (süren işin kilidi). Ayrı "süresi doldu" durumu yoktur: süresi geçen paket `ready` kalır, cevaplarda `expired: true` olarak türetilir.
-- **PlatformLog:** `adminId`, `companyId`, `action`, `changes`, `reason`, `at`. Şifre içermez; firma kalıcı silinse de asgari kaydı (firma adı, tarihler, işlem yapan, gerekçe) kalır. Kalıcı silmede firmanın işletim kayıtları silinmez: ad, tarih, kapasite ve durum içeren kayıtların (firma oluşturma, kapasite, durdurma, hizmet sonu, yeniden açma, arşiv uzatma, silme) ayrıntısı korunur; kişi verisi taşıyan kayıtlarda (kullanıcı işlemleri, firma düzenleme) `changes` temizlenir. İşlem yapan, zaman ve gerekçe her kayıtta kalır. Silme tamamlanınca firma adı ve silinen kayıt/dosya sayılarıyla `company.delete_completed` yazılır. Firma işlem adları: `company.update`, `company.quota`, `company.suspend`, `company.unsuspend`, `company.end_service`, `company.reopen`, `company.extend_retention`, `company.delete`, `company.delete_completed`, `company.delete_failed`; kullanıcı düzenlemesi `user.update` (Adım 2'deki hesap işlemlerine ek). Ekranda Türkçe karşılıklarıyla gösterilir.
+- **PlatformLog:** `adminId`, `companyId`, `action`, `changes`, `reason`, `at`. Şifre içermez; firma kalıcı silinse de asgari kaydı (firma adı, tarihler, işlem yapan, gerekçe) kalır. Kalıcı silmede firmanın işletim kayıtları silinmez: ad, tarih, kapasite ve durum içeren kayıtların (firma oluşturma, kapasite, durdurma, hizmet sonu, yeniden açma, arşiv uzatma, silme) ayrıntısı korunur; kişi verisi taşıyan kayıtlarda (kullanıcı işlemleri, firma düzenleme) `changes` temizlenir. İşlem yapan, zaman ve gerekçe her kayıtta kalır. Silme tamamlanınca firma adı ve silinen kayıt/dosya sayılarıyla `company.delete_completed` yazılır. Firma işlem adları: `company.update`, `company.quota`, `company.suspend`, `company.unsuspend`, `company.end_service`, `company.reopen`, `company.extend_retention`, `company.delete`, `company.delete_completed`, `company.delete_failed`; kullanıcı düzenlemesi `user.update`; ürün sahibinin TOTP yeniden kurulumu `admin.totp_reset` (Adım 2'deki hesap işlemlerine ek). Ekranda Türkçe karşılıklarıyla gösterilir.
 
 ---
 
@@ -1189,8 +1198,10 @@ Ayrı token türü. Müşteri finansal kayıtlarına uç yok.
 | POST | `/platform/auth/totp/verify` | `code`; kurulumu onaylar veya girişi tamamlar; ilk kurulumda kurtarma kodlarını bir kez döner |
 | POST | `/platform/auth/recovery` | `recoveryCode`; ara token ile girişi tamamlar |
 | POST | `/platform/auth/recovery-codes/regenerate` | oturumlu + geçerli TOTP kodu; yeni 10 kod, eskiler geçersiz |
+| POST | `/platform/auth/totp/reset` | oturumlu + mevcut TOTP kodu veya kullanılmamış kurtarma kodu; yeni anahtar ve QR için `otpauth` adresi döner. Eski anahtar onaya kadar geçerli |
+| POST | `/platform/auth/totp/reset/confirm` | oturumlu + yeni uygulamadaki `code`; yeni anahtarı geçerli kılar, `admin.totp_reset` yazar |
 | POST | `/platform/auth/refresh` `/platform/auth/logout` | |
-| GET | `/platform/companies` | `q, status`, kullanım ve tarihler. Filtreden bağımsız `summary`: `storageFull`, `storageNearFull`, `viewEnding`, `retentionEnding`, `deletionPending` ve silmesi tamamlanmayanlar (bekleyen, süren, başarısız); her öğede kimlik, ad, durum, kullanım, kota, `viewUntil`, `retainUntil`. Silinmiş firmalar `deletionStatus` ile listelenir |
+| GET | `/platform/companies` | `q, status`, kullanım ve tarihler. Filtreden bağımsız `summary`: `storageFull`, `storageNearFull`, `viewEnding`, `retentionEnding`, `deletionPending`, `deletionIncomplete` (bekleyen, süren, başarısız silme); her öğede kimlik, ad, durum, `deletionStatus`, kullanım, kota, `viewUntil`, `retainUntil`. Silinmiş firmalar `deletionStatus` ile listelenir |
 | POST | `/platform/companies` | firma oluştur |
 | GET | `/platform/companies/:id` | detay, kullanıcılar, depolama, hizmet, işletim geçmişi; `contents`: hareket, anlaşma (başlangıç dahil), şantiye, kişi ve belge (yüklenmiş ve yüklenmekte) sayıları, silinmiş ama geri alınabilir kayıtlar dahil |
 | PATCH | `/platform/companies/:id` | ad, iletişim, işletim notu, `expectedUpdatedAt`, `reason?` |

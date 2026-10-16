@@ -150,6 +150,23 @@ describe('firma listesi ve işletim özeti', () => {
       storageQuotaBytes: 1,
       storageUsedBytes: 1,
     });
+    const deletionFailed = await createCompany({
+      name: 'Başarısız Silme',
+      ...ended(300),
+      deletionStatus: 'failed',
+      storageQuotaBytes: 1,
+      storageUsedBytes: 1,
+    });
+    const deletionQueued = await createCompany({
+      name: 'Kuyrukta Silme',
+      ...ended(300),
+      deletionStatus: 'pending',
+    });
+    const deletionRunning = await createCompany({
+      name: 'Süren Silme',
+      ...ended(300),
+      deletionStatus: 'running',
+    });
     await createUser(full);
     await createUser(full);
 
@@ -179,8 +196,16 @@ describe('firma listesi ve işletim özeti', () => {
       storage: { usedBytes: 1_000, quotaBytes: 1_000 },
       service: { state: 'active', serviceEndedAt: null, viewUntil: null, retainUntil: null },
     });
-    // Özet aramadan bağımsızdır; kalıcı silme başlamış firma özete girmez.
+    // Özet aramadan bağımsızdır; silmesi başlamış firmalar yalnız kendi grubundadır.
     const ids = (group: { id: string }[]) => group.map((item) => item.id);
+    expect(Object.keys(data.summary)).toEqual([
+      'storageFull',
+      'storageNearFull',
+      'viewEnding',
+      'retentionEnding',
+      'deletionPending',
+      'deletionIncomplete',
+    ]);
     expect(ids(data.summary.storageFull)).toEqual([full._id.toString()]);
     expect(ids(data.summary.storageNearFull)).toEqual([near._id.toString()]);
     expect(ids(data.summary.viewEnding)).toEqual([viewEnding._id.toString()]);
@@ -195,6 +220,40 @@ describe('firma listesi ve işletim özeti', () => {
       retainUntil: addDays(today, 20),
     });
     expect(ids(data.summary.deletionPending)).toEqual([pending._id.toString()]);
+    expect(data.summary.deletionPending[0]).toMatchObject({ deletionStatus: 'none' });
+
+    // Silmesi bekleyen, süren veya başarısız olanlar; tamamlanmış silme girmez.
+    expect(ids(data.summary.deletionIncomplete)).toEqual([
+      deletionFailed._id.toString(),
+      deletionQueued._id.toString(),
+      deletionRunning._id.toString(),
+    ]);
+    expect(data.summary.deletionIncomplete[0]).toEqual({
+      id: deletionFailed._id.toString(),
+      name: 'Başarısız Silme',
+      state: 'deleting',
+      deletionStatus: 'failed',
+      usedBytes: 1,
+      quotaBytes: 1,
+      viewUntil: addDays(today, -270),
+      retainUntil: addDays(today, -120),
+    });
+    expect(data.summary.deletionIncomplete.map((item: Body) => item.deletionStatus)).toEqual([
+      'failed',
+      'pending',
+      'running',
+    ]);
+    // Durum filtrelerine girmezler; listede silme durumlarıyla görünürler.
+    for (const status of ['active', 'suspended', 'view_only', 'archived', 'deletion_pending']) {
+      expect(await list({ status })).not.toContain('Başarısız Silme');
+    }
+    const deleting = await admin.ok(admin.get('/platform/companies', { q: 'silme' }));
+    expect(deleting.items.map((item: Body) => [item.name, item.deletionStatus])).toEqual([
+      ['Başarısız Silme', 'failed'],
+      ['Bekleyen Silme', 'none'],
+      ['Kuyrukta Silme', 'pending'],
+      ['Süren Silme', 'running'],
+    ]);
   });
 });
 
@@ -775,11 +834,20 @@ describe('firma açılışından kalıcı silmeye', () => {
     expect((await api.get('/projects')).body.code).toBe('ACCESS_CLOSED');
     await admin.fails(admin.post(companyPath(id, '/reopen'), { reason: 'x' }), 409, 'CONFLICT');
     expect(await PlatformLogModel.countDocuments({ action: 'company.delete_failed' })).toBe(1);
+    // Başarısız silme işletim özetinde kendi grubunda görünür; silme onayı bekleyenlerde değil.
+    const failedSummary = (await admin.ok(admin.get('/platform/companies'))).summary;
+    expect(failedSummary.deletionIncomplete).toEqual([
+      expect.objectContaining({ id, deletionStatus: 'failed', state: 'deleting' }),
+    ]);
+    expect(failedSummary.deletionPending).toEqual([]);
 
     testApp.storage.beforeRemovePrefix = null;
     await admin.ok(admin.post(companyPath(id, '/delete'), body), 202);
     await testApp.deps.background.idle();
     expect((await admin.ok(admin.get(companyPath(id)))).company.deletionStatus).toBe('done');
+    expect((await admin.ok(admin.get('/platform/companies'))).summary.deletionIncomplete).toEqual(
+      [],
+    );
     for (const [name, count] of Object.entries(await remainingCompanyData(id))) {
       expect(count, name).toBe(0);
     }

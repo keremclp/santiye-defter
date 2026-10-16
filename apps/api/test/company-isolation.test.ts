@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import request from 'supertest';
 import { describe, expect, it } from 'vitest';
+import { CompanyModel } from '../src/models/company.js';
 import { buildTestApp, useTestDatabase } from './helpers/app.js';
 import { addDocument, pdfFile } from './helpers/documents.js';
+import { enrollPlatformAdmin } from './helpers/factories.js';
 import { financeSetup, tl } from './helpers/finance.js';
 import { expectCompanyIsolation } from './helpers/isolation.js';
 import { companyIsolationCases } from './isolation-cases.js';
@@ -171,6 +174,38 @@ describe('firma yalıtımı: listeler, arama, pano ve gövdedeki kimlikler', () 
       initialAmount: tl(1),
     });
     expect(foreignProjectAgreement.status).toBe(400);
+  });
+
+  it('yönetim listesi, işletim özeti ve firma detayı firma kayıtlarını göstermez; silme grubu yalnız o firmayı içerir', async () => {
+    const { owner, intruder } = await twoCompanies();
+    await CompanyModel.updateOne(
+      { _id: owner.company._id },
+      {
+        $set: {
+          serviceEndedAt: '2025-01-01',
+          viewUntil: '2025-01-31',
+          retainUntil: '2025-06-30',
+          deletionStatus: 'failed',
+        },
+      },
+    );
+    const { accessToken } = await enrollPlatformAdmin(intruder.testApp);
+    const auth = { Authorization: `Bearer ${accessToken}` };
+    const app = intruder.testApp.app;
+
+    const list = await request(app).get('/platform/companies').set(auth);
+    expect(list.status).toBe(200);
+    expect(list.body.data.summary.deletionIncomplete).toEqual([
+      expect.objectContaining({ id: owner.company._id.toString(), deletionStatus: 'failed' }),
+    ]);
+    const detail = await request(app)
+      .get(`/platform/companies/${owner.company._id.toString()}`)
+      .set(auth);
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.contents).toMatchObject({ transactions: 1, projects: 2, parties: 1 });
+    for (const res of [list, detail]) {
+      expect(JSON.stringify(res.body)).not.toMatch(/4242|4\.242|424200|Gizli/);
+    }
   });
 
   it('istemciden gelen companyId yok sayılır', async () => {

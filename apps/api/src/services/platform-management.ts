@@ -132,7 +132,8 @@ async function companyContents(companyId: Types.ObjectId) {
 /**
  * Listenin üstündeki işletim özeti: kapasitesi dolan/yaklaşan, görüntüleme dönemi 7 gün içinde
  * biten, arşiv saklaması 30 gün içinde biten ve saklama süresi dolmuş (silme onayı bekleyen) firmalar.
- * Kalıcı silme başlamış firmalar özete girmez.
+ * Kalıcı silmesi bekleyen, süren veya başarısız olanlar yalnız `deletionIncomplete` grubundadır;
+ * tamamlanmış silmeler özete girmez.
  */
 function operationsSummary(companies: Company[], today: string) {
   const live = companies.filter((company) => company.deletionStatus === 'none');
@@ -140,6 +141,7 @@ function operationsSummary(companies: Company[], today: string) {
     id: company._id.toString(),
     name: company.name,
     state: computeServiceState(company, today),
+    deletionStatus: company.deletionStatus,
     usedBytes: company.storageUsedBytes,
     quotaBytes: company.storageQuotaBytes,
     viewUntil: company.viewUntil,
@@ -180,6 +182,9 @@ function operationsSummary(companies: Company[], today: string) {
   const deletionPending = live
     .filter((company) => ended(company) && compareIsoDates(today, company.retainUntil!) > 0)
     .sort(byDate('retainUntil'));
+  const deletionIncomplete = companies.filter(
+    (company) => company.deletionStatus !== 'none' && company.deletionStatus !== 'done',
+  );
 
   return {
     storageFull: storageFull.map(ref),
@@ -187,6 +192,7 @@ function operationsSummary(companies: Company[], today: string) {
     viewEnding: viewEnding.map(ref),
     retentionEnding: retentionEnding.map(ref),
     deletionPending: deletionPending.map(ref),
+    deletionIncomplete: deletionIncomplete.map(ref),
   };
 }
 
