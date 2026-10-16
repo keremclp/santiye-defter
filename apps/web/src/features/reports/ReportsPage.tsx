@@ -12,6 +12,7 @@ import { useUrlFilters } from '../../hooks/useUrlFilters';
 import { PROJECT_STATUS_LABEL } from '../../lib/labels';
 import { PartyPicker } from '../common/Pickers';
 import { useProjectOptions } from '../common/project-options';
+import { FullExportPanel } from './FullExportPanel';
 import { RANGE_DEFAULTS, rangeParams } from './report-params';
 import { RangeFilter } from './ReportParts';
 import {
@@ -211,7 +212,8 @@ function OpenTab({ f, update }: { f: Filters; update: (patch: Partial<Filters>) 
 
 /**
  * Raporlar (şartname 7.10): dört standart rapor; her biri ekranda görüntülenir ve aynı filtrelerle
- * Excel, CSV veya PDF olarak indirilir. Telefonda da aynı.
+ * Excel, CSV veya PDF olarak indirilir. Telefonda da aynı. Altta filtrelerden bağımsız tam firma
+ * veri çıkışı.
  */
 export function ReportsPage() {
   usePageMeta('Raporlar');
@@ -250,6 +252,7 @@ export function ReportsPage() {
       {tab === 'santiye' ? <ProjectTab f={f} update={update} /> : null}
       {tab === 'kisi' ? <PartyTab f={f} update={update} /> : null}
       {tab === 'acik' ? <OpenTab f={f} update={update} /> : null}
+      <FullExportPanel />
     </main>
   );
 }

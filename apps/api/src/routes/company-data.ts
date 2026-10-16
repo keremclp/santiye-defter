@@ -39,6 +39,7 @@ import { CategoryService } from '../services/categories.js';
 import { CompanyService } from '../services/company.js';
 import type { CustomerAuthService } from '../services/customer-auth.js';
 import { DocumentService } from '../services/documents.js';
+import { ExportService } from '../services/exports.js';
 import type { IdempotentOutcome } from '../services/idempotency.js';
 import {
   deletedQuerySchema,
@@ -75,6 +76,7 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
   const overview = new OverviewService(deps, transactions);
   const documents = new DocumentService(deps);
   const reports = new ReportService(deps, transactions);
+  const exportJobs = new ExportService(deps);
   const id = (req: Parameters<typeof routeParam>[0]) => routeParam(req, 'id');
 
   // ── Firma ve kategoriler (10.3) ──────────────────────────────────────────────
@@ -506,6 +508,18 @@ export function companyDataRouter(deps: AppDeps, customerAuthService: CustomerAu
         'Cache-Control': 'no-store',
       })
       .send(file.body);
+  });
+
+  // ── Tam firma veri çıkışı (10.9): okuma sayılır; görüntüleme döneminde de açıktır ──
+  const readAuth = customerAuth(customerAuthService, { access: 'read' });
+  router.post('/exports/full', readAuth, async (req, res) => {
+    respond(res, await exportJobs.start(requireCustomer(req)));
+  });
+  router.get('/exports', auth, async (req, res) => {
+    sendSuccess(res, await exportJobs.list(requireCustomer(req)));
+  });
+  router.get('/exports/:id', auth, async (req, res) => {
+    sendSuccess(res, await exportJobs.get(requireCustomer(req), id(req)));
   });
 
   router.get('/deleted', auth, async (req, res) => {

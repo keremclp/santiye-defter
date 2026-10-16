@@ -1,7 +1,7 @@
 // Kimlik, profil ve ürün sahibi yönetimi giriş şemaları (şartname 8.1, 8.2, 9.8, 10.1, 10.10).
 
 import { z } from 'zod';
-import { reasonSchema } from './schemas.js';
+import { isoDateSchema, reasonSchema } from './schemas.js';
 
 /** Kullanıcı adı sistem genelinde tek; kırpılır ve Türkçe kurallarla küçük harfe çevrilir. */
 export function normalizeUsername(value: string): string {
@@ -95,17 +95,35 @@ export const recoveryCodeSchema = z.object({
   recoveryCode: z.string().trim().min(1, 'Kurtarma kodunu girin.'),
 });
 
+const companyNameSchema = z
+  .string()
+  .trim()
+  .min(1, 'Firma adını girin.')
+  .max(200, 'Firma adı çok uzun.');
+
+const platformContactSchema = z.object({
+  person: z.string().trim().max(100, 'Yetkili adı çok uzun.').default(''),
+  phone: phoneSchema.default(''),
+  email: emailSchema.default(''),
+});
+
+const opsNoteSchema = z.string().trim().max(2000, 'Not çok uzun.');
+const optionalReasonSchema = z.string().trim().optional();
+
 export const platformCompanyCreateSchema = z.object({
-  name: z.string().trim().min(1, 'Firma adını girin.').max(200, 'Firma adı çok uzun.'),
-  contact: z
-    .object({
-      person: z.string().trim().max(100, 'Yetkili adı çok uzun.').default(''),
-      phone: phoneSchema.default(''),
-      email: emailSchema.default(''),
-    })
-    .default({ person: '', phone: '', email: '' }),
-  opsNote: z.string().trim().max(2000, 'Not çok uzun.').default(''),
-  reason: z.string().trim().optional(),
+  name: companyNameSchema,
+  contact: platformContactSchema.default({ person: '', phone: '', email: '' }),
+  opsNote: opsNoteSchema.default(''),
+  reason: optionalReasonSchema,
+});
+
+/** Ürün sahibinin kaydettiği ad, iletişim ve işletim notu (şartname 10.10). */
+export const platformCompanyUpdateSchema = z.object({
+  name: companyNameSchema.optional(),
+  contact: platformContactSchema.optional(),
+  opsNote: opsNoteSchema.optional(),
+  reason: optionalReasonSchema,
+  expectedUpdatedAt: expectedUpdatedAtSchema,
 });
 
 export const platformUserCreateSchema = z.object({
@@ -113,16 +131,63 @@ export const platformUserCreateSchema = z.object({
   username: usernameSchema,
   phone: phoneSchema.default(''),
   email: emailSchema.default(''),
-  reason: z.string().trim().optional(),
+  reason: optionalReasonSchema,
 });
 
-export const platformUserActivationSchema = z.object({
-  isActive: z.boolean({ message: 'Kullanıcının aktif olup olmayacağı belirtilmeli.' }),
-  reason: reasonSchema,
-  expectedUpdatedAt: expectedUpdatedAtSchema,
-});
+/**
+ * Ad, kullanıcı adı ve aktiflik (şartname 10.10). Aktiflik değişiminde gerekçe zorunlu, ad ve
+ * kullanıcı adı değişiminde isteğe bağlı (bölüm 9.8).
+ */
+export const platformUserUpdateSchema = z
+  .object({
+    name: personNameSchema.optional(),
+    username: usernameSchema.optional(),
+    isActive: z.boolean({ message: 'Kullanıcının aktif olup olmayacağı belirtilmeli.' }).optional(),
+    reason: optionalReasonSchema,
+    expectedUpdatedAt: expectedUpdatedAtSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.isActive !== undefined && !value.reason) {
+      ctx.addIssue({ code: 'custom', path: ['reason'], message: 'Gerekçe girin.' });
+    }
+  });
 
 export const platformPasswordResetSchema = z.object({
+  reason: reasonSchema,
+});
+
+/** Kapasite bayt cinsinden; mevcut kullanımın altına inemez (sunucuda denetlenir). */
+export const platformQuotaSchema = z.object({
+  quotaBytes: z
+    .number({ message: 'Kapasiteyi girin.' })
+    .int('Kapasite bayt cinsinden tamsayı olmalı.')
+    .positive('Kapasite sıfırdan büyük olmalı.')
+    .max(Number.MAX_SAFE_INTEGER, 'Kapasite çok büyük.'),
+  reason: reasonSchema,
+});
+
+export const platformSuspendSchema = z.object({
+  suspended: z.boolean({ message: 'Erişimin durdurulup durdurulmayacağı belirtilmeli.' }),
+  reason: reasonSchema,
+});
+
+/** Önizlemede (`?preview=1`) gerekçe istenmez. */
+export const platformEndServiceSchema = z.object({
+  effectiveDate: isoDateSchema,
+  reason: optionalReasonSchema,
+});
+
+export const platformReasonSchema = z.object({
+  reason: reasonSchema,
+});
+
+export const platformExtendRetentionSchema = z.object({
+  retainUntil: isoDateSchema,
+  reason: reasonSchema,
+});
+
+export const platformCompanyDeleteSchema = z.object({
+  confirmName: z.string().trim().min(1, 'Onay için firma adını yazın.'),
   reason: reasonSchema,
 });
 
@@ -131,4 +196,10 @@ export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type PlatformCompanyCreateInput = z.infer<typeof platformCompanyCreateSchema>;
 export type PlatformUserCreateInput = z.infer<typeof platformUserCreateSchema>;
-export type PlatformUserActivationInput = z.infer<typeof platformUserActivationSchema>;
+export type PlatformCompanyUpdateInput = z.infer<typeof platformCompanyUpdateSchema>;
+export type PlatformUserUpdateInput = z.infer<typeof platformUserUpdateSchema>;
+export type PlatformQuotaInput = z.infer<typeof platformQuotaSchema>;
+export type PlatformSuspendInput = z.infer<typeof platformSuspendSchema>;
+export type PlatformEndServiceInput = z.infer<typeof platformEndServiceSchema>;
+export type PlatformExtendRetentionInput = z.infer<typeof platformExtendRetentionSchema>;
+export type PlatformCompanyDeleteInput = z.infer<typeof platformCompanyDeleteSchema>;

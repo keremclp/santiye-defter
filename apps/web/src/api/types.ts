@@ -8,6 +8,7 @@ import type {
   DirectionSummary,
   DocumentOwnerType,
   DocumentStatus,
+  ExportJobStatus,
   PaymentStatus,
   ReportExportType,
   Scope,
@@ -582,4 +583,24 @@ export interface OpenBalancesReport {
   header: ReportHeader;
   summary: ObligationSummary;
   groups: { state: DueState; rows: ReportAgreementRow[] }[];
+}
+
+/** Tam firma veri çıkışı işi (şartname 7.10, 10.9). */
+export interface ExportJob {
+  id: string;
+  type: 'full';
+  status: ExportJobStatus;
+  progress: number;
+  requestedBy: { id: string; name: string } | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  expiresAt: string | null;
+  /** Hazır paket 7 gün sonra silindi */
+  expired: boolean;
+  fileName: string | null;
+  sizeBytes: number | null;
+  error: string | null;
+  /** Yalnız `GET /exports/:id` cevabında, paket hazırsa: 5 dakika geçerli indirme adresi */
+  download: { url: string; expiresAt: string } | null;
 }

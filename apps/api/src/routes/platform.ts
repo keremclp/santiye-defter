@@ -2,9 +2,16 @@ import {
   loginSchema,
   logoutSchema,
   platformCompanyCreateSchema,
+  platformCompanyDeleteSchema,
+  platformCompanyUpdateSchema,
+  platformEndServiceSchema,
+  platformExtendRetentionSchema,
   platformPasswordResetSchema,
-  platformUserActivationSchema,
+  platformQuotaSchema,
+  platformReasonSchema,
+  platformSuspendSchema,
   platformUserCreateSchema,
+  platformUserUpdateSchema,
   recoveryCodeSchema,
   refreshTokenSchema,
   totpCodeSchema,
@@ -29,6 +36,14 @@ const companyListQuerySchema = z.object({
   status: z.enum(SERVICE_STATES).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+/** `?preview=1`: hizmet sonu tarihlerini yazmadan gösterir. */
+const previewQuerySchema = z.object({
+  preview: z
+    .enum(['0', '1', 'true', 'false'])
+    .optional()
+    .transform((value) => value === '1' || value === 'true'),
 });
 
 export function platformRouter(
@@ -112,11 +127,76 @@ export function platformRouter(
     sendSuccess(res, outcome.data, { status: outcome.status, message: outcome.message });
   });
 
-  router.patch('/platform/users/:id', signedIn, async (req, res) => {
-    const input = platformUserActivationSchema.parse(req.body);
+  router.patch('/platform/companies/:id', signedIn, async (req, res) => {
+    const input = platformCompanyUpdateSchema.parse(req.body);
     sendSuccess(
       res,
-      await management.setUserActive(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+      await management.updateCompany(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+    );
+  });
+
+  router.post('/platform/companies/:id/quota', signedIn, async (req, res) => {
+    const input = platformQuotaSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.setQuota(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+    );
+  });
+
+  router.post('/platform/companies/:id/suspend', signedIn, async (req, res) => {
+    const input = platformSuspendSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.setSuspended(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+    );
+  });
+
+  router.post('/platform/companies/:id/end-service', signedIn, async (req, res) => {
+    const { preview } = previewQuerySchema.parse(req.query);
+    const input = platformEndServiceSchema.parse(req.body);
+    if (!preview) platformReasonSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.endService(
+        requirePlatformAdmin(req)._id,
+        routeParam(req, 'id'),
+        input,
+        preview,
+      ),
+    );
+  });
+
+  router.post('/platform/companies/:id/reopen', signedIn, async (req, res) => {
+    const { reason } = platformReasonSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.reopen(requirePlatformAdmin(req)._id, routeParam(req, 'id'), reason),
+    );
+  });
+
+  router.post('/platform/companies/:id/extend-retention', signedIn, async (req, res) => {
+    const input = platformExtendRetentionSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.extendRetention(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+    );
+  });
+
+  // Silme arka planda sürer; durum firma detayındaki `deletionStatus` ile izlenir.
+  router.post('/platform/companies/:id/delete', signedIn, async (req, res) => {
+    const input = platformCompanyDeleteSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.requestDeletion(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
+      { status: 202 },
+    );
+  });
+
+  router.patch('/platform/users/:id', signedIn, async (req, res) => {
+    const input = platformUserUpdateSchema.parse(req.body);
+    sendSuccess(
+      res,
+      await management.updateUser(requirePlatformAdmin(req)._id, routeParam(req, 'id'), input),
     );
   });
 

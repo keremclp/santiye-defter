@@ -5,7 +5,9 @@ import { createDeps } from './deps.js';
 import { createLogger } from './lib/logger.js';
 import { loadLocalEnvFile } from './load-env.js';
 import { initModels } from './models/index.js';
+import { startCompanyDeletions } from './services/company-deletion.js';
 import { startDocumentCleanup } from './services/documents.js';
+import { startExportJobs } from './services/exports.js';
 import { ensureBootstrapAdmin } from './services/platform-auth.js';
 
 loadLocalEnvFile();
@@ -23,6 +25,8 @@ try {
     logger.error('Belge deposu ayarlanmadı (STORAGE_*); belge işlemleri çalışmayacak.');
   }
   const stopDocumentCleanup = startDocumentCleanup(deps);
+  const stopExportJobs = startExportJobs(deps);
+  const stopCompanyDeletions = startCompanyDeletions(deps);
 
   const app = createApp(deps);
   const server = app.listen(deps.config.port, () => {
@@ -36,6 +40,8 @@ try {
   const shutdown = (signal: string) => {
     logger.info('API kapatılıyor', { signal });
     stopDocumentCleanup();
+    stopExportJobs();
+    stopCompanyDeletions();
     server.close(() => {
       void disconnectDatabase().finally(() => process.exit(0));
     });

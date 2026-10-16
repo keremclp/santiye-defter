@@ -133,6 +133,12 @@ export const companyIsolationCases: IsolationCase[] = [
     method: 'get',
     path: `/reports/project/export.csv?id=${project.id}`,
   })),
+  // Tam firma veri çıkışı; kimliksiz uçlar (POST /exports/full, GET /exports) exports.test.ts'te.
+  caseFor('GET /exports/:id', async ({ api }) => {
+    const job = await api.ok(api.post('/exports/full', {}), 201);
+    await api.testApp.deps.background.idle();
+    return { method: 'get', path: `/exports/${job.id}` };
+  }),
   caseFor('PATCH /parties/:id', ({ party }) => ({
     method: 'patch',
     path: `/parties/${party.id}`,

@@ -1,4 +1,5 @@
 import type { Config } from './config.js';
+import { BackgroundTasks } from './lib/background.js';
 import { systemClock, type Clock } from './lib/clock.js';
 import { silentLogger, type Logger } from './lib/logger.js';
 import { LoginLimiter } from './lib/rate-limiter.js';
@@ -14,6 +15,7 @@ export interface AppDeps {
   customerLoginLimiter: LoginLimiter;
   platformLoginLimiter: LoginLimiter;
   storage: ObjectStorage;
+  background: BackgroundTasks;
 }
 
 export function createDeps(options: {
@@ -24,9 +26,11 @@ export function createDeps(options: {
 }): AppDeps {
   const clock = options.clock ?? systemClock;
   const storageConfig = options.config.storage;
+  const logger = options.logger ?? silentLogger;
   return {
     config: options.config,
-    logger: options.logger ?? silentLogger,
+    logger,
+    background: new BackgroundTasks(logger),
     clock,
     tokens: new TokenService(
       {

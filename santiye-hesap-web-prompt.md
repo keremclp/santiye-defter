@@ -150,8 +150,9 @@ Kurallar:
 - **Tarih:** İşlem, vade, anlaşma, başlangıç ve takip tarihleri `YYYY-MM-DD` metni olarak saklanır; saat dilimi kayması olmaz. Sistem zamanları (`createdAt` vb.) ISO UTC. "Bugün" ve gecikme hesabı Europe/Istanbul gününe göre yapılır.
 - **Atomik işlem:** Bir para hareketinin, payların, bağlı anlaşma bakiyelerinin, iade toplamlarının ve kayıt geçmişinin değiştiği her işlem tek MongoDB transaction'ı içinde tamamlanır. Yarım güncelleme olmaz.
 - **Eşzamanlı güncelleme:** Sabitleme ve arama geçmişini temizleme dışındaki bütün değiştirme işlemlerinde (güncelleme, tamamlama, arşiv, bedel/vade/iş durumu, iptal, silme, geri yükleme) `expectedUpdatedAt` zorunlu. Kayıt bu arada değişmişse 409 `CONFLICT`, mesaj "Kayıt başka bir yerde güncellendi" ve güncel kayıt `details` içinde döner. Sessizce üzerine yazma.
-- **Güvenli tekrar:** Para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturma `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Şantiye, kişi, kategori oluşturmada ve belge yükleme niyetinde (`POST /documents/upload-intent`) isteğe bağlıdır; gelirse uygulanır. Web, çift tıklamaya karşı bütün oluşturma isteklerinde anahtar gönderir. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Tek istisna yükleme niyetidir: tekrarda aynı bekleyen belge döner ama imzalı yükleme adresi yeniden üretilir; ikinci rezervasyon yapılmaz. Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
+- **Güvenli tekrar:** Para hareketi, anlaşma, başlangıç kaydı, iade ve ürün sahibinin firma/kullanıcı oluşturma `POST` isteklerinde `Idempotency-Key` başlığı zorunlu. Şantiye, kişi, kategori oluşturmada ve belge yükleme niyetinde (`POST /documents/upload-intent`) isteğe bağlıdır; gelirse uygulanır. Web, çift tıklamaya karşı bütün oluşturma isteklerinde anahtar gönderir. Aynı anahtar ve aynı gövde gelirse ilk sonucu tekrar döndür, yeni kayıt açma. Tek istisna yükleme niyetidir: tekrarda aynı bekleyen belge döner ama imzalı yükleme adresi yeniden üretilir; ikinci rezervasyon yapılmaz. `POST /exports/full` hiçbir listede değildir ve anahtar uygulanmaz; çift isteğe karşı firma başına tek etkin iş kuralıyla korunur (bölüm 7.10). Aynı anahtar farklı gövdeyle gelirse 422 `IDEMPOTENCY_MISMATCH`. Anahtar kaydı işlemle aynı transaction'da yazılır; benzersiz indeks sayesinde aynı anda gelen iki istek çift kayıt üretemez. Anahtar kayıtları 30 gün tutulur, 24 saatten eski anahtar 422 `IDEMPOTENCY_EXPIRED` alır.
 - **Hizmet durumu her istekte hesaplanır** (bölüm 9.10). Görüntüleme döneminde yazma isteği 403 `READ_ONLY`; kapalı durumlarda 403 `ACCESS_CLOSED`.
+- **Tek süreç:** İlk sürümde API tek süreç olarak çalışır ve süreç sürekli açık kalır (arka plan işleri aynı süreçtedir). Giriş deneme sınırı (bölüm 9.8) ve kalıcı silme taraması bu varsayıma dayanır; birden fazla sürece geçilirse deneme sınırı paylaşılan bir depoya, silme taraması kilide taşınır. Tam veri çıkışı işi zaten kilitlidir.
 
 Kimlik akışı:
 
@@ -664,7 +665,18 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
 - PDF okunabilir dökümdür: paylar, kaynak işlem no, sisteme girilme zamanı ve takip başlangıcı sütunları yalnız Excel ve CSV'dedir (takip başlangıcı başlık bilgisi PDF'te de vardır). Gelir yeşil, gider kırmızı; kalan borç/alacak bakiyedir ve `ink` renginde yazılır.
 - Dosya adı Türkçe harfleri sadeleştirilmiş ASCII ve İstanbul günüyle verilir (ör. `santiye-raporu-kadikoy-villa-2026-10-15.pdf`).
 
-**Tüm firma verisini dışa aktar:** Filtrelerden bağımsız, ayrı düğme. Arka planda hazırlanır, ilerleme ve hazır olunca indirme gösterilir. İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi; ilişkileri açıklanmış Excel sayfaları veya CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde. Silinen ama geri alınabilir kayıtlar durum etiketiyle. Şifre, token veya başka firma verisi içermez. Hazır paket 7 gün sonra silinir. Hazırlama hatası finansal kayıtları etkilemez.
+**Tüm firma verisini dışa aktar:** Filtrelerden bağımsız, ayrı düğme. Arka planda hazırlanır, ilerleme ve hazır olunca indirme gösterilir. İçerik: hareketler, paylar, iadeler, anlaşmalar, başlangıç kayıtları, şantiyeler, kişiler, kategoriler ve değişiklik geçmişi; ilişkileri açıklanmış Excel sayfaları ve CSV dosyaları; orijinal belgeler dosya–kayıt eşleme tablosuyla zip paketinde. Silinen ama geri alınabilir kayıtlar durum etiketiyle. Şifre, token veya başka firma verisi içermez. Hazır paket 7 gün sonra silinir. Hazırlama hatası finansal kayıtları etkilemez. Ayrıntılar:
+
+- **Panel:** Raporlar sayfasının altında "Tüm firma verisi" paneli: "Tüm firma verisini dışa aktar" düğmesi, ilerleme çubuğu, hazır paketin boyutu, silineceği tarih ve indirme. Bekleyen veya süren iş varken panel 2 saniyede bir yenilenir; sayfadan ayrılınca iş sürer. Sayfa yeniden açılınca veya başka cihazda son iş `GET /exports` ile bulunur. İndirme her tıklamada yeni 5 dakikalık adres alır ve dosyayı `attachment` olarak açar. Görüntüleme döneminde de açıktır.
+- **Tek etkin iş, tek hazır paket:** Firmada bekleyen veya süren iş varsa yeni istek yeni iş açmaz, o işi döner (çift tıklama, ikinci cihaz). Hazır paket varken yeni istek yeni iş açar; yeni paket hazır olunca önceki hazır paket silinir ve kapasitesi iade edilir. Böylece firmada en fazla bir hazır paket bulunur; yeni iş başarısız olursa önceki paket süresi dolana kadar indirilebilir kalır.
+- **Paket düzeni:** Zip içinde tek kök klasör, adı dosya adıyla aynı: `tum-firma-verisi-<firma>-<İstanbul günü>.zip`. Tek `veri.xlsx` (Özet, "Tablolar ve ilişkiler" ve her tablo ayrı sayfa) ve `csv/` klasöründe her tablo için ayrı CSV ile `ozet.csv`; kullanıcı biçim seçmez. Tablolar: Hareketler, Paylar, İadeler (iade başına kaynak pay satırları), Anlaşmalar, Başlangıç kayıtları, Şantiyeler, Kişiler ve firmalar, Kategoriler, Belgeler (eşleme tablosu) ve Değişiklik geçmişi. Her tabloda "Kimlik" sütunu vardır; ilişkiler "... kimliği" sütunlarıyla kurulur ve "Tablolar ve ilişkiler" tablosunda kayıt sayıları, silinmiş kayıt sayıları ve bağlantılarla açıklanır.
+- **Durum etiketi:** Silinmiş ama geri alınabilir kayıtlar "Silindi (geri alınabilir)", diğerleri "Geçerli"; silen, zaman ve gerekçe ayrı sütunlarda. Silinmiş kayıtlar toplamlara katılmaz.
+- **Belgeler:** Orijinaller `belgeler/<belge kimliği>-<sadeleşmiş ad>.<uzantı>` adıyla konur; asıl dosya adı eşleme tablosundadır. Yalnız yüklenmiş belgeler (silinmiş ama geri alınabilir olanlar dahil) pakete girer; yüklenmekte olan, başarısız ve süresi geçmiş yüklemeler yalnız değişiklik geçmişinde görünür. Önizlemeler pakete konmaz. Depoda bulunamayan dosya paketi durdurmaz; eşleme tablosunda "Dosya depoda bulunamadı" notuyla listelenir.
+- **Değişiklik geçmişi:** Firma, şantiye, kişi, kategori, hareket, anlaşma, başlangıç kaydı ve belgelerin kendi geçmişi (oluşturma, yükleme, silme, geri yükleme dahil) zamana göre tek tabloda; değişen her alan ayrı satır, kim, ne zaman ve gerekçeyle. Tutarlar "40.000 TL" biçiminde, kişi ve kategori kimlikleri adlarıyla yazılır. İşlem ve alan adlarının Türkçe karşılıkları `packages/shared` içindedir; ekran ve paket aynı adları kullanır.
+- **Dışarıda kalanlar:** Kullanıcı adları, şifre hash'leri, refresh token'lar, ürün sahibinin işletim notu ve iç depo anahtarları pakete yazılmaz; kullanıcılar yalnız görünen adlarıyla geçer.
+- **Tek okuma ve toplamlar:** Bütün firma verisi tek snapshot okumasından alınır; Özet sayfasındaki toplamlar bölüm 9.1'deki gibi satırlardan hesaplanır ve dönem dökümüyle aynı sonucu verir.
+- **Arka plan işi:** İş API sürecinde çalışır; bu yüzden API süreci sürekli açık kalmalıdır. İlerleme veriler okununca %10, tablolar yazılınca %15, sonra belge baytlarına göre artar. Süren işin 10 dakikalık kilidi ilerledikçe uzatılır. Dakikada bir çalışan tarama kilidi düşen işi yeniden kuyruğa alır, üçüncü denemeden sonra başarısız sayar; süresi dolan paketleri siler ve bekleyen işleri hazırlar. Sorgular firma bazında yapılır. Paket depoya akışla, 16 MB'lık parçalarla çok parçalı yükleme olarak yazılır; bellekte en fazla bir belge bulunur; her deneme kendine özgü anahtara yazar, hata olursa yarım yükleme iptal edilir.
+- **Hata ve süre:** Hazırlama yalnız okur; hata işi `failed` yapar ve "Paket hazırlanamadı. Finansal kayıtlarınız etkilenmedi; yeniden deneyebilirsiniz." gösterilir. Paketin silineceği an hazır olma + 7 gündür; süresi geçen paket tarama beklenmeden indirilemez.
 
 ### 7.11 Ayarlar
 
@@ -683,18 +695,29 @@ Her raporda ve indirilen dosyada: firma adı, kapsam, işlem tarihi aralığı, 
 
 ### 7.13 Yönetim (ürün sahibi)
 
-- **İşletim özeti ve firma listesi:** Firma adına göre arama; durum filtresi (aktif, geçici durdurulmuş, hizmet sonu görüntüleme, arşiv saklama, silme onayı bekleyen). Satırda firma adı, kullanıcı sayısı, kullanılan/toplam depolama, hizmet durumu ve ilgili bitiş tarihleri. Kapasitesi dolan/yaklaşan, görüntüleme süresi biten ve saklama süresi dolan firmalar üstte özetlenir. Otomatik müşteri mesajı ve faturalama yok.
+- **İşletim özeti ve firma listesi:** Firma adına göre arama (Türkçe harf ve büyük/küçük harf farkı gözetmez; sıralama Türkçe alfabeye göre); durum filtresi (aktif, geçici durdurulmuş, hizmet sonu görüntüleme, arşiv saklama, silme onayı bekleyen). Satırda firma adı, kullanıcı sayısı, kullanılan/toplam depolama, hizmet durumu ve ilgili bitiş tarihleri. Üstte filtreden bağımsız özet gruplar:
+  - Kapasitesi yaklaşan (kullanım kotanın %90'ına ulaştı) ve dolan (kotanın tamamına ulaştı).
+  - Görüntüleme süresi biten: görüntüleme dönemi bugünden itibaren 7 gün içinde bitecek firmalar (bitmiş olanlar arşiv saklama filtresindedir).
+  - Saklama bitişi yaklaşan: arşiv saklaması 30 gün içinde bitecek firmalar.
+  - Silme onayı bekleyen: saklama süresi dolmuş firmalar.
+  - Silmesi tamamlanmayan: kalıcı silmesi bekleyen, süren veya başarısız olan firmalar; başarısız silme buradan yeniden başlatılır.
+  Kalıcı silmesi tamamlanmış firmalar listede "Silindi" durumuyla kalır, beş durum filtresinin hiçbirine ve özete girmez. Otomatik müşteri mesajı ve faturalama yok.
+- **Firma düzenle:** ad, iletişim, işletim notu; çakışma kontrolüyle, gerekçe isteğe bağlı, değişiklikler işletim geçmişine yazılır. Firma detayında kalıcı silme ekranı için kayıt sayıları (hareket, anlaşma ve başlangıç kaydı, şantiye, kişi, belge; silinmiş ama geri alınabilir kayıtlar dahil) görünür; ürün sahibi kayıtların kendisini görmez.
 - **Firma oluştur:** ad zorunlu; yetkili kişi, telefon, e-posta, işletim notu isteğe bağlı. Yeni firma aktif, boş ve 20 GB kapasiteyle başlar; demo verisi aktarılmaz. Benzer ad uyarısı engellemez.
 - **Kullanıcı ekle:** ad soyad, kullanıcı adı (sistem genelinde benzersiz, küçük harfe ve Türkçe kurallara göre normalize) ve firma zorunlu; telefon/e-posta isteğe bağlı. Sistem geçici şifre üretir ve **yalnız bir kez** gösterir; 72 saat geçerlidir. Ürün sahibi bunu müşteriye kendisi iletir; uygulama mesaj göndermez. Kullanıcı tek firmaya bağlıdır.
   - Kullanıcı adı biçimi: 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi ve tire.
   - Geçici şifre hiçbir yerde düz metin saklanmaz. Oluşturma isteği aynı `Idempotency-Key` ile tekrar gelirse kullanıcı şifresiz döner ve "Geçici şifre ilk yanıtta gösterildi; görmediyseniz şifreyi sıfırlayın" denir.
 - **Şifre sıfırla:** gerekçe zorunlu. Yeni geçici şifre üretir, mevcut şifre hiç görüntülenmez, bütün oturumlar hemen düşer.
 - **Kullanıcıyı pasifleştir / aktifleştir:** gerekçe zorunlu. Giriş ve oturumlar hemen kapanır; geçmişteki kayıt atıfları kalır.
+- **Kullanıcı düzenle:** ad ve kullanıcı adı; gerekçe isteğe bağlı. Kullanıcı adı çakışması 409.
 - Firma ve kullanıcı oluşturmada gerekçe isteğe bağlıdır. Bütün yönetim işlemleri işletim geçmişine yazılır.
-- **Kapasite:** gerekçeyle artır veya mevcut kullanımın altına inmeden azalt; önceki/yeni değer ve kim/ne zaman kaydedilir.
-- **Hizmet yaşam döngüsü:** Geçici durdur, Hizmeti sonlandır, Yeniden aç ayrı eylemler. Sonlandırmada yürürlük tarihi (geçmişe çekilemez), son görüntüleme günü (`viewUntil`) ve saklama bitişi (`retainUntil`) kesin tarih olarak önizlenir (gün sınırları bölüm 9.10); gerekçe ve onay alınır. Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
-- **Kalıcı silme:** Yalnız saklama süresi dolmuş firmada, ayrı ekranda. Firma adı, durum, kapsanan kayıt ve belge sayısı, geri döndürülemeyecek sonuç gösterilir; firma adını yazarak onay ve gerekçe. Durum: bekliyor / sürüyor / tamamlandı / başarısız. Kalıcı silinen firma yeniden açılamaz.
-- **İşletim geçmişi:** hesap, şifre sıfırlama, kapasite, hizmet ve silme işlemleri kim, ne zaman, gerekçe ile kaydedilir; şifre hiçbir yerde loglanmaz.
+- **Kapasite:** gerekçeyle artır veya mevcut kullanımın altına inmeden azalt (kontrol atomik; altına inen istek 409 "Kapasite mevcut kullanımın altına indirilemez."); önceki/yeni değer ve kim/ne zaman kaydedilir. Değer aynıysa kayıt yazılmaz.
+- **Hizmet yaşam döngüsü:** Geçici durdur, Hizmeti sonlandır, Yeniden aç ayrı eylemler. Kurallar bölüm 9.10.
+  - Geçici durdurma hizmet sonu tarihlerine dokunmaz; erişim bir sonraki istekte kapanır. Aynı durum yeniden istenirse işlem ve kayıt yapılmaz.
+  - Sonlandırmada yürürlük tarihi (geçmişe çekilemez, ileri tarih seçilebilir), son görüntüleme günü (`viewUntil`) ve saklama bitişi (`retainUntil`) kesin tarih olarak önizlenir (gün sınırları bölüm 9.10); gerekçe ve onay alınır.
+  - Arşiv uzatmada yeni saklama bitişi ve gerekçe; uzatma müşteri erişimini açmaz.
+- **Kalıcı silme:** Yalnız saklama süresi dolmuş (silme onayı bekleyen) firmada veya başarısız silmenin yeniden başlatılmasında, ayrı ekranda. Firma adı, durum, kapsanan kayıt ve belge sayısı, geri döndürülemeyecek sonuç gösterilir; firma adını (ürün sahibinin kaydettiği `name`, kırpılmış hâliyle birebir; büyük/küçük ve Türkçe harf farkı kabul edilmez) yazarak onay ve gerekçe. Silme arka planda sürer: açık dışa aktarma işleri iptal edilir; depoda `companies/<firma>/` altındaki bütün nesneler silinir ve yarım çok parçalı yüklemeler iptal edilir; `companyId` alanı olan bütün koleksiyonlardaki firma verisi (kullanıcılar, güvenli tekrar kayıtları, arama geçmişi dahil) silinir; son olarak depo bir kez daha temizlenir. Adımlar tekrar çalıştırılabilir. Durum: bekliyor / sürüyor / tamamlandı / başarısız; hata işletim geçmişine yazılır. API açılışta yarıda kalan silmeyi yeniden bekleyene alır. Silme başlamış firmada yeniden açma, düzenleme, kapasite, durdurma, arşiv uzatma ve kullanıcı ekleme 409 döner; kullanıcıları kalmadığı için girişleri 401'dir. Kalıcı silinen firma yeniden açılamaz.
+- **İşletim geçmişi:** hesap, şifre sıfırlama, kapasite, hizmet ve silme işlemleri kim, ne zaman, gerekçe ile kaydedilir; şifre hiçbir yerde loglanmaz. İşlem adlarının Türkçe karşılıkları ekranda gösterilir (bölüm 8.10).
 - Ürün sahibi müşteri finansal kayıtlarını görüntülemez ve düzenlemez.
 - **Hesap güvenliği:**
   - Giriş iki aşamalıdır: şifre, ardından doğrulama uygulamasındaki 6 haneli TOTP kodu. İki aşamalı doğrulama kapatılamaz.
@@ -736,6 +759,10 @@ Bütün tutar alanları kuruş cinsinden tamsayıdır. İş tarihleri `YYYY-MM-D
 | `deletionStatus` | `none` `pending` `running` `done` `failed` |
 | `isDemo` `demoLastActiveAt` | Yalnız demo veritabanında |
 | `recordCounter` | Firma içi artan kayıt numarası |
+
+Kalıcı silinen firmanın Company belgesi asgari iz kaydı olarak kalır: yalnız `name`, hizmet tarihleri ve `deletionStatus: done`. Görünen ad, iletişim, işletim notu, firma geçmişi, kullanım ve kayıt sayacı sıfırlanır. Böylece silme durumu izlenir ve yeniden açma 409 ile reddedilir.
+
+Firmanın `updatedAt` değerini yalnız ad, iletişim ve not düzenlemeleri değiştirir. Kapasite, durdurma ve hizmet yaşam döngüsü işlemleri değiştirmez; müşterinin açık firma bilgisi formu bu yüzden çakışma almaz.
 
 ### 8.2 User
 
@@ -868,8 +895,8 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 ### 8.10 Yardımcı koleksiyonlar
 
 - **IdempotencyRecord:** `companyId`, `userId`, `key` (benzersiz `companyId + key`), `requestHash`, `resultRef`, `createdAt` (30 gün TTL).
-- **ExportJob:** `companyId`, `requestedBy`, `type`, `status` (`queued` `running` `ready` `failed`), `progress`, `fileKey`, `expiresAt` (7 gün).
-- **PlatformLog:** `adminId`, `companyId`, `action`, `changes`, `reason`, `at`. Şifre içermez; firma kalıcı silinse de asgari kaydı (firma adı, tarihler, işlem yapan, gerekçe) kalır.
+- **ExportJob:** `companyId`, `requestedBy`, `type`, `status` (`queued` `running` `ready` `failed`), `progress` (0–100), `fileKey` ve `fileName` (paket silinince `fileKey` null), `sizeBytes`, `countedBytes` (firmanın kullanımında bu paket için sayılan bayt; paket silinince 0), `expiresAt` (hazır olma + 7 gün), `startedAt`, `finishedAt`, `error` (kullanıcıya gösterilen metin), `active` (bekleyen veya süren işte true; `companyId + active` kısmi benzersiz indeksiyle firma başına tek etkin iş), `attempts`, `lease` (süren işin kilidi). Ayrı "süresi doldu" durumu yoktur: süresi geçen paket `ready` kalır, cevaplarda `expired: true` olarak türetilir.
+- **PlatformLog:** `adminId`, `companyId`, `action`, `changes`, `reason`, `at`. Şifre içermez; firma kalıcı silinse de asgari kaydı (firma adı, tarihler, işlem yapan, gerekçe) kalır. Kalıcı silmede firmanın işletim kayıtları silinmez: ad, tarih, kapasite ve durum içeren kayıtların (firma oluşturma, kapasite, durdurma, hizmet sonu, yeniden açma, arşiv uzatma, silme) ayrıntısı korunur; kişi verisi taşıyan kayıtlarda (kullanıcı işlemleri, firma düzenleme) `changes` temizlenir. İşlem yapan, zaman ve gerekçe her kayıtta kalır. Silme tamamlanınca firma adı ve silinen kayıt/dosya sayılarıyla `company.delete_completed` yazılır. Firma işlem adları: `company.update`, `company.quota`, `company.suspend`, `company.unsuspend`, `company.end_service`, `company.reopen`, `company.extend_retention`, `company.delete`, `company.delete_completed`, `company.delete_failed`; kullanıcı düzenlemesi `user.update` (Adım 2'deki hesap işlemlerine ek). Ekranda Türkçe karşılıklarıyla gösterilir.
 
 ---
 
@@ -956,12 +983,13 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Yükleme niyeti | `POST /documents/upload-intent`: 20 MB, kayıt başına 10 belge (`documentCount` koşullu `$inc`) ve firma kapasitesi (`storageUsedBytes` koşullu `$inc`) atomik kontrol edilir. Kapasite bildirilen orijinal boyutla ayrılır. Geçici anahtara 15 dk geçerli imzalı yükleme adresi döner. `Idempotency-Key` isteğe bağlıdır; aynı anahtarla tekrar aynı bekleyen belgeyi ve yeni imzalı adresi döner, ikinci rezervasyon yapılmaz (bölüm 3) |
 | Tamamlama | `POST /documents/:id/complete`: durum koşullu `pending → uploaded` geçmeden önce sunucu gerçek boyutu ve dosya imzasını kendisi doğrular, dosyayı değiştirilemeyen nihai anahtara kopyalar, geçici kopyayı siler, kapasiteyi gerçek boyuta göre düzeltir. Önizleme üretir |
 | Doğrulama sonucu | Desteklenmeyen içerik veya 20 MB'tan büyük gerçek boyut belgeyi `failed` yapar; rezervasyon ve sayaç iade edilir, geçici dosya silinir. Gerçek boyut bildirilenden büyükse fark da kotaya sığmalıdır (değilse 409 `STORAGE_FULL`); küçükse fark iade edilir |
-| Önizleme | Görseller için üretilir; PDF için üretilmez. Önizleme kalan kapasiteye sığmazsa saklanmaz ve belge önizlemesiz yüklenir; firma kotası hiçbir durumda aşılmaz. Çözülemeyen görsel (ör. bozuk HEIC) de önizlemesiz yüklenir |
+| Önizleme | Görseller için üretilir; PDF için üretilmez. Önizleme kalan kapasiteye sığmazsa saklanmaz ve belge önizlemesiz yüklenir; belge yüklemesi firma kotasını hiçbir durumda aşmaz (kotayı yalnız hazır dışa aktarma paketi aşabilir, aşağıda). Çözülemeyen görsel (ör. bozuk HEIC) de önizlemesiz yüklenir |
 | Temizlik | 1 saati geçen ve hâlâ `pending` olan yüklemeler `expired` olur; rezervasyon ve sayaç iade edilir. İş 10 dakikada bir çalışır ve sorgularını firma bazında yapar |
 | Tamamlama–temizlik çakışması | Tamamlama belgeyi 5 dakikalık bir kilitle sahiplenir; temizlik kilitli belgeye dokunmaz. Kilit dolup temizlik kazanırsa tamamlama kendi kopyasını siler ve 409 döner. Rezervasyon ve sayaç yalnız bir kez iade edilir |
-| Geçici klasör | Üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü (otomatik silme) kuralı tanımlanır; reddedilen yüklemenin adresine sonradan konan yetim dosyaları temizler |
+| Geçici klasör | Üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü (otomatik silme) kuralı tanımlanır; reddedilen yüklemenin adresine sonradan konan yetim dosyaları temizler. `companies/*/exports/` için de yarım kalan çok parçalı yüklemeleri temizleyen yaşam döngüsü kuralı tanımlanır (sunucu paket yazarken çökerse) |
 | Kapasite dolu | Yeni belge yükleme 409 `STORAGE_FULL`; finansal kayıt ve mevcut belgelere erişim devam eder |
-| Kapasite hesabı | Orijinaller, önizlemeler, geri alınabilir silinmiş belgeler, yüklenmekte olan dosyaların rezervasyonları ve hazır dışa aktarma paketleri sayılır |
+| Kapasite hesabı | Orijinaller, önizlemeler, geri alınabilir silinmiş belgeler, yüklenmekte olan dosyaların rezervasyonları ve hazır dışa aktarma paketleri sayılır. Hazırlanmakta olan paket sayılmaz |
+| Dışa aktarma paketi | Paket her durumda hazırlanır ve hazır olunca firmanın kullanımına eklenir; kota aşılabilir. Veri çıkışı hakkı (görüntüleme dönemi dahil) kapasite yüzünden hiçbir zaman engellenmez. Kota aşılırsa yeni belge yükleme paket silinene kadar 409 `STORAGE_FULL` alır. Firmada en fazla bir hazır paket bulunur: yeni paket hazır olunca önceki silinir. Paket silinince kapasite bir kez iade edilir |
 | Belge silme ve geri yükleme | Yumuşak; gerekçe ve `expectedUpdatedAt` ister. Silinen belge kayıt başına 10 sınırında sayılmaz (`documentCount` bir azalır), kapasitede sayılmaya devam eder; silme alanı boşaltmaz. Geri yüklemede kayıtta 10 belge varsa 422 `LIMIT_EXCEEDED`: "Bu kayıtta 10 belge var; geri yüklemek için önce birini silin." |
 | Silinmiş kayıt | Silinmiş işlem veya anlaşmanın belgeleri indirilebilir ve önizlenebilir. Bu kayda yeni belge yükleme, belge silme ve geri yükleme 409 `CONFLICT`: "Kayıt silinmiş. Belge işlemi için önce kaydı geri yükleyin." |
 | Erişim | Bağlı kaydın firmasıyla sınırlı; indirme ve önizleme için 5 dk geçerli imzalı adres. Bucket herkese kapalı |
@@ -987,7 +1015,7 @@ Desteklenen türler: PDF, JPEG, PNG, WEBP, HEIC/HEIF. Dosya en fazla 20 MB, kay�
 | Giriş hatası | 401 "Kullanıcı adı veya şifre hatalı". Hesabın varlığını ifşa etme |
 | Deneme sınırı | Aynı kullanıcı adında 15 dakikada 5 veya aynı IP'den 30 hatalı denemede 5 dakika bekleme. Sınır sunucu belleğinde tutulur; birden fazla sunucuya geçilirse paylaşılan bir depoya taşınmalıdır. Ters vekil sunucu arkasında gerçek IP için Express `trust proxy` barındırma seçilince ayarlanır |
 | Kullanıcı adı biçimi | 3–50 karakter; harf (Türkçe dahil), rakam, nokta, alt çizgi, tire. `tr-TR` küçük harfe normalize |
-| Yönetim gerekçesi | Kullanıcı pasifleştirme, aktifleştirme ve şifre sıfırlamada zorunlu; firma ve kullanıcı oluşturmada isteğe bağlı |
+| Yönetim gerekçesi | Kullanıcı pasifleştirme, aktifleştirme ve şifre sıfırlamada zorunlu; firma ve kullanıcı oluşturmada, firma düzenlemede, kullanıcının ad ve kullanıcı adı değişiminde isteğe bağlı. Kapasite, durdurma, hizmet yaşam döngüsü ve kalıcı silmede zorunlu |
 | Kullanıcı adı çakışması | Yönetimde 409 "Bu kullanıcı adı kullanılıyor" |
 | Ürün sahibi ikinci adım | Şifre doğruysa yalnız 5 dakika geçerli bir ara token verilir; access/refresh ancak geçerli TOTP veya kurtarma koduyla verilir. TOTP ±1 zaman adımı toleranslı, aynı kod ikinci kez kabul edilmez |
 | Ürün sahibi kilit | 5 hatalı ikinci adım denemesinde 15 dakika kilit; PlatformLog'a yazılır |
@@ -1014,6 +1042,9 @@ Firmanın etkin durumu her istekte tarihlerden ve işaretlerden hesaplanır; zam
 - Erişim kapalıyken boş firma gösterme; açıklayıcı erişim mesajı göster. Veri silinmiş gibi sunma.
 - `retainUntil` sonrasında veri kendiliğinden silinmez; ürün sahibinin onayını bekler. Hizmet bu süre içinde yeniden açılırsa firma geçmişiyle devam eder.
 - Kullanıcı pasifleştirme, geçici durdurma veya tek kayıt silme hizmet sonu sürecini başlatmaz.
+- **Hizmeti sonlandırma:** Yürürlük günü İstanbul gününe göre bugünden önce olamaz. İleri tarih seçilebilir; firma o güne kadar aktif kalır. Hizmeti zaten sonlandırılmış firmada süreler doğrudan yeniden başlatılamaz (409).
+- **Yeniden açma:** Kalıcı silme başlamadıkça (silme onayı bekleyen firma dahil) açıktır. Hizmet sonu tarihlerini temizler, geçici durdurmaya dokunmaz; eski tarihler işletim geçmişinde kalır. İleri tarihli sonlandırmayı iptal etmek için de kullanılır. Yeniden açıp yeni tarihle sonlandırmak süreleri baştan başlatır; bu bilinçli bir yoldur: iki ayrı işlem gerekir, ikisi de işletim geçmişine yazılır ve yürürlük günü geçmişe çekilemediği için müşterinin görüntüleme süresi yalnız uzayabilir, kısalamaz.
+- **Arşiv uzatma:** Yalnız hizmeti sonlandırılmış firmada; yeni bitiş mevcut `retainUntil`'den sonra ve bugünden önce olmamalı. `viewUntil` değişmez, müşteri erişimi açılmaz.
 
 ---
 
@@ -1141,8 +1172,9 @@ Anlaşmaya ödeme/tahsilat ayrı uç değil; `POST /transactions` ile `allocatio
 | GET | `/reports/parties/:id/statement` | hesap dökümü verisi |
 | GET | `/reports/open-balances` | açık borç/alacak ve vade |
 | GET | `/reports/:type/export.{xlsx,csv,pdf}` | aynı filtrelerle dosya. `type`: `period`, `project`, `party`, `open-balances`, `transactions`; şantiye ve kişi raporunda kayıt `?id=` ile. `transactions` "Bu sonuçları indir"dir ve `GET /transactions` filtrelerini sayfasız alır. Bilinmeyen tür veya biçim 400 `VALIDATION`, başka firmanın kaydı 404. Dosya adı `Content-Disposition` başlığında |
-| POST | `/exports/full` | tam firma veri çıkışı başlat |
-| GET | `/exports/:id` | durum, ilerleme, hazırsa indirme adresi |
+| POST | `/exports/full` | tam firma veri çıkışı başlat. Bekleyen veya süren iş varsa yeni iş açmaz, o işi 200 ile döner; yeni iş 201. `Idempotency-Key` uygulanmaz (bölüm 3). Okuma sayılır; görüntüleme döneminde açık |
+| GET | `/exports` | firmanın son 5 işi: durum, ilerleme, boyut, silineceği tarih, `expired`; indirme adresi yok |
+| GET | `/exports/:id` | durum, ilerleme, boyut, silineceği tarih, `expired`; hazırsa ve süresi geçmediyse 5 dk geçerli indirme adresi (`attachment`). Başka firmanın işi 404 |
 | GET | `/deleted` | `type` ile silinen kayıtlar |
 | GET | `/health` | `{ success, status: "ok" }` |
 
@@ -1158,19 +1190,21 @@ Ayrı token türü. Müşteri finansal kayıtlarına uç yok.
 | POST | `/platform/auth/recovery` | `recoveryCode`; ara token ile girişi tamamlar |
 | POST | `/platform/auth/recovery-codes/regenerate` | oturumlu + geçerli TOTP kodu; yeni 10 kod, eskiler geçersiz |
 | POST | `/platform/auth/refresh` `/platform/auth/logout` | |
-| GET | `/platform/companies` | `q, status`, kullanım ve tarihler |
+| GET | `/platform/companies` | `q, status`, kullanım ve tarihler. Filtreden bağımsız `summary`: `storageFull`, `storageNearFull`, `viewEnding`, `retentionEnding`, `deletionPending` ve silmesi tamamlanmayanlar (bekleyen, süren, başarısız); her öğede kimlik, ad, durum, kullanım, kota, `viewUntil`, `retainUntil`. Silinmiş firmalar `deletionStatus` ile listelenir |
 | POST | `/platform/companies` | firma oluştur |
-| GET | `/platform/companies/:id` | detay, kullanıcılar, depolama, hizmet, işletim geçmişi |
-| PATCH | `/platform/companies/:id` | ad, iletişim, işletim notu |
+| GET | `/platform/companies/:id` | detay, kullanıcılar, depolama, hizmet, işletim geçmişi; `contents`: hareket, anlaşma (başlangıç dahil), şantiye, kişi ve belge (yüklenmiş ve yüklenmekte) sayıları, silinmiş ama geri alınabilir kayıtlar dahil |
+| PATCH | `/platform/companies/:id` | ad, iletişim, işletim notu, `expectedUpdatedAt`, `reason?` |
 | POST | `/platform/companies/:id/users` | kullanıcı + bir kez gösterilen geçici şifre. Aynı `Idempotency-Key` ile tekrar: kullanıcı şifresiz ve açıklama mesajıyla döner |
-| PATCH | `/platform/users/:id` | ad, kullanıcı adı, `isActive` |
+| PATCH | `/platform/users/:id` | ad, kullanıcı adı, `isActive` birlikte alınabilir; `reason` aktiflik değişiminde zorunlu, diğerlerinde isteğe bağlı. Kullanıcı adı çakışması 409 `USERNAME_EXISTS` |
 | POST | `/platform/users/:id/reset-password` | yeni geçici şifre |
-| POST | `/platform/companies/:id/quota` | `quotaBytes, reason` |
+| POST | `/platform/companies/:id/quota` | `quotaBytes, reason`; kullanımın altına inerse 409 `CONFLICT` |
 | POST | `/platform/companies/:id/suspend` | `{ suspended, reason }` |
-| POST | `/platform/companies/:id/end-service` | `effectiveDate, reason`; önizleme için `?preview=1` |
+| POST | `/platform/companies/:id/end-service` | `effectiveDate, reason`. `?preview=1` yazmaz, gerekçe istemez ve `{ preview, name, effectiveDate, serviceEndedAt, viewUntil, retainUntil }` döner. Geçmiş tarih 400; hizmeti zaten sonlandırılmış firma 409 |
 | POST | `/platform/companies/:id/reopen` | `reason` |
-| POST | `/platform/companies/:id/extend-retention` | `retainUntil, reason` |
-| POST | `/platform/companies/:id/delete` | `confirmName, reason`; yalnız saklama süresi dolmuşsa |
+| POST | `/platform/companies/:id/extend-retention` | `retainUntil, reason`; kurallar bölüm 9.10 |
+| POST | `/platform/companies/:id/delete` | `confirmName, reason`; yalnız silme onayı bekleyen firmada veya başarısız silmenin yeniden başlatılmasında. 202 döner, silme arka planda sürer |
+
+Kalıcı silmesi başlamış firmada değiştiren yönetim uçları 409 döner.
 
 Hata kodları: `VALIDATION` 400, `UNAUTHORIZED` 401, `PASSWORD_CHANGE_REQUIRED` 403, `READ_ONLY` 403, `ACCESS_CLOSED` 403, `NOT_FOUND` 404, `CONFLICT` 409, `EXCESS_CONFIRMATION_REQUIRED` 409, `HAS_DEPENDENCIES` 409, `STORAGE_FULL` 409, `USERNAME_EXISTS` 409, `LIMIT_EXCEEDED` 422 (dosya boyutu, belge sayısı, iade sınırı), `IDEMPOTENCY_MISMATCH` 422, `IDEMPOTENCY_EXPIRED` 422, `RATE_LIMITED` 429, `INTERNAL` 500.
 
@@ -1226,6 +1260,8 @@ Arayüz dili Türkçe. Kısa ve doğrudan yaz. Örnekler:
 | Belge sayısı dolu | Bu kayda en fazla 10 belge eklenebilir. |
 | Belge geri yükleme sınırı | Bu kayıtta 10 belge var; geri yüklemek için önce birini silin. |
 | Silinmiş kayıtta belge | Kayıt silinmiş. Belge işlemi için önce kaydı geri yükleyin. |
+| Tam veri çıkışı hatası | Paket hazırlanamadı. Finansal kayıtlarınız etkilenmedi; yeniden deneyebilirsiniz. |
+| Kapasite azaltma | Kapasite mevcut kullanımın altına indirilemez. |
 | Görüntüleme dönemi | Hizmetiniz sona erdi. Kayıtları görüntüleyip dışa aktarabilirsiniz. |
 | Demo bandı | Örnek veriler — değişiklikler geçicidir. |
 | Boş şantiye | Aktif proje bulunamadı |

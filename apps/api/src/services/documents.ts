@@ -28,6 +28,7 @@ import { CompanyModel } from '../models/company.js';
 import { DocumentModel, type StoredDocument } from '../models/document.js';
 import { TransactionModel } from '../models/transaction.js';
 import type { CustomerContext } from './customer-auth.js';
+import { exportBytesOf } from './exports.js';
 import type { IdempotentOutcome } from './idempotency.js';
 import {
   actorNames,
@@ -191,7 +192,10 @@ export async function documentsOf(
   return presentDocuments(companyId, docs);
 }
 
-/** Firma bilgisindeki kullanım dökümü (şartname 7.11, 9.6). Toplamı `storageUsedBytes` ile aynıdır. */
+/**
+ * Firma bilgisindeki kullanım dökümü (şartname 7.11, 9.6): belgeler ve hazır dışa aktarma paketleri.
+ * Toplamı `storageUsedBytes` ile aynıdır.
+ */
 export async function storageBreakdown(companyId: Types.ObjectId) {
   const [row] = await DocumentModel.aggregate<{
     originalBytes: number;
@@ -248,8 +252,8 @@ export async function storageBreakdown(companyId: Types.ObjectId) {
     deletedBytes: row?.deletedBytes ?? 0,
     /** Yüklenmekte olan dosyalar için ayrılan alan */
     pendingBytes: row?.pendingBytes ?? 0,
-    /** Hazır dışa aktarma paketleri (Adım 6) */
-    exportBytes: 0,
+    /** Hazır dışa aktarma paketleri */
+    exportBytes: await exportBytesOf(companyId),
     documentCount: row?.documentCount ?? 0,
     deletedDocumentCount: row?.deletedDocumentCount ?? 0,
   };

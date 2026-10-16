@@ -300,7 +300,9 @@ Not: Ürün sahibi girişi, TOTP, kurtarma kodları, firma oluşturma ve kullan�
 
 ```text
 ADIM 7a — Ürün sahibi yönetimi: kalan API
-Okunacaklar: şartnamede bölüm 7.13, 8.1, 8.10 (PlatformLog), 9.10, 10.10. Adım 2'de yazılan yönetim kodunu incele; yeniden yazma.
+Okunacaklar: şartnamede bölüm 7.13, 8.1, 8.10 (PlatformLog ve ExportJob), 9.10, 10.10; "Önce" işi için 7.10'daki "Tek etkin iş, tek hazır paket" maddesi ve 9.6'daki "Dışa aktarma paketi" satırı. Adım 2'de yazılan yönetim kodunu incele; yeniden yazma.
+
+Önce (kısa iş, Adım 6b düzeltmesi): Şu an firmada hazır paket varken yeni tam veri çıkışı istenince önceki hazır paket silinmiyor; paketler birikip kapasiteyi ve depolama maliyetini sınırsız büyütebiliyor (karar belgesi 10.18). Yeni paket `ready` olunca aynı firmanın önceki hazır paketlerini sil ve kapasitelerini bir kez iade et (mevcut süre dolumu silme yoluyla aynı kural). Yeni iş başarısız olursa önceki paket süresi dolana kadar indirilebilir kalmalı. Testler: iki ardışık paketten sonra yalnız sonuncusu kalır ve kapasite yalnız onu sayar; yeni iş başarısız olunca önceki paket durur; tarama ile değiştirme çakışınca kapasite iki kez iade edilmez.
 
 Yap:
 - Firma listesi: arama, durum filtresi (aktif, geçici durdurulmuş, görüntüleme dönemi, arşiv saklama, silme onayı bekleyen), satır bilgileri ve işletim özeti (kapasitesi dolan/yaklaşan, görüntüleme süresi biten, saklama süresi dolan).
@@ -322,15 +324,17 @@ Bitti sayılması için:
 
 ```text
 ADIM 7b — Ürün sahibi yönetimi: ekranlar
-Okunacaklar: şartnamede bölüm 4 (yalnız 4.4 ve 4.5), 5.3, 7.13, 12. API'yi Adım 2 ve 7a kodundan incele.
+Okunacaklar: şartnamede bölüm 4 (yalnız 4.4 ve 4.5), 5.3, 7.13, 8.10 (yalnız PlatformLog: işlem adları), 9.10 (yalnız tablonun altındaki maddeler), 10.10, 12. API'yi Adım 2 ve 7a kodundan incele.
+
+Önce (kısa API işi, Adım 7a düzeltmesi): `GET /platform/companies` cevabındaki `summary` yalnız silme başlamamış firmalardan hesaplanıyor; kalıcı silmesi bekleyen, süren veya başarısız olan firmalar hiçbir özet grubunda ve durum filtresinde görünmüyor (karar belgesi 10.20). `summary`'ye bu firmalar için ayrı bir grup ekle (öğe biçimi diğer gruplarla aynı, `deletionStatus` dahil). Tamamlanmış silmeler bu gruba girmez. Firma yalıtımı ve yönetim testlerine ekle; cevap biçimini şartname 10.10'a uygun tut.
 
 Yap:
 - Yönetim girişi (şifre, ardından TOTP veya kurtarma kodu), zorunlu güvenlik kurulumu (QR) ve kurtarma kodlarının bir kez gösterilip indirilmesi, güvenlik ayarları (TOTP'yi yeniden kur, kodları yenile).
-- İşletim özeti ve firma listesi (arama, filtreler, uyarılar), firma oluştur, firma detay (kullanıcılar, depolama, hizmet durumu ve tarihleri, işletim geçmişi).
+- İşletim özeti ve firma listesi (arama, filtreler, şartname 7.13'teki özet grupları; silmesi tamamlanmayan firmalardan başarısız silmeyi yeniden başlatma), firma oluştur, firma düzenle, firma detay (kullanıcılar, depolama, hizmet durumu ve tarihleri, işletim geçmişi işlem adlarının Türkçe karşılıklarıyla).
 - Kullanıcı ekle (geçici şifre bir kez gösterilir), şifre sıfırla, pasifleştir/aktifleştir, kullanıcı adı değiştir; kapasite; hizmet yaşam döngüsü dialogları (tarih önizlemeli); kalıcı silme ekranı (firma adı yazarak onay).
 - Müşteri uygulamasıyla aynı tasarım sistemi; yönetim alanı olduğu açıkça belli olsun.
 
-Yapma: API değişikliği (gerekirse dur ve sor), müşteri finansal kayıtlarını gösterme.
+Yapma: "Önce" işi dışında API değişikliği (gerekirse dur ve sor), müşteri finansal kayıtlarını gösterme.
 
 Bitti sayılması için:
 - Masaüstünde ilk kurulumdan kalıcı silmeye kadar akış ekrandan çalışıyor; telefonda temel ekranlar bozulmuyor.
@@ -384,9 +388,12 @@ Yap:
 - Playwright uçtan uca testleri (telefon ve masaüstü görünümü): giriş, ilk şifre, gider oluşturma, anlaşmaya ödeme, paylaştırma, iade, sil/geri al, belge yükleme hatası, bağlantı kesintisinde "doğrulanıyor" akışı, demo sıfırlama, ürün sahibi TOTP girişi.
 - Bölüm 13'teki her kabul maddesini bir teste veya belgelenmiş elle kontrole bağlayan kontrol listesi (docs/kabul_kontrol_listesi.md).
 - Önceki adımlarda denenmemiş kalan belge akışlarını kontrol listesine ekle ve dene: anlaşma formu ve detayında belge ekleme, önizleme, sil/geri al (tarayıcıda); indirmenin gerçek dosya kaydetmesi; gerçek telefon kamerasıyla çekim ve gerçek bir HEIC dosyasının önizlemesi (son ikisi elle kontrol olabilir).
-- Rapor dosyalarını kontrol listesine ekle: indirilen Excel, CSV ve PDF gerçek Excel'de ve gerçek bir telefonda açılıyor, Türkçe karakterler ve toplamlar doğru (elle kontrol olabilir).
+- Rapor dosyalarını kontrol listesine ekle: indirilen Excel, CSV ve PDF ile tam veri çıkışı paketindeki `veri.xlsx` ve CSV dosyaları gerçek Excel'de ve gerçek bir telefonda açılıyor, Türkçe karakterler ve toplamlar doğru; paket tarayıcıdan gerçekten indiriliyor (elle kontrol olabilir).
+- Kalıcı silmenin depo temizliğini (`removePrefix`, yarım çok parçalı yüklemelerin iptali) yerel MinIO'da gerçek nesnelerle dene; silinen firmanın `companies/<firma>/` altında nesne kalmadığını doğrula.
+- Yedekten çıkarma son tarihi: kalıcı silmeden sonra kalan yedek kopyaların en geç 30 gün içinde saklama döngüsünden çıkarılması (karar belgesi 7.7) yedekleme yöntemi seçildiyse takibe bağla; seçilmediyse canlıya hazırlık notunda açık nokta olarak yaz.
+- Büyük firma ölçümü: on binlerce hareket ve yaklaşık bin belgelik örnek firmayla tam veri çıkışında tek snapshot okumanın MongoDB transaction süre sınırına (60 sn) takılıp takılmadığını ve Excel üretiminin bellek kullanımını ölç; raporlar için de süreyi kaydet. Sınır aşılıyorsa dur ve seçenekleri sor.
 - Eksik veya hatalı çıkan noktaları düzelt; şartnameden sapma gerekiyorsa dur ve sor.
-- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar, üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü kuralı (şartname 9.6), PDF yazı tipi klasörünün (`apps/api/assets/fonts`) üretim dağıtımına dahil edilmesi (şartname bölüm 2).
+- Canlıya hazırlık notu: gerekli ortam değişkenleri, veritabanı indeksleri, ilk ürün sahibi kurulumu, yedekleme için bekleyen kararlar, üretim deposunda `companies/*/uploads/` için bir günlük yaşam döngüsü kuralı ve `companies/*/exports/` için yarım kalan çok parçalı yüklemeleri temizleyen kural (şartname 9.6), arka plan işleri API sürecinde çalıştığı için sürecin sürekli açık kalması ve ilk sürümde tek süreç çalışması gerektiği (şartname bölüm 3 "Tek süreç"), PDF yazı tipi klasörünün (`apps/api/assets/fonts`) üretim dağıtımına dahil edilmesi (şartname bölüm 2).
 
 Bitti sayılması için: Bölüm 13'ün her maddesi işaretli; bütün testler CI'da geçer.
 ```

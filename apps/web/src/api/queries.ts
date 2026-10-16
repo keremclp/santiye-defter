@@ -13,6 +13,7 @@ import type {
   DeletedItem,
   DeletedType,
   DuesList,
+  ExportJob,
   MeResult,
   OpenBalancesReport,
   Paged,
@@ -67,9 +68,24 @@ export const keys = {
   searchHistory: ['search', 'history'] as const,
   deleted: (params: Params) => ['deleted', params] as const,
   report: (path: string, params: Params) => ['reports', path, params] as const,
+  exports: ['exports'] as const,
 };
 
 const STATIC_KEYS = new Set(['me']);
+
+/** Hazırlanan paketin ilerlemesi bu aralıkla yenilenir. */
+const EXPORT_POLL_MS = 2_000;
+
+/** Firmanın son tam veri çıkışı işleri; bekleyen veya süren iş varken düzenli yenilenir. */
+export const useExports = () =>
+  useQuery({
+    queryKey: keys.exports,
+    queryFn: () => apiGet<ExportJob[]>('/exports'),
+    refetchInterval: (query) =>
+      query.state.data?.some((job) => job.status === 'queued' || job.status === 'running')
+        ? EXPORT_POLL_MS
+        : false,
+  });
 
 /** Finansal kayıt değişince bütün listeler, detaylar, özetler ve pano yeniden doğrulanır. */
 export function invalidateRecords(client: QueryClient): Promise<void> {

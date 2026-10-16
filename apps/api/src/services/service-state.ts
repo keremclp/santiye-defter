@@ -1,6 +1,6 @@
 // Etkin hizmet durumu ve erişim tablosu (şartname 9.10). Her istekte tarihlerden hesaplanır.
 
-import { compareIsoDates } from '@santiye/shared';
+import { addDays, compareIsoDates } from '@santiye/shared';
 import { AppError } from '../http/errors.js';
 import type { Company } from '../models/company.js';
 
@@ -38,6 +38,18 @@ export function computeServiceState(company: CompanyServiceFields, today: string
   }
 
   return company.isSuspended ? 'suspended' : 'active';
+}
+
+/** Görüntüleme dönemi D … D+30, saklama D … D+180; uçlar dahil (şartname 8.1, 9.10). */
+export const VIEW_PERIOD_DAYS = 30;
+export const RETENTION_PERIOD_DAYS = 180;
+
+export function serviceEndDates(effectiveDate: string) {
+  return {
+    serviceEndedAt: effectiveDate,
+    viewUntil: addDays(effectiveDate, VIEW_PERIOD_DAYS),
+    retainUntil: addDays(effectiveDate, RETENTION_PERIOD_DAYS),
+  };
 }
 
 export type AccessDecision = 'allow' | 'read_only' | 'closed';

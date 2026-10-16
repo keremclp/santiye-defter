@@ -163,7 +163,7 @@ function base(header: ReportHeader, fileBase: string, dated = true) {
   };
 }
 
-function cashSummary(title: string, totals: CashTotals): SummarySection {
+export function cashSummary(title: string, totals: CashTotals): SummarySection {
   return {
     kind: 'summary',
     title,
@@ -195,7 +195,7 @@ function directionItems(summary: DirectionSummary, opening: DirectionSummary, pa
   ];
 }
 
-function obligationSections(
+export function obligationSections(
   payable: DirectionSummary,
   receivable: DirectionSummary,
   openings: { payable: DirectionSummary; receivable: DirectionSummary },
